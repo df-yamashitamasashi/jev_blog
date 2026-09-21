@@ -151,44 +151,9 @@ export class GenerativeMonsterUseCase {
     const defense = Math.max(3, Math.round(totalMod.def * floorMult));
     const agility = Math.max(4, Math.round(totalMod.agi * floorMult));
 
-    // レトロRPG風の名前の命名
-    const prefixes: Record<string, string> = {
-      p_blue: "蒼天の",
-      p_crimson: "紅蓮の",
-      p_emerald: "深緑の",
-      p_gold: "黄金の",
-      p_purple: "魔界の",
-      p_cyan: "氷結の",
-      p_obsidian: "黒曜の",
-      p_bone: "骸骨の",
-      p_toxic: "猛毒の",
-      p_copper: "古銅の",
-      p_silver: "白銀の",
-      p_ruby: "血華の",
-      p_plasma: "閃光の",
-      p_spectral: "幻影の",
-      p_sunburst: "烈日の",
-      p_void: "虚無の",
-    };
-
-    const bodyNames: Record<string, string> = {
-      b_slime: "スライム",
-      b_beast: "魔獣",
-      b_reptile: "トカゲ戦士",
-      b_avian: "怪鳥",
-      b_undead: "スケルトン",
-      b_insect: "甲虫兵",
-      b_golem: "ゴーレム",
-      b_demon: "悪魔",
-      b_aquatic: "水竜",
-      b_plant: "人喰い樹",
-      b_specter: "亡霊まどうし",
-      b_dragon: "ドラゴンロード",
-    };
-
-    const prefix = prefixes[paletteId] || "";
-    const baseName = bodyNames[bodyId] || "魔物";
-    const monsterName = `${prefix}${baseName}`;
+    // 表示名はフレーバーテキストではなくDNAハッシュをそのままIDとして使う
+    // （8言語分の命名辞書を持つより、ID・DNA構成・ステータスを直接見せる方針）
+    const monsterName = dnaHash;
 
     // レアリティ判定
     const isBoss = bodyId === "b_dragon" || floor.floorNumber % 5 === 0;

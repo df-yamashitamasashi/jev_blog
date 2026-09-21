@@ -21,18 +21,16 @@ export class BattleUseCase {
     return String(key);
   }
 
+  /** フレーバー名ではなくDNA由来のIDをそのまま表示名として使う（i18n名前合成は行わない） */
   private getMonsterDisplayName(monster: Monster): string {
-    if (this.i18n) {
-      return this.i18n.getMonsterName(monster.dna, monster.rarity);
-    }
-    return monster.name;
+    return `#${monster.dna ? monster.dna.dnaHash : monster.id}`;
   }
 
   initBattle(monster: Monster): BattleState {
     const name = this.getMonsterDisplayName(monster);
     const msg = this.i18n
       ? `${name} ${this.t("appeared")}`
-      : `${monster.name} が あらわれた！`;
+      : `${name} が あらわれた！`;
 
     return {
       monster,
@@ -43,6 +41,7 @@ export class BattleUseCase {
       currentMessageIndex: 0,
       isHeroDefending: false,
       canEscape: !monster.isBoss,
+      pendingActor: "hero",
       atbHero: 1.0,
       atbMonster: 0.2,
     };
@@ -85,6 +84,7 @@ export class BattleUseCase {
         turnMessages: messages,
         currentMessageIndex: 0,
         isHeroDefending: false,
+        pendingActor: "monster",
         atbHero: 0.0,
       },
     };
@@ -99,9 +99,10 @@ export class BattleUseCase {
         hero,
         state: {
           ...state,
-          phase: "command_select",
+          phase: "message_wait",
           turnMessages: [this.t("mp_lacking")],
           currentMessageIndex: 0,
+          pendingActor: "hero",
         },
       };
     }
@@ -132,6 +133,7 @@ export class BattleUseCase {
             `HP +${healAmount} ${this.t("heal_done")}`,
           ],
           currentMessageIndex: 0,
+          pendingActor: "monster",
           atbHero: 0.0,
         },
       };
@@ -157,6 +159,7 @@ export class BattleUseCase {
           phase: isDefeated ? "victory" : "message_wait",
           turnMessages: messages,
           currentMessageIndex: 0,
+          pendingActor: "monster",
           atbHero: 0.0,
         },
       };
@@ -172,9 +175,10 @@ export class BattleUseCase {
         hero,
         state: {
           ...state,
-          phase: "command_select",
+          phase: "message_wait",
           turnMessages: [this.t("no_herbs")],
           currentMessageIndex: 0,
+          pendingActor: "hero",
         },
       };
     }
@@ -199,6 +203,7 @@ export class BattleUseCase {
           `HP +${healAmount} ${this.t("heal_done")}`,
         ],
         currentMessageIndex: 0,
+        pendingActor: "monster",
         atbHero: 0.0,
       },
     };
@@ -214,6 +219,7 @@ export class BattleUseCase {
       turnMessages: [this.t("defending")],
       currentMessageIndex: 0,
       isHeroDefending: true,
+      pendingActor: "monster",
       atbHero: 0.0,
     };
   }
@@ -228,6 +234,7 @@ export class BattleUseCase {
         phase: "message_wait",
         turnMessages: [this.t("cannot_escape")],
         currentMessageIndex: 0,
+        pendingActor: "monster",
       };
     }
 
@@ -238,6 +245,7 @@ export class BattleUseCase {
         phase: "escaped",
         turnMessages: [this.t("escape_success")],
         currentMessageIndex: 0,
+        pendingActor: "hero",
       };
     } else {
       return {
@@ -245,6 +253,7 @@ export class BattleUseCase {
         phase: "message_wait",
         turnMessages: [this.t("escape_fail")],
         currentMessageIndex: 0,
+        pendingActor: "monster",
         atbHero: 0.0,
       };
     }
@@ -270,7 +279,9 @@ export class BattleUseCase {
       messages.push(this.t("monster_critical"));
       dmg = Math.round(state.monster.attack * 1.4);
     } else if (action === "spell") {
-      messages.push(`${mName} ${this.t("spell_cast")} ${spellName || "Frizz"}!`);
+      // spellNameは表示テキストではなくスペルID（"fire"等）で渡ってくるためローカライズして表示する
+      const spellKey = `spell_${spellName || "fire"}` as Parameters<I18nManager["t"]>[0];
+      messages.push(`${mName} ${this.t("spell_cast")} ${this.t(spellKey)}!`);
       dmg = Math.round(14 * (0.8 + Math.random() * 0.4));
     } else if (action === "defend") {
       messages.push(`${mName} ${this.t("monster_defending")}`);
@@ -304,6 +315,7 @@ export class BattleUseCase {
         phase: isDefeat ? "defeat" : "message_wait",
         turnMessages: messages,
         currentMessageIndex: 0,
+        pendingActor: "hero",
         atbMonster: 0.0,
       },
     };

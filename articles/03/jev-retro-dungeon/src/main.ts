@@ -68,9 +68,9 @@ window.addEventListener("DOMContentLoaded", () => {
   // アダプター & ユースケースのDI
   const jevClient = new JevClient({ apiKey: savedKey });
   const soundEngine = new RetroSoundEngine();
-  const gameDirector = new GameDirectorUseCase(jevClient);
+  const gameDirector = new GameDirectorUseCase(jevClient, i18n);
   const battleUseCase = new BattleUseCase(i18n);
-  const cardGenerator = new CardGeneratorUseCase(jevClient);
+  const cardGenerator = new CardGeneratorUseCase(jevClient, i18n);
   const bgmComposer = new BgmComposerUseCase(jevClient);
 
   // BGM切り替えボタン
@@ -132,7 +132,7 @@ window.addEventListener("DOMContentLoaded", () => {
 
   shareCardBtn.addEventListener("click", async () => {
     if (currentCard) {
-      const msg = await CardRenderer.shareCard(cardModalCanvas, currentCard);
+      const msg = await CardRenderer.shareCard(cardModalCanvas, currentCard, i18n);
       alert(msg);
     }
   });

@@ -10,6 +10,7 @@ import {
   TILE_SIZE,
   RETRO_PALETTE,
   ELEMENT_PALETTES,
+  HERB_HEAL_AMOUNT,
 } from "../domain/constants";
 import { BaseEquipment } from "../domain/equipmentModels";
 import { GenerativeMonsterRenderer } from "./generativeRenderer";
@@ -125,7 +126,8 @@ export class CanvasRenderer {
   renderBattle(
     hero: Hero,
     battle: BattleState,
-    jevStatus: { isThinking: boolean; lastLatencyMs: number; isSimulated: boolean }
+    jevStatus: { isThinking: boolean; lastLatencyMs: number; isSimulated: boolean },
+    frame = 0
   ): void {
     const ctx = this.ctx;
     const t = (k: Parameters<I18nManager["t"]>[0], params?: Record<string, string | number>) =>
@@ -141,35 +143,37 @@ export class CanvasRenderer {
         CANVAS_WIDTH / 2,
         145,
         battle.monster.dna,
-        2.5
+        2.5,
+        frame
       );
     }
 
-    // 2. 敵情報ウィンドウ（上部：多言語モンスター名、DNAハッシュ、HPバー）
-    this.drawRetroWindow(100, 14, 440, 56);
-    const monsterDisplayName = this.i18n.getMonsterName(
-      battle.monster.dna,
-      battle.monster.rarity
+    // 2. 敵情報ウィンドウ（上部：DNA ID・ステータス・HPバー。フレーバー名は表示しない）
+    this.drawRetroWindow(100, 14, 440, 78);
+    this.drawRetroText(
+      `#${battle.monster.dna ? battle.monster.dna.dnaHash : battle.monster.id} [${battle.monster.rarity}]`,
+      116,
+      22,
+      RETRO_PALETTE.textWhite,
+      15,
+      true
     );
-    this.drawRetroText(monsterDisplayName, 116, 22, RETRO_PALETTE.textWhite, 15, true);
 
-    // DNAハッシュバッジ
-    if (battle.monster.dna) {
-      this.drawRetroText(
-        `DNA: ${battle.monster.dna.dnaHash}`,
-        350,
-        24,
-        RETRO_PALETTE.textGold,
-        11
-      );
-    }
+    // モンスターのステータス（こうげき／しゅび／すばやさ）
+    this.drawRetroText(
+      `${t("attack")}:${battle.monster.attack}  ${t("defense")}:${battle.monster.defense}  ${t("speed")}:${battle.monster.agility}`,
+      116,
+      42,
+      RETRO_PALETTE.textCyan,
+      12
+    );
 
     // 敵HPバー
     const enemyHpRatio = Math.max(0, battle.monster.currentHp / battle.monster.maxHp);
     ctx.fillStyle = RETRO_PALETTE.wallStoneDark;
-    ctx.fillRect(116, 46, 408, 8);
+    ctx.fillRect(116, 64, 408, 8);
     ctx.fillStyle = enemyHpRatio > 0.3 ? RETRO_PALETTE.textCyan : RETRO_PALETTE.textRed;
-    ctx.fillRect(116, 46, Math.round(408 * enemyHpRatio), 8);
+    ctx.fillRect(116, 64, Math.round(408 * enemyHpRatio), 8);
 
     // 3. 勇者ステータスウィンドウ（右上：固定サイズ 170x130）
     this.drawRetroWindow(450, 185, 170, 135);
@@ -177,7 +181,7 @@ export class CanvasRenderer {
     this.drawRetroText(`${t("hp")}: ${hero.stats.currentHp}/${hero.stats.maxHp}`, 466, 220, RETRO_PALETTE.textWhite, 13);
     this.drawRetroText(`${t("mp")}: ${hero.stats.currentMp}/${hero.stats.maxMp}`, 466, 242, RETRO_PALETTE.textWhite, 13);
     this.drawRetroText(`${t("level")}: ${hero.stats.level}`, 466, 264, RETRO_PALETTE.textWhite, 13);
-    this.drawRetroText(`やくそう: x${hero.herbs}`, 466, 286, RETRO_PALETTE.textCyan, 13);
+    this.drawRetroText(`${t("herb")}: x${hero.herbs}`, 466, 286, RETRO_PALETTE.textCyan, 13);
 
     // 4. コマンドウィンドウ（左下：固定サイズ 190x135）
     this.drawRetroWindow(20, 185, 190, 135);
@@ -241,7 +245,7 @@ export class CanvasRenderer {
 
     // --- 左側：現在の装備とステータス（横幅 260px） ---
     this.drawRetroWindow(40, 68, 255, 375);
-    this.drawRetroText("【 現在の装備 】", 54, 80, RETRO_PALETTE.textCyan, 14, true);
+    this.drawRetroText(t("ui_current_equipment"), 54, 80, RETRO_PALETTE.textCyan, 14, true);
 
     const weapon = hero.inventory.equipments.find((e) => e.id === hero.inventory.equippedWeaponId);
     const shield = hero.inventory.equipments.find((e) => e.id === hero.inventory.equippedShieldId);
@@ -271,12 +275,12 @@ export class CanvasRenderer {
     this.drawRetroText("───────────────", 54, 310, RETRO_PALETTE.wallStone, 12);
     this.drawRetroText(`${t("attack")}: ${totalAtk}`, 54, 330, RETRO_PALETTE.textCyan, 14, true);
     this.drawRetroText(`${t("defense")}: ${totalDef}`, 150, 330, RETRO_PALETTE.textCyan, 14, true);
-    this.drawRetroText(`やくそう所持: x${hero.herbs}`, 54, 360, RETRO_PALETTE.textGold, 14, true);
+    this.drawRetroText(`${t("herb")}: x${hero.herbs}`, 54, 360, RETRO_PALETTE.textGold, 14, true);
     this.drawRetroText(`HP: ${hero.stats.currentHp}/${hero.stats.maxHp}`, 54, 390, RETRO_PALETTE.textWhite, 13);
 
     // --- 右側：所持品一覧（道具 ＋ 装備品一覧、横幅 275px） ---
     this.drawRetroWindow(305, 68, 290, 375);
-    this.drawRetroText("【 もちもの一覧 】", 320, 80, RETRO_PALETTE.textCyan, 14, true);
+    this.drawRetroText(t("ui_item_list"), 320, 80, RETRO_PALETTE.textCyan, 14, true);
 
     // リスト構成: [0]: やくそう、[1..N]: 装備品
     const items: Array<{
@@ -289,11 +293,13 @@ export class CanvasRenderer {
 
     items.push({
       type: "herb",
-      name: `やくそう (x${hero.herbs})`,
+      name: `${t("herb")} (x${hero.herbs})`,
       isEquipped: false,
-      detail: "HPを35回復",
+      detail: t("herb_heal_desc", { amount: HERB_HEAL_AMOUNT }),
     });
 
+    const atkShort = t("stat_atk_short");
+    const defShort = t("stat_def_short");
     hero.inventory.equipments.forEach((eq) => {
       const isEq =
         eq.id === hero.inventory.equippedWeaponId ||
@@ -303,10 +309,10 @@ export class CanvasRenderer {
       const eqName = this.i18n.getEquipmentName(eq.nameKey) || eq.nameKey;
       const statDesc =
         eq.slot === "weapon"
-          ? `攻+${eq.attackBonus}`
+          ? `${atkShort}+${eq.attackBonus}`
           : eq.slot === "shield" || eq.slot === "armor"
-          ? `守+${eq.defenseBonus}`
-          : `攻+${eq.attackBonus} 守+${eq.defenseBonus}`;
+          ? `${defShort}+${eq.defenseBonus}`
+          : `${atkShort}+${eq.attackBonus} ${defShort}+${eq.defenseBonus}`;
 
       items.push({
         type: "equip",
@@ -336,14 +342,14 @@ export class CanvasRenderer {
         ? RETRO_PALETTE.textCyan
         : RETRO_PALETTE.textWhite;
 
-      const badge = item.isEquipped ? " [E]" : "";
+      const badge = item.isEquipped ? ` ${t("equipped")}` : "";
       this.drawRetroText(`${item.name}${badge}`, 332, iy, nameColor, 14, isSelected);
       this.drawRetroText(`  ${item.detail}`, 332, iy + 18, RETRO_PALETTE.wallStone, 12);
     });
 
     // 下部：操作ガイド
     this.drawRetroText(
-      "[W/S] 選択  [ENTER] そうび/つかう  [E/ESC] とじる",
+      t("ui_inventory_guide"),
       45,
       460,
       RETRO_PALETTE.textGold,
@@ -460,7 +466,7 @@ export class CanvasRenderer {
     this.drawRetroText(`${t("level")}:${hero.stats.level}`, 160, 19, RETRO_PALETTE.textWhite, 14);
     this.drawRetroText(`${t("hp")}:${hero.stats.currentHp}/${hero.stats.maxHp}`, 235, 19, RETRO_PALETTE.textWhite, 14);
     this.drawRetroText(`${t("mp")}:${hero.stats.currentMp}/${hero.stats.maxMp}`, 350, 19, RETRO_PALETTE.textWhite, 14);
-    this.drawRetroText(`やくそう:x${hero.herbs}`, 455, 19, RETRO_PALETTE.textCyan, 14, true);
+    this.drawRetroText(`${t("herb")}:x${hero.herbs}`, 455, 19, RETRO_PALETTE.textCyan, 14, true);
 
     this.renderJevLamp(jevStatus);
   }

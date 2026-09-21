@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Monster DNA Gallery (dev-only)</title>
+    <style>
+      body {
+        background: #0a0a10;
+        color: #eee;
+        font-family: monospace;
+        padding: 16px;
+      }
+      h2 {
+        color: #fcd800;
+        margin-top: 28px;
+        border-bottom: 1px solid #333;
+        padding-bottom: 6px;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+        gap: 8px;
+      }
+      .cell {
+        background: #000;
+        border: 2px solid #444;
+        text-align: center;
+        padding: 4px;
+      }
+      .cell canvas {
+        image-rendering: pixelated;
+        width: 96px;
+        height: 96px;
+        background: #000;
+      }
+      .cell .label {
+        font-size: 10px;
+        color: #0e8;
+        margin-top: 2px;
+        word-break: break-all;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>🧪 Generative Monster DNA Gallery (dev-only)</h1>
+    <p>フレームは自動でアニメーションします（呼吸・羽ばたき・オーラ明滅の確認用）。</p>
+    <div id="inspector" style="display:flex; gap:16px; align-items:flex-start; margin-bottom:16px;"></div>
+    <div id="root"></div>
+    <script type="module" src="/gallery-main.ts"></script>
+  </body>
+</html>

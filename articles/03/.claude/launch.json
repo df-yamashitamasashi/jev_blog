@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "jev-retro-dungeon-dev",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "jev-retro-dungeon", "run", "dev"],
+      "port": 3000
+    }
+  ]
+}

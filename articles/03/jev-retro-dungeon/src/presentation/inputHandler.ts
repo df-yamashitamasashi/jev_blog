@@ -16,7 +16,6 @@ export interface BattleInput {
 
 export class InputHandler {
   private lastMoveDir: "up" | "down" | "left" | "right" | null = null;
-  private actionTriggered = false;
 
   private battleCursorDelta = 0;
   private confirmTriggered = false;
@@ -46,7 +45,6 @@ export class InputHandler {
 
       // 決定 / アクション
       if (e.code === "Space" || e.code === "Enter" || e.code === "KeyZ") {
-        this.actionTriggered = true;
         this.confirmTriggered = true;
         e.preventDefault();
       }
@@ -71,8 +69,36 @@ export class InputHandler {
 
     canvas.addEventListener("click", () => {
       this.confirmTriggered = true;
-      this.actionTriggered = true;
     });
+  }
+
+  /**
+   * エッジ入力（決定 / キャンセル / カーソル移動）をまとめて読み出して解除する。
+   *
+   * 各フレームで呼ばれるのは現在のモードに対応した1つのgetterだけなので、
+   * モードごとに使うフラグだけを解除すると、使われなかったフラグが押しっぱなしのまま
+   * 次のモードへ持ち越されてしまう（例: ダンジョンで押した決定キーが、
+   * 直後に始まった戦闘の1フレーム目で「たたかう」を勝手に実行する）。
+   * そのため、どのgetterから呼ばれても全てのエッジ入力を消費する。
+   */
+  private consumeEdgeInputs(): { confirm: boolean; cancel: boolean; cursorDelta: number } {
+    const edges = {
+      confirm: this.confirmTriggered,
+      cancel: this.cancelTriggered,
+      cursorDelta: this.battleCursorDelta,
+    };
+    this.confirmTriggered = false;
+    this.cancelTriggered = false;
+    this.battleCursorDelta = 0;
+    return edges;
+  }
+
+  /** モーダル表示中など、どのモードの更新も走らないフレームで入力を捨てる */
+  flush(): void {
+    this.consumeEdgeInputs();
+    // 押しっぱなしの方向キーも解除しておく
+    // （カードモーダルを閉じた瞬間に勇者が walk しはじめるのを防ぐ）
+    this.lastMoveDir = null;
   }
 
   getDungeonInput(): DungeonInput {
@@ -84,29 +110,21 @@ export class InputHandler {
       this.lastMoveTime = now;
     }
 
-    const action = this.actionTriggered;
-    this.actionTriggered = false;
+    const edges = this.consumeEdgeInputs();
 
     return {
       moveDir: dir,
-      actionPressed: action,
+      actionPressed: edges.confirm,
     };
   }
 
   getBattleInput(): BattleInput {
-    const delta = this.battleCursorDelta;
-    this.battleCursorDelta = 0;
-
-    const confirm = this.confirmTriggered;
-    this.confirmTriggered = false;
-
-    const cancel = this.cancelTriggered;
-    this.cancelTriggered = false;
+    const edges = this.consumeEdgeInputs();
 
     return {
-      cursorDelta: delta,
-      confirmPressed: confirm,
-      cancelPressed: cancel,
+      cursorDelta: edges.cursorDelta,
+      confirmPressed: edges.confirm,
+      cancelPressed: edges.cancel,
     };
   }
 }

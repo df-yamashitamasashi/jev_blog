@@ -139,3 +139,96 @@ export const DNA_CATALOG = {
     { id: "p_void", nameKey: "deep_void", primary: "#100820", secondary: "#381858", glow: "rgba(56, 24, 88, 0.7)" },
   ],
 };
+
+/** 遺伝子スロットの並び順（カード表示・DNAハッシュ生成で共有） */
+export const GENE_SLOTS = [
+  "body",
+  "eyes",
+  "mouth",
+  "horns",
+  "wings",
+  "tail",
+  "aura",
+  "palette",
+] as const;
+
+export type GeneSlot = (typeof GENE_SLOTS)[number];
+
+const SLOT_TO_CATALOG: Record<GeneSlot, keyof typeof DNA_CATALOG> = {
+  body: "bodies",
+  eyes: "eyes",
+  mouth: "mouths",
+  horns: "horns",
+  wings: "wings",
+  tail: "tails",
+  aura: "auras",
+  palette: "palettes",
+};
+
+export interface GeneReadout {
+  readonly slot: GeneSlot;
+  readonly id: string;
+  /** "b_dragon" → "dragon" のようにスロット接頭辞を落とした表示用コード */
+  readonly code: string;
+  readonly statModifiers: { hp: number; atk: number; def: number; agi: number } | null;
+}
+
+const NO_MODIFIERS = { hp: 0, atk: 0, def: 0, agi: 0 };
+
+/**
+ * MonsterDNAを8スロットの読み出し行に変換する（カードの遺伝子情報欄で使用）。
+ *
+ * カタログに無いIDが来ても表示は壊さず、コードだけを出して補正はnullにする。
+ * paletteは配色のみのスロットでステータス補正を持たないため常にnullになる。
+ */
+export function readGenome(dna: MonsterDNA): GeneReadout[] {
+  const ids: Record<GeneSlot, string> = {
+    body: dna.bodyGene,
+    eyes: dna.eyesGene,
+    mouth: dna.mouthGene,
+    horns: dna.hornsGene,
+    wings: dna.wingsGene,
+    tail: dna.tailGene,
+    aura: dna.auraGene,
+    palette: dna.paletteGene,
+  };
+
+  return GENE_SLOTS.map((slot) => {
+    const id = ids[slot] || "-";
+    const entry = (DNA_CATALOG[SLOT_TO_CATALOG[slot]] as ReadonlyArray<{ id: string }>).find(
+      (e) => e.id === id
+    ) as { statModifiers?: typeof NO_MODIFIERS } | undefined;
+
+    return {
+      slot,
+      id,
+      code: id.replace(/^[a-z]+_/, ""),
+      statModifiers: entry?.statModifiers ?? null,
+    };
+  });
+}
+
+/** 遺伝子由来のステータス補正の合計 */
+export function sumGenomeModifiers(dna: MonsterDNA): { hp: number; atk: number; def: number; agi: number } {
+  return readGenome(dna).reduce(
+    (acc, g) => {
+      const m = g.statModifiers ?? NO_MODIFIERS;
+      return { hp: acc.hp + m.hp, atk: acc.atk + m.atk, def: acc.def + m.def, agi: acc.agi + m.agi };
+    },
+    { ...NO_MODIFIERS }
+  );
+}
+
+/** DNAカタログ上で表現しうるモンスターの総組み合わせ数 */
+export function totalGeneCombinations(): number {
+  return (
+    DNA_CATALOG.bodies.length *
+    DNA_CATALOG.eyes.length *
+    DNA_CATALOG.mouths.length *
+    DNA_CATALOG.horns.length *
+    DNA_CATALOG.wings.length *
+    DNA_CATALOG.tails.length *
+    DNA_CATALOG.auras.length *
+    DNA_CATALOG.palettes.length
+  );
+}

@@ -111,6 +111,12 @@ export interface BattleState {
   currentMessageIndex: number;
   isHeroDefending: boolean;
   canEscape: boolean;
+  /**
+   * turnMessages を読み終えた後に手番を渡す相手。
+   * "monster" ならモンスターの反撃へ、"hero" ならコマンド選択へ戻る。
+   * これが無いとモンスターのターン終了後に再びモンスターのターンが走り続ける。
+   */
+  pendingActor: "hero" | "monster";
   atbHero: number; // 0.0 〜 1.0 (リアルタイムATBゲージ)
   atbMonster: number;
 }
@@ -123,10 +129,19 @@ export interface CardData {
   readonly element: ElementType;
   readonly rarity: "Common" | "Rare" | "Epic" | "Legendary";
   readonly stats: {
+    readonly maxHp: number;
     readonly attack: number;
     readonly defense: number;
+    /** すばやさのランク表記（S / A / B） */
     readonly speed: string;
+    /** すばやさの実数値 */
+    readonly agility: number;
     readonly dangerScore: number;
+  };
+  /** 討伐報酬 */
+  readonly rewards: {
+    readonly exp: number;
+    readonly gold: number;
   };
   readonly dna: MonsterDNA;
   readonly flavorText: string;

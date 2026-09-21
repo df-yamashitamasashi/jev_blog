@@ -11,6 +11,7 @@ import {
   CardData,
 } from "../domain/models";
 import { INITIAL_EQUIPMENT, BaseEquipment } from "../domain/equipmentModels";
+import { HERB_HEAL_AMOUNT } from "../domain/constants";
 import { GameDirectorUseCase } from "../usecases/gameDirectorUseCase";
 import { BattleUseCase } from "../usecases/battleUseCase";
 import { CardGeneratorUseCase } from "../usecases/cardGeneratorUseCase";
@@ -39,6 +40,9 @@ export class GameLoop {
   private floorNumber = 1;
   private inventoryCursorIndex = 0;
   private stepsSinceLastBattle = 0;
+  private animFrame = 0;
+  /** Jev応答待ちなど非同期処理の実行中フラグ（連打による多重実行・多重報酬を防ぐ） */
+  private isResolvingTurn = false;
 
   private jevStatus = {
     isThinking: false,
@@ -90,7 +94,8 @@ export class GameLoop {
       },
       weapon: {
         id: "w_copper",
-        name: "銅の剣",
+        // 武器覚醒ログ等で表示されるため、ハードコードせず辞書から引く
+        name: this.i18n.getEquipmentName("copper_sword"),
         prefix: "",
         element: "normal",
         attack: 10,
@@ -98,7 +103,7 @@ export class GameLoop {
       },
       shield: {
         id: "s_leather",
-        name: "革の盾",
+        name: this.i18n.getEquipmentName("leather_shield"),
         defense: 4,
       },
       inventory: {
@@ -141,7 +146,7 @@ export class GameLoop {
 
   async start(): Promise<void> {
     this.isRunning = true;
-    this.callbacks.onLogMessage("ダンジョン潜入開始... Jev AI Directorスタンバイ (22億通りDNA稼働中)", "jev");
+    this.callbacks.onLogMessage(this.i18n.t("log_dungeon_start"), "jev");
 
     window.addEventListener("keydown", async (e) => {
       if (e.code === "KeyE") {
@@ -177,15 +182,26 @@ export class GameLoop {
   private loop(): void {
     if (!this.isRunning) return;
 
-    if (this.mode === "dungeon") {
-      this.updateDungeon();
-      this.canvasRenderer.renderDungeon(this.hero, this.currentFloor, this.jevStatus);
-    } else if (this.mode === "battle" && this.battleState) {
-      this.updateBattle();
-      this.canvasRenderer.renderBattle(this.hero, this.battleState, this.jevStatus);
-    } else if (this.mode === "equip_menu") {
-      this.updateEquipMenu();
-      this.canvasRenderer.renderEquipmentMenu(this.hero, this.inventoryCursorIndex);
+    this.animFrame++;
+
+    // 1フレーム内で例外が出てもrequestAnimationFrameの連鎖を切らない
+    // （切れるとゲーム画面が固まったまま操作不能になる）
+    try {
+      if (this.mode === "dungeon") {
+        this.updateDungeon();
+      } else if (this.mode === "battle" && this.battleState) {
+        void this.updateBattle();
+      } else if (this.mode === "equip_menu") {
+        this.updateEquipMenu();
+      } else if (this.mode === "paused") {
+        // カードモーダル表示中の入力は溜めずに捨てる（閉じた直後の暴発防止）
+        this.inputHandler.flush();
+      }
+
+      // update内でモード・状態が切り替わるため、描画は必ず「更新後の状態」で分岐する
+      this.renderCurrentState();
+    } catch (err) {
+      console.error("Game loop frame failed", err);
     }
 
     requestAnimationFrame(this.loop.bind(this));
@@ -247,7 +263,7 @@ export class GameLoop {
       this.hero.inventory.equippedAccessoryId = eq.id;
     }
 
-    this.callbacks.onLogMessage(`【${eqDisp}】を装備した！`, "evolution");
+    this.callbacks.onLogMessage(this.i18n.t("log_equipped", { name: eqDisp }), "evolution");
   }
 
   private useHerbInDungeon(): void {
@@ -258,25 +274,22 @@ export class GameLoop {
     }
     if (this.hero.stats.currentHp >= this.hero.stats.maxHp) {
       this.soundEngine.playCancel();
-      this.callbacks.onLogMessage("HPはすでに満タンです！", "info");
+      this.callbacks.onLogMessage(this.i18n.t("log_hp_full"), "info");
       return;
     }
 
     this.hero.herbs--;
-    const healAmount = Math.min(35, this.hero.stats.maxHp - this.hero.stats.currentHp);
+    const healAmount = Math.min(HERB_HEAL_AMOUNT, this.hero.stats.maxHp - this.hero.stats.currentHp);
     this.hero.stats.currentHp += healAmount;
     this.soundEngine.playSpell();
-    this.callbacks.onLogMessage(
-      `${this.i18n.t("herb_used")} (+${healAmount} HP回復)`,
-      "evolution"
-    );
+    this.callbacks.onLogMessage(this.i18n.t("herb_used", { amount: healAmount }), "evolution");
   }
 
   private renderCurrentState(): void {
-    if (this.mode === "dungeon") {
+    if (this.mode === "dungeon" && this.currentFloor) {
       this.canvasRenderer.renderDungeon(this.hero, this.currentFloor, this.jevStatus);
     } else if (this.mode === "battle" && this.battleState) {
-      this.canvasRenderer.renderBattle(this.hero, this.battleState, this.jevStatus);
+      this.canvasRenderer.renderBattle(this.hero, this.battleState, this.jevStatus, this.animFrame);
     } else if (this.mode === "equip_menu") {
       this.canvasRenderer.renderEquipmentMenu(this.hero, this.inventoryCursorIndex);
     }
@@ -416,14 +429,19 @@ export class GameLoop {
     this.mode = "battle";
     this.stepsSinceLastBattle = 0;
     this.battleState = this.battleUseCase.initBattle(monster);
-    const mName = this.i18n.getMonsterName(monster.dna, monster.rarity);
-    this.callbacks.onLogMessage(`${mName} ${this.i18n.t("appeared")} [DNA: ${monster.dna.dnaHash}]`, "combat");
+    this.callbacks.onLogMessage(
+      `#${monster.dna.dnaHash} ${this.i18n.t("appeared")} [${monster.rarity}]`,
+      "combat"
+    );
   }
 
   private async updateBattle(): Promise<void> {
     if (!this.battleState) return;
 
     const bInput = this.inputHandler.getBattleInput();
+
+    // Jev応答待ちの間の入力は読み捨てる（連打で同じターンが二重に走るのを防ぐ）
+    if (this.isResolvingTurn) return;
 
     if (this.battleState.phase === "command_select") {
       if (bInput.cursorDelta !== 0) {
@@ -484,23 +502,45 @@ export class GameLoop {
         this.battleState.currentMessageIndex++;
 
         if (this.battleState.currentMessageIndex >= this.battleState.turnMessages.length) {
-          await this.triggerMonsterTurn();
+          if (this.battleState.pendingActor === "monster") {
+            // 勇者の行動が終わった → モンスターの反撃へ
+            this.isResolvingTurn = true;
+            try {
+              await this.triggerMonsterTurn();
+            } finally {
+              this.isResolvingTurn = false;
+            }
+          } else if (this.battleState) {
+            // モンスターの行動が終わった / 行動不成立 → コマンド選択に戻す
+            this.battleState.phase = "command_select";
+            this.battleState.currentMessageIndex = Math.max(0, this.battleState.turnMessages.length - 1);
+          }
         }
       }
     } else if (this.battleState.phase === "victory") {
       if (bInput.confirmPressed) {
         this.soundEngine.playVictory();
-        await this.handleVictory(this.battleState.monster);
+        this.isResolvingTurn = true;
+        try {
+          await this.handleVictory(this.battleState.monster);
+        } finally {
+          this.isResolvingTurn = false;
+        }
       }
     } else if (this.battleState.phase === "defeat") {
       if (bInput.confirmPressed) {
         this.soundEngine.playDefeat();
-        alert(`${this.i18n.t("defeat")} (B${this.floorNumber}F)`);
-        this.hero = this.createInitialHero();
-        this.floorNumber = 1;
-        this.mode = "dungeon";
-        this.battleState = null;
-        await this.generateFloor();
+        this.isResolvingTurn = true;
+        try {
+          alert(`${this.i18n.t("defeat")} (B${this.floorNumber}F)`);
+          this.hero = this.createInitialHero();
+          this.floorNumber = 1;
+          this.mode = "dungeon";
+          this.battleState = null;
+          await this.generateFloor();
+        } finally {
+          this.isResolvingTurn = false;
+        }
       }
     } else if (this.battleState.phase === "escaped") {
       if (bInput.confirmPressed) {
@@ -594,8 +634,12 @@ export class GameLoop {
       this.jevStatus.isThinking = false;
     }
 
-    this.mode = "dungeon";
     this.battleState = null;
+    // onCardGenerated がカードモーダルを開いて pause(true) 済みの場合があるため、
+    // ここで無条件に "dungeon" へ戻すとモーダルの裏でダンジョンが動いてしまう
+    if (this.mode !== "paused") {
+      this.mode = "dungeon";
+    }
   }
 
   private async generateFloor(): Promise<void> {
@@ -630,7 +674,7 @@ export class GameLoop {
       }
 
       this.callbacks.onLogMessage(
-        `B${floor.floorNumber}F に到達。危険度: ★${floor.dangerScore.toFixed(1)}`,
+        this.i18n.t("log_floor_reached", { floor: floor.floorNumber, danger: floor.dangerScore.toFixed(1) }),
         "jev"
       );
     } catch (err) {

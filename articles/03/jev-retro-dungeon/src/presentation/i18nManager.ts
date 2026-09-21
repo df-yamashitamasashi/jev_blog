@@ -4,7 +4,6 @@
  */
 
 import { LanguageCode, I18N_DICTIONARIES, TranslationDictionary } from "../domain/i18nTypes";
-import { MonsterDNA, DNA_CATALOG } from "../domain/dnaModels";
 
 export class I18nManager {
   private currentLang: LanguageCode = "ja";
@@ -78,37 +77,6 @@ export class I18nManager {
         input.placeholder = this.t(key);
       }
     });
-  }
-
-  /**
-   * モンスターのDNAとレア度から、現在言語に即した名前を自然に合成
-   */
-  getMonsterName(dna: MonsterDNA, rarity: string): string {
-    const palette = DNA_CATALOG.palettes.find((p) => p.id === dna.paletteGene) || DNA_CATALOG.palettes[0];
-    const body = DNA_CATALOG.bodies.find((b) => b.id === dna.bodyGene) || DNA_CATALOG.bodies[0];
-
-    const prefixKey = `prefix_${palette.id.replace("p_", "")}` as keyof TranslationDictionary;
-    const raceKey = `race_${body.nameKey}` as keyof TranslationDictionary;
-
-    const prefix = this.t(prefixKey);
-    const race = this.t(raceKey);
-
-    let suffix = "";
-    if (rarity === "Rare") {
-      suffix = this.t("suffix_knight");
-    } else if (rarity === "Epic") {
-      suffix = this.t("suffix_lord");
-    } else if (rarity === "Legendary") {
-      suffix = this.t("suffix_king");
-    }
-
-    if (this.currentLang === "ja" || this.currentLang === "zh" || this.currentLang === "ko") {
-      return `${prefix}${race}${suffix ? suffix : ""}`;
-    } else if (this.currentLang === "fr" || this.currentLang === "it") {
-      return suffix ? `${race} ${suffix} ${prefix}` : `${race} ${prefix}`;
-    } else {
-      return suffix ? `${prefix} ${race} ${suffix}` : `${prefix} ${race}`;
-    }
   }
 
   /**

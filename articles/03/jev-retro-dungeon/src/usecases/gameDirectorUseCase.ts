@@ -15,12 +15,16 @@ import {
 import { BaseEquipment, EquipmentSlot } from "../domain/equipmentModels";
 import { GenerativeMonsterUseCase } from "./generativeMonsterUseCase";
 import { MAP_COLS, MAP_ROWS } from "../domain/constants";
+import { I18nManager } from "../presentation/i18nManager";
+import { TranslationDictionary } from "../domain/i18nTypes";
 
 export class GameDirectorUseCase {
   private readonly generativeMonsterUseCase: GenerativeMonsterUseCase;
+  private readonly i18n: I18nManager;
 
-  constructor(private readonly jevClient: IJevClient) {
+  constructor(private readonly jevClient: IJevClient, i18n?: I18nManager) {
     this.generativeMonsterUseCase = new GenerativeMonsterUseCase(jevClient);
+    this.i18n = i18n ?? new I18nManager();
   }
 
   /**
@@ -265,7 +269,8 @@ export class GameDirectorUseCase {
 
     return {
       action,
-      spellName: action === "spell" ? "ファイア" : undefined,
+      // 表示テキストではなくスペルID（"fire"）を返し、ローカライズはUI側のspell_fireキーで行う
+      spellName: action === "spell" ? "fire" : undefined,
       latencyMs,
       isSimulated,
     };
@@ -317,27 +322,36 @@ export class GameDirectorUseCase {
     const prefixAns = response.answers["prefixName"];
     const bonusAns = response.answers["attackBonus"];
 
-    const pMap: Record<string, { prefix: string; elem: ElementType }> = {
-      holy: { prefix: "聖なる", elem: "golden" },
-      flame: { prefix: "ほのおの", elem: "crimson" },
-      thunder: { prefix: "いなずまの", elem: "frost" },
-      light: { prefix: "ひかりの", elem: "golden" },
-      miracle: { prefix: "きせきの", elem: "normal" },
+    // プレフィックスは現在のUI言語でローカライズして武器名を合成する
+    // （固有の武器種名は保持せず、汎用の「剣」ベース名 + プレフィックスで再構成する。
+    //   これによりどの言語でも「Xの」のような日本語文法に依存せず一貫して組み立てられる）
+    const pMap: Record<string, { prefixKey: keyof TranslationDictionary; elem: ElementType }> = {
+      holy: { prefixKey: "weapon_prefix_holy", elem: "golden" },
+      flame: { prefixKey: "weapon_prefix_flame", elem: "crimson" },
+      thunder: { prefixKey: "weapon_prefix_thunder", elem: "frost" },
+      light: { prefixKey: "weapon_prefix_light", elem: "golden" },
+      miracle: { prefixKey: "weapon_prefix_miracle", elem: "normal" },
     };
 
     const selected = pMap[prefixAns?.type === "choice" ? prefixAns.choice : "flame"] || pMap.flame;
     const bonus = Math.round((bonusAns?.type === "score" ? bonusAns.score : 2.0) * 3);
+    const prefix = this.i18n.t(selected.prefixKey);
+    const oldWeaponName = hero.weapon.name;
 
     const newWeapon: Weapon = {
       id: `wpn_${Date.now()}`,
-      name: `${selected.prefix}${hero.weapon.name.replace(/^.*の/, "")}`,
-      prefix: selected.prefix,
+      name: `${prefix} ${this.i18n.t("weapon_base_name")}`.trim(),
+      prefix,
       attack: hero.weapon.attack + bonus,
       element: selected.elem,
       level: hero.weapon.level + 1,
     };
 
-    const awakeningText = `なんと ${hero.weapon.name} が ${newWeapon.name} に覚醒した！（こうげき力 +${bonus}）`;
+    const awakeningText = this.i18n.t("weapon_awakened_detail", {
+      oldName: oldWeaponName,
+      newName: newWeapon.name,
+      bonus,
+    });
 
     return { weapon: newWeapon, awakeningText, latencyMs, isSimulated };
   }

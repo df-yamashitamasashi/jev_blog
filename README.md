@@ -41,13 +41,15 @@ jev_blog/
 │   │       ├── README.md               # 拡張機能の詳細ドキュメント
 │   │       ├── src/                    # Domain, Adapters, UseCases, VSCode Presentation
 │   │       └── test/                   # Vitest 単体テストスイート (12 tests)
-│   └── 03/                             # Vol. 3: リアルタイム・レトロダンジョンバトル
+│   └── 03/                             # Vol. 3: 王道レトロダンジョンRPG (22億通りDNAモンスター & BGM自動作曲)
 │       ├── 03_jev_retro_dungeon_game.md # 技術解説記事
-│       └── jev-retro-dungeon/          # 8-bit ゲーム本体 (Clean Architecture)
+│       ├── README.md                   # バイリンガル（英日）詳細ドキュメント
+│       └── jev-retro-dungeon/          # ゲーム本体 & ギャラリー (Clean Architecture)
 │           ├── package.json
 │           ├── index.html              # レトロUI & CRTスキャンライン
+│           ├── gallery.html            # 22億通りDNAモンスター検証ギャラリー
 │           ├── src/                    # Domain, Adapters, UseCases, Presentation
-│           └── test/                   # Vitest 単体テストスイート (7 tests)
+│           └── test/                   # Vitest 単体テストスイート (4ファイル・22 tests)
 └── docs/                               # 開発ログ・設計ドキュメント
 ```
 
@@ -56,7 +58,7 @@ jev_blog/
 ## クイックスタート
 
 ### 共通前提
-TypeSafe AI の API キーを取得し、環境変数 `TYPESAFE_API_KEY` に設定してください。
+TypeSafe AI の API キーを取得し、環境変数 `TYPESAFE_API_KEY` に設定してください（※未設定の場合でも内蔵シミュレーターにより即座にプレイ・動作確認が可能です）。
 ```bash
 export TYPESAFE_API_KEY="your-typesafe-api-key"
 ```
@@ -93,6 +95,22 @@ code --install-extension jev-companion-0.1.0.vsix
 #### 初期設定 (APIキー)
 VSCode 画面左下の歯車アイコン ⚙️ ->「設定」（または `Cmd+,`）から `jev` を検索し、**`Jev: Api Key`** に取得した API キーを入力（または環境変数 `TYPESAFE_API_KEY` を設定）すれば完了です。
 詳細は [拡張機能README](./articles/02/vscode-jev-companion/README.md) をご覧ください。
+
+### 3. Jev レトロダンジョンRPGの起動 (Vol. 3)
+```bash
+cd articles/03/jev-retro-dungeon
+
+# 依存パッケージのインストール & 単体テスト (22 tests 全パス)
+npm install
+npm test
+
+# 開発用ローカルサーバーの起動 (Vite)
+npm run dev
+```
+
+ブラウザで `http://localhost:3000/` を開くとゲームが起動します。
+また、`http://localhost:3000/gallery.html` で22億通りのDNAモンスターを心ゆくまで生成・検証できるモンスターギャラリーを利用可能です。
+詳細は [ゲームREADME](./articles/03/README.md) をご覧ください。
 
 ---
 

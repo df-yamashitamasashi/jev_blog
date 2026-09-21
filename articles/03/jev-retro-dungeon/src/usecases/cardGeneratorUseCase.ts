@@ -5,9 +5,15 @@
 
 import { Monster, Hero, CardData } from "../domain/models";
 import { JevClient } from "../adapters/jevClient";
+import { I18nManager } from "../presentation/i18nManager";
+import { TranslationDictionary } from "../domain/i18nTypes";
 
 export class CardGeneratorUseCase {
-  constructor(private readonly jevClient: JevClient) {}
+  private readonly i18n: I18nManager;
+
+  constructor(private readonly jevClient: JevClient, i18n?: I18nManager) {
+    this.i18n = i18n ?? new I18nManager();
+  }
 
   /**
    * 討伐モンスターと戦闘記録からレトロRPG風カードデータを生成
@@ -74,46 +80,53 @@ export class CardGeneratorUseCase {
     const scoreAns = response.answers["dangerScore"];
     const loreAns = response.answers["flavorLore"];
 
-    const titleMap: Record<string, string> = {
-      miracle_slayer: "不撓不屈の勇者",
-      blade_master: "剛剣の勇士",
-      abyss_breaker: "魔窟の討伐者",
-      dragon_vanquisher: "竜討の英傑",
-      legendary_hero: "伝説の英傑",
+    // カードに刻まれる称号・フレーバーは現在のUI言語でローカライズして表示する
+    const titleMap: Record<string, keyof TranslationDictionary> = {
+      miracle_slayer: "card_title_miracle_slayer",
+      blade_master: "card_title_blade_master",
+      abyss_breaker: "card_title_abyss_breaker",
+      dragon_vanquisher: "card_title_dragon_vanquisher",
+      legendary_hero: "card_title_legendary_hero",
     };
 
-    const loreMap: Record<string, string> = {
-      lore_a: "迷宮の深淵に棲みつき、幾多の冒険者を屠ってきた魔物。勇者の刃の前に散った。",
-      lore_b: "魔力を帯びたその瞳は暗闇を照らし、侵入者を捕食する。いま、その魂はカードへと封じられた。",
-      lore_c: "一撃必殺の牙を持つ凶悪な魔獣。死闘の末に討ち取られ、その名は歴史の1ページとなる。",
-      lore_d: "洞窟の主として君臨した脅威。勇者の放ちし一閃により、静寂が訪れた。",
+    const loreMap: Record<string, keyof TranslationDictionary> = {
+      lore_a: "card_lore_a",
+      lore_b: "card_lore_b",
+      lore_c: "card_lore_c",
+      lore_d: "card_lore_d",
     };
 
     const chosenTitleKey = titleAns?.type === "choice" ? titleAns.choice : "legendary_hero";
     const dangerScore = scoreAns?.type === "score" ? scoreAns.score : 2.5;
     const chosenLoreKey = loreAns?.type === "choice" ? loreAns.choice : "lore_a";
 
-    const title = titleMap[chosenTitleKey] || "不撓不屈の勇者";
-    const flavorText = loreMap[chosenLoreKey] || loreMap.lore_a;
+    const title = this.i18n.t(titleMap[chosenTitleKey] || titleMap.legendary_hero);
+    const flavorText = this.i18n.t(loreMap[chosenLoreKey] || loreMap.lore_a);
 
     const speedGrade = monster.agility >= 14 ? "S" : monster.agility >= 9 ? "A" : "B";
 
     const card: CardData = {
       id: `card_${Date.now()}`,
-      title: monster.name,
+      title: `#${monster.dna.dnaHash}`,
       subtitle: `【${title}】`,
       monsterType: monster.type,
       element: monster.element,
       rarity: monster.rarity,
       stats: {
+        maxHp: monster.maxHp,
         attack: monster.attack,
         defense: monster.defense,
         speed: speedGrade,
+        agility: monster.agility,
         dangerScore,
+      },
+      rewards: {
+        exp: monster.expReward,
+        gold: monster.goldReward,
       },
       dna: monster.dna,
       flavorText,
-      slayerName: "勇者 (Hero)",
+      slayerName: this.i18n.t("hero"),
       floor,
       timestamp: Date.now(),
       jevConfidence: titleAns?.type === "choice" ? titleAns.confidence : 0.9,

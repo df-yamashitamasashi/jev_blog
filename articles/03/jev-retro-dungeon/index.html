@@ -230,8 +230,10 @@
         border: 3px solid var(--accent-gold);
         padding: 16px;
         border-radius: 6px;
-        max-width: 440px;
-        width: 90%;
+        max-width: 460px;
+        max-height: 94vh;
+        overflow-y: auto;
+        width: 92%;
         text-align: center;
         box-shadow: 0 0 30px rgba(252, 216, 0, 0.3);
       }
@@ -246,8 +248,14 @@
       #cardModalCanvas {
         border: 2px solid #555;
         margin-bottom: 10px;
-        max-width: 100%;
+        /* canvasは論理サイズの2倍の解像度で描いているため、CSS側で等倍まで縮めて表示する
+           （縮小表示＝共有・保存時は高解像度のまま、画面上は文字が潰れない） */
+        /* width/heightをautoにしたうえで両方にmaxを指定することで、
+           縦が画面に収まらない場合も縦横比を保ったまま縮む */
+        width: auto;
         height: auto;
+        max-width: min(400px, 100%);
+        max-height: 72vh;
       }
     </style>
   </head>
@@ -306,12 +314,12 @@
             <span data-i18n="ui_controls_title">🎮 CONTROLS</span>
           </div>
           <div class="controls-list">
-            <div><span class="key">WASD / 矢印</span> : <span data-i18n="ui_ctrl_move">移動 / コマンド選択</span></div>
+            <div><span class="key" data-i18n="ui_ctrl_keys_move">WASD / 矢印</span> : <span data-i18n="ui_ctrl_move">移動 / コマンド選択</span></div>
             <div><span class="key">SPACE / ENTER / Z</span> : <span data-i18n="ui_ctrl_action">決定 / 宝箱調べる</span></div>
             <div><span class="key">ESC / X</span> : <span data-i18n="ui_ctrl_back">戻る / キャンセル</span></div>
             <div><span class="key">E</span> : <span data-i18n="ui_ctrl_equip">E: そうび画面 (着脱変更)</span></div>
             <div><span class="key">H</span> : <span data-i18n="ui_ctrl_item">H: 道具を使う (やくそう回復)</span></div>
-            <div><span class="key">B</span> : <span>即時エンカウント (Battle)</span></div>
+            <div><span class="key">B</span> : <span data-i18n="ui_ctrl_battle">即時エンカウント (Battle)</span></div>
             <div style="margin-top: 6px; color: var(--accent-gold); font-size: 13px;" data-i18n="ui_ctrl_hint">
               宝箱から装備品ドロップ！22億通りのDNAモンスターを討伐せよ！
             </div>
@@ -335,7 +343,7 @@
     <div id="cardModal" class="modal-overlay">
       <div class="modal-content">
         <div class="modal-title" data-i18n="ui_card_title">🃏 モンスター討伐カード獲得！ 🃏</div>
-        <canvas id="cardModalCanvas" width="360" height="520"></canvas>
+        <canvas id="cardModalCanvas" width="800" height="1240"></canvas>
         <div style="display: flex; gap: 8px; justify-content: center; margin-top: 8px;">
           <button id="downloadCardBtn" class="btn btn-gold" data-i18n="ui_btn_save_png">PNGで保存</button>
           <button id="shareCardBtn" class="btn" data-i18n="ui_btn_share_x">X (Twitter) で共有</button>

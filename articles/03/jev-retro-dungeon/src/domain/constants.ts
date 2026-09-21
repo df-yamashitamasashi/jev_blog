@@ -10,6 +10,7 @@ export const CANVAS_HEIGHT = 530;
 export const TILE_SIZE = 32;
 export const MAP_COLS = 20;
 export const MAP_ROWS = 15;
+export const HERB_HEAL_AMOUNT = 35;
 
 // Classic 8-bit Retro RPG Palette
 export const RETRO_PALETTE = {
@@ -20,6 +21,9 @@ export const RETRO_PALETTE = {
   textGold: "#fcd800",
   textCyan: "#00e8d8",
   textRed: "#e40058",
+  textGreen: "#00d858",
+  // 黒背景での副次テキスト用（wallStoneは暗すぎて読めないため）
+  textDim: "#a0a0c8",
   wallStone: "#6c6c6c",
   wallStoneDark: "#3c3c3c",
   floorStone: "#887000",

@@ -80,7 +80,8 @@ describe("CardGeneratorUseCase (Retro RPG Style)", () => {
   it("should generate a rich retro TCG card data from battle", async () => {
     const { card, latencyMs } = await cardGenerator.generateMonsterCard(mockMonster, mockHero, 3);
 
-    expect(card.title).toBe(mockMonster.name);
+    // カードタイトルはフレーバー名ではなくDNAハッシュ由来のIDを表示する
+    expect(card.title).toBe(`#${mockMonster.dna!.dnaHash}`);
     expect(card.subtitle).toBeDefined();
     expect(card.monsterType).toBe("dragon_lord");
     expect(card.element).toBe("crimson");
@@ -88,7 +89,8 @@ describe("CardGeneratorUseCase (Retro RPG Style)", () => {
     expect(card.stats.attack).toBe(mockMonster.attack);
     expect(card.stats.dangerScore).toBeGreaterThan(0);
     expect(card.flavorText).toBeDefined();
-    expect(card.slayerName).toContain("勇者");
+    // slayerNameは現在のUI言語（デフォルトja）に応じてi18nの"hero"キーから決まる
+    expect(card.slayerName).toBe("ゆうしゃ");
     expect(latencyMs).toBeGreaterThan(0);
   });
 });
