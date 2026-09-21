@@ -1,0 +1,88 @@
+{
+  "name": "jev-companion",
+  "displayName": "Jev Companion",
+  "description": "High-speed, confidence-driven AI decision companion for VSCode powered by TypeSafe Jev (System One)",
+  "version": "0.1.0",
+  "publisher": "typesafe-ai-community",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Linters",
+    "Programming Languages",
+    "Machine Learning"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "jev.analyzeSelection",
+        "title": "Jev: Analyze Selected Code",
+        "category": "Jev"
+      },
+      {
+        "command": "jev.routeIntent",
+        "title": "Jev: Smart Intent Dispatcher",
+        "category": "Jev"
+      },
+      {
+        "command": "jev.toggleDiagnostics",
+        "title": "Jev: Toggle Real-time Diagnostics",
+        "category": "Jev"
+      }
+    ],
+    "configuration": {
+      "type": "object",
+      "title": "Jev Companion Configuration",
+      "properties": {
+        "jev.apiKey": {
+          "type": "string",
+          "default": "",
+          "description": "TypeSafe AI API Key (can also be set via TYPESAFE_API_KEY environment variable)."
+        },
+        "jev.baseUrl": {
+          "type": "string",
+          "default": "https://api.typesafe.ai",
+          "description": "TypeSafe AI API Base URL."
+        },
+        "jev.model": {
+          "type": "string",
+          "default": "jev-latest",
+          "description": "Jev model name."
+        },
+        "jev.confidenceThreshold": {
+          "type": "number",
+          "default": 0.85,
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Minimum confidence required to report diagnostics without human review."
+        },
+        "jev.enableOnSave": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically run Jev security diagnostics when a document is saved."
+        },
+        "jev.enableSpeculativeGate": {
+          "type": "boolean",
+          "default": true,
+          "description": "Gate LLM calls with fast speculative decision making."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run build",
+    "build": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "@types/vscode": "^1.85.0",
+    "typescript": "^5.3.3",
+    "vitest": "^1.3.1"
+  }
+}

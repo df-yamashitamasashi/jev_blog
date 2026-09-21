@@ -2,7 +2,12 @@
 __pycache__/
 .ruff_cache/
 *.md
+!articles/**/README.md
 docs/
 .flake8
 .mypy_cache/
 .DS_Store
+node_modules/
+dist/
+*.vsix
+.vscode-test/
