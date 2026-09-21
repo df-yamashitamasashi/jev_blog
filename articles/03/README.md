@@ -38,7 +38,7 @@ All game balance decisions—dungeon layout parameters, monster genetic recombin
    - Pure Web Audio API chiptune synthesis using square waves, triangle waves, and white noise.
    - For every descending floor, Jev AI composes a unique ambient musical track matching the floor's elemental atmosphere.
 
-6. **🃏 Slaying Victory NFT-Style Collectible Cards**
+6. **🃏 Slaying Victory Collectible Cards**
    - Defeating monsters triggers Jev to generate a unique commemorative card with title, danger score, DNA hash, and flavor lore.
    - One-click PNG image export and sharing to X (Twitter).
 
@@ -117,7 +117,7 @@ Copyright (c) 2026 Masashi Yamashita.
 ### 📖 概要
 **JEV RETRO DUNGEON（Jev レトロダンジョン）** は、**TypeSafe Jev System One AI エンジン** をフル活用した本格的王道レトロローグライクRPGです。ファミコン由来のチップチューンと、スーファミ級の多階調ドット絵と、現代AIによる超高速意思決定を融合させ、**2.2億通り（221,184,000通り）のジェネラティブDNAモンスター**、**Web Audio APIによるフロア別リアルタイム作曲BGM**、**装備の収集・着脱システム**、そして**世界8言語の完全多言語対応**を実現しています。
 
-ダンジョンマップの生成から、モンスターのDNA配合、エンカウント歩数判定、戦闘時の敵AI戦術、武器の二つ名覚醒、討伐NFTカードの自動生成に至るまで、すべてのゲームバランスを Jev System One がミリ秒単位でリアルタイムにディレクションします。
+ダンジョンマップの生成から、モンスターのDNA配合、エンカウント歩数判定、戦闘時の敵AI戦術、武器の二つ名覚醒、討伐カードの自動生成に至るまで、すべてのゲームバランスを Jev System One がミリ秒単位でリアルタイムにディレクションします。
 
 ---
 
@@ -145,7 +145,7 @@ Copyright (c) 2026 Masashi Yamashita.
    - 矩形波・三角波・ノイズジェネレーターによるピュアレトロ音源。
    - フロアの属性（溶岩、氷結、虚無など）に合わせて、Jevがスケール・テンポ・アルペジオ・ベースラインを即興で作曲。
 
-6. **🃏 モンスター討伐NFTカード生成・保存・共有**
+6. **🃏 モンスター討伐カード生成・保存・共有**
    - モンスター撃破時に、戦闘データ（死闘度、DNAハッシュ、二つ名、図鑑説明文）を刻んだ記念カードを自動生成。
    - ワンクリックでPNG画像ダウンロード保存、およびX（Twitter）への共有が可能。
 

@@ -119,9 +119,20 @@ window.addEventListener("DOMContentLoaded", () => {
     bgmComposer
   );
 
-  closeCardBtn.addEventListener("click", () => {
+  const closeCardModal = () => {
+    if (cardModal.style.display !== "flex") return;
     cardModal.style.display = "none";
     gameLoop.pause(false);
+  };
+
+  closeCardBtn.addEventListener("click", closeCardModal);
+
+  window.addEventListener("keydown", (e) => {
+    if (cardModal.style.display !== "flex") return;
+    if (e.code === "Escape" || e.code === "KeyX" || e.code === "Backspace") {
+      e.preventDefault();
+      closeCardModal();
+    }
   });
 
   downloadCardBtn.addEventListener("click", () => {

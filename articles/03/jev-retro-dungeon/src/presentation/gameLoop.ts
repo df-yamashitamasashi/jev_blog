@@ -618,7 +618,7 @@ export class GameLoop {
       }
     }
 
-    // 討伐モンスターのNFTカード生成＆ポップアップ
+    // 討伐モンスターのカード生成＆ポップアップ
     this.jevStatus.isThinking = true;
     try {
       const { card, latencyMs, isSimulated } = await this.cardGenerator.generateMonsterCard(
