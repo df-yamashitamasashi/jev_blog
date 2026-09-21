@@ -100,18 +100,13 @@ src/
 
 ### 📄 License
 
-This software is released under a **Source-Available License (Personal use is free / Commercial use requires a paid license)**. It is **not** open source.
+This software and sample code is released under the **[MIT License](./jev-retro-dungeon/LICENSE)**.
 
-| Use Case | Permission |
-| :--- | :--- |
-| Personal Use (private gaming, learning, research, evaluation, non-monetized personal sharing) | **Free of Charge** |
-| Commercial Use (integration into paid products/services, internal enterprise use, deliverables to clients, paid training/course materials) | **Requires Paid License** |
-
-For commercial licensing inquiries, please contact the author in advance. Terms and pricing are negotiated individually.
+Free for both personal and commercial use, modification, and distribution (subject to the inclusion of the original copyright and permission notice).
 
 Full text: [`jev-retro-dungeon/LICENSE`](./jev-retro-dungeon/LICENSE)
 
-Copyright (c) 2026 Masashi Yamashita. All rights reserved.
+Copyright (c) 2026 Masashi Yamashita.
 
 ---
 ---
@@ -199,19 +194,10 @@ npm run build
 
 ### 📄 ライセンス
 
-**個人利用は無償 / 商用利用は有償** のソースコード公開ライセンスです（オープンソースではありません）。
+本ソフトウェアおよびサンプルコードは **[MIT ライセンス](./jev-retro-dungeon/LICENSE)** のもとで公開されています。
 
-| 用途 | 可否 |
-| :--- | :--- |
-| 個人利用（私的な遊び・学習・研究・評価・収益化しない個人発信） | **無償** |
-| 商用利用（販売／収益化する製品・サービスへの組み込み、営利組織での社内利用、顧客への納品物、有償の研修・教材） | **要 有償ライセンス** |
-
-商用利用をご検討の場合は事前にご連絡ください。条件・価格は個別に協議のうえ決定します。
-
-> **License (English)**
-> Source-available, **not** open source. Personal use is free of charge;
-> any commercial use requires a paid license obtained in advance.
+商用・非商用を問わず、複製・改変・再配布・自作プロジェクトへの組み込みなど、自由にご利用いただけます（著作権表示の保持が必要です）。
 
 全文: [`jev-retro-dungeon/LICENSE`](./jev-retro-dungeon/LICENSE)
 
-Copyright (c) 2026 Masashi Yamashita. All rights reserved.
+Copyright (c) 2026 Masashi Yamashita.

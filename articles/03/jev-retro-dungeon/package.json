@@ -2,7 +2,7 @@
   "name": "jev-retro-dungeon",
   "version": "1.0.0",
   "description": "Retro Dungeon Battle Game powered by TypeSafe Jev (System One AI Director)",
-  "license": "SEE LICENSE IN LICENSE",
+  "license": "MIT",
   "author": "Masashi Yamashita",
   "private": true,
   "type": "module",
