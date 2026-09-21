@@ -14,7 +14,7 @@ export interface ChoiceQuestionDefinition {
 export interface ScoreQuestionDefinition {
   type: "score";
   instructions?: string;
-  criteria?: Record<string, string>;
+  criteria: string[];
 }
 
 export interface NoulQuestionDefinition {

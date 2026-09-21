@@ -58,7 +58,15 @@ export class SecurityDiagnosticUseCase {
         },
         risk_severity: {
           type: "score",
-          instructions: "Score the severity of the risk from 1 (trivial/info) to 5 (critical security issue).",
+          instructions:
+            "Rate the severity of the security or quality risk from 0 (trivial) to 4 (critical).",
+          criteria: [
+            "0: Trivial cosmetic issue or standard code",
+            "1: Minor quality improvement or missing defensive check",
+            "2: Moderate error handling flaw or poor practice",
+            "3: Serious risk: potential injection or unhandled error",
+            "4: Critical exploit: hardcoded credential, secret key, or remote code execution",
+          ],
         },
       },
     });
@@ -96,7 +104,7 @@ export class SecurityDiagnosticUseCase {
     }
 
     const severityLevel =
-      highestSeverityScore >= 4 ? "error" : highestSeverityScore === 3 ? "warning" : "info";
+      highestSeverityScore >= 3 ? "error" : highestSeverityScore === 2 ? "warning" : "info";
 
     let message = "";
     let suggestedFix: string | undefined;

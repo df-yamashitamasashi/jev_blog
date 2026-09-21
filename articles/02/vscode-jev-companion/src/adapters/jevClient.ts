@@ -66,52 +66,87 @@ export class JevHttpClient implements IJevClient {
       questions: request.questions,
     };
 
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), this.timeoutMs);
+    const maxRetries = 1;
+    let lastError: Error | null = null;
 
-    try {
-      const res = await this.fetchFn(url, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${this.apiKey}`,
-        },
-        body: JSON.stringify(payload),
-        signal: controller.signal,
-      });
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), this.timeoutMs);
 
-      if (!res.ok) {
-        let errorBody: unknown = null;
-        try {
-          errorBody = await res.json();
-        } catch {
-          errorBody = await res.text().catch(() => null);
+      try {
+        const res = await this.fetchFn(url, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${this.apiKey}`,
+          },
+          body: JSON.stringify(payload),
+          signal: controller.signal,
+        });
+
+        if (!res.ok) {
+          let errorBody: unknown = null;
+          let detailStr = "";
+          try {
+            errorBody = await res.json();
+            if (errorBody && typeof errorBody === "object") {
+              const eb = errorBody as Record<string, unknown>;
+              if (eb.detail) {
+                detailStr = `: ${typeof eb.detail === "string" ? eb.detail : JSON.stringify(eb.detail)}`;
+              }
+            }
+          } catch {
+            errorBody = await res.text().catch(() => null);
+            if (typeof errorBody === "string" && errorBody.trim()) {
+              detailStr = `: ${errorBody.slice(0, 200)}`;
+            }
+          }
+
+          // Transient errors (503, 502, 504, 429) can be retried once
+          if ([429, 502, 503, 504].includes(res.status) && attempt < maxRetries) {
+            clearTimeout(timeoutId);
+            await new Promise((r) => setTimeout(r, 600));
+            continue;
+          }
+
+          let message = `Jev API request failed with status ${res.status}: ${res.statusText}${detailStr}`;
+          if (res.status === 503) {
+            message = `TypeSafe Jev API is temporarily busy or scaling (503 Service Unavailable). Please retry in a few seconds.${detailStr}`;
+          } else if (res.status === 422) {
+            message = `Jev API request validation failed (422 Unprocessable Entity)${detailStr}`;
+          }
+
+          throw new JevApiError(message, res.status, errorBody);
         }
-        throw new JevApiError(
-          `Jev API request failed with status ${res.status}: ${res.statusText}`,
-          res.status,
-          errorBody
-        );
-      }
 
-      const json = (await res.json()) as JevSystemOneResponse;
-      if (!json || typeof json !== "object" || !json.answers) {
-        throw new JevApiError("Malformed response structure from Jev API", res.status, json);
-      }
+        const json = (await res.json()) as JevSystemOneResponse;
+        if (!json || typeof json !== "object" || !json.answers) {
+          throw new JevApiError("Malformed response structure from Jev API", res.status, json);
+        }
 
-      return json;
-    } catch (err: unknown) {
-      if (err instanceof JevApiError) {
-        throw err;
+        return json;
+      } catch (err: unknown) {
+        if (err instanceof JevApiError) {
+          throw err;
+        }
+        if (err instanceof Error && err.name === "AbortError") {
+          lastError = new JevApiError(`Jev API request timed out after ${this.timeoutMs}ms`);
+        } else {
+          lastError = new JevApiError(
+            `Failed to communicate with Jev API: ${err instanceof Error ? err.message : String(err)}`
+          );
+        }
+
+        if (attempt < maxRetries) {
+          await new Promise((r) => setTimeout(r, 500));
+          continue;
+        }
+        throw lastError;
+      } finally {
+        clearTimeout(timeoutId);
       }
-      if (err instanceof Error && err.name === "AbortError") {
-        throw new JevApiError(`Jev API request timed out after ${this.timeoutMs}ms`);
-      }
-      throw new JevApiError(
-        `Failed to communicate with Jev API: ${err instanceof Error ? err.message : String(err)}`
-      );
-    } finally {
-      clearTimeout(timeoutId);
     }
+
+    throw lastError || new JevApiError("Jev API call failed unexpectedly");
   }
 }
