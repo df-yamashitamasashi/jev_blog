@@ -2,7 +2,8 @@
 __pycache__/
 .ruff_cache/
 *.md
-!articles/**/README.md
+!README.md
+!**/README.md
 docs/
 .flake8
 .mypy_cache/
