@@ -7,8 +7,12 @@ import { JevHttpClient, JevApiError } from "../src/adapters/jevClient";
 import { JevSystemOneResponse } from "../src/domain/models";
 
 describe("JevHttpClient", () => {
-  it("should throw JevApiError if API key is missing", async () => {
-    const client = new JevHttpClient({ apiKey: "" });
+  it("should throw JevApiError if API key is explicitly empty string even if env var exists", async () => {
+    const mockFetch = vi.fn();
+    const client = new JevHttpClient({
+      apiKey: "",
+      fetchFn: mockFetch as unknown as typeof fetch,
+    });
     await expect(
       client.systemOne({
         state: "test code",
@@ -17,6 +21,46 @@ describe("JevHttpClient", () => {
         },
       })
     ).rejects.toThrow(JevApiError);
+    expect(mockFetch).not.toHaveBeenCalled();
+  });
+
+  it("should fallback to TYPESAFE_API_KEY environment variable when apiKey option is undefined", async () => {
+    const originalEnv = process.env.TYPESAFE_API_KEY;
+    process.env.TYPESAFE_API_KEY = "env-injected-key";
+
+    const mockResponseData: JevSystemOneResponse = {
+      answers: { test_q: { type: "noul", noul: 0.8 } },
+    };
+    const mockFetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => mockResponseData,
+    });
+
+    try {
+      const client = new JevHttpClient({
+        fetchFn: mockFetch as unknown as typeof fetch,
+      });
+      const res = await client.systemOne({
+        state: "test",
+        questions: { test_q: { type: "noul" } },
+      });
+      expect(res.answers.test_q).toBeDefined();
+      expect(mockFetch).toHaveBeenCalledWith(
+        expect.stringContaining("/v1/systemone"),
+        expect.objectContaining({
+          headers: expect.objectContaining({
+            Authorization: "Bearer env-injected-key",
+          }),
+        })
+      );
+    } finally {
+      if (originalEnv !== undefined) {
+        process.env.TYPESAFE_API_KEY = originalEnv;
+      } else {
+        delete process.env.TYPESAFE_API_KEY;
+      }
+    }
   });
 
   it("should successfully parse valid Jev API response", async () => {

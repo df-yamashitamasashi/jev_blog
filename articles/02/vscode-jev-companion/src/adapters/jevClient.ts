@@ -43,9 +43,10 @@ export class JevHttpClient implements IJevClient {
 
   constructor(options: JevClientOptions = {}) {
     this.apiKey =
-      options.apiKey ||
-      (typeof process !== "undefined" && process.env?.TYPESAFE_API_KEY) ||
-      "";
+      options.apiKey !== undefined
+        ? options.apiKey
+        : (typeof process !== "undefined" && process.env?.TYPESAFE_API_KEY) ||
+          "";
     this.baseUrl = (options.baseUrl || DEFAULT_JEV_BASE_URL).replace(/\/+$/, "");
     this.timeoutMs = options.timeoutMs ?? DEFAULT_REQUEST_TIMEOUT_MS;
     this.fetchFn = options.fetchFn ?? fetch;
