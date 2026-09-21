@@ -49,58 +49,109 @@ src/
 
 ---
 
-## セットアップと開発手順
+---
 
-### 前提条件
-- Node.js >= 18.0.0
-- npm >= 9.0.0
-- VSCode >= 1.85.0
+## VSCodeへの導入方法 (Installation & Setup)
 
-### インストール
+日常利用するVSCodeに本拡張機能「Jev Companion」を導入し、有効化するまでの手順です。
+
+### 1. インストール手順（3つの方法から選択）
+
+#### 方法 A: VSIX パッケージからインストール（一番おすすめ・普段使い向け）
+配布用 `.vsix` ファイルを作成し、VSCodeに正式にインストールします。
+
 ```bash
-cd articles/02/vscode-jev-companion
+# 1. リポジトリをクローンして移動
+git clone https://github.com/df-yamashitamasashi/jev_blog.git
+cd jev_blog/articles/02/vscode-jev-companion
+
+# 2. 依存関係のインストールとビルド
 npm install
-```
-
-### 単体テストの実行 (Vitest)
-VSCode を起動することなく、モックを用いた高速な単体テストを実行できます。
-```bash
-npm test
-```
-
-### ビルド & パッケージング (VSIX 作成)
-TypeScript のコンパイルおよび VSCode インストール用 `.vsix` パッケージの作成を行います：
-```bash
-# TypeScript のビルド
 npm run build
 
-# VSIX パッケージの作成 (jev-companion-0.1.0.vsix が生成されます)
+# 3. VSIX パッケージの作成 (jev-companion-0.1.0.vsix が生成されます)
 npm run package
-```
 
-### VSCode へのインストール方法
-
-#### 1. VSIX からのインストール（普段使いにおすすめ）
-```bash
-# コマンドラインから直接インストール
+# 4. VSCode にインストール (CLI)
 code --install-extension jev-companion-0.1.0.vsix
 ```
-*または VSCode の「拡張機能」タブ（Cmd+Shift+X）→ 右上の「...」メニュー →「VSIX からのインストール...」から選択。*
 
-#### 2. ローカル拡張機能フォルダへのシンボリックリンク（開発しながら常用）
+> **GUI からインストールする場合:**
+> 1. VSCode のサイドバーで「拡張機能」アイコン（`Cmd+Shift+X` / `Ctrl+Shift+X`）を開きます。
+> 2. 拡張機能ペイン右上の「**…**」（その他のアクション）メニューをクリックします。
+> 3. 「**VSIX からのインストール... (Install from VSIX...)**」を選択し、生成された `jev-companion-0.1.0.vsix` を選択します。
+
+#### 方法 B: ローカル拡張機能フォルダへのシンボリックリンク（開発しながら常用）
+ソースコードを変更しながら常用したい場合は、VSCodeの拡張機能ディレクトリへシンボリックリンクを張ります。
 ```bash
+# macOS / Linux
 ln -s "$(pwd)" ~/.vscode/extensions/jev-companion
-```
-VSCode を再起動するか、`Developer: Reload Window` で即座に有効化されます。
 
-#### 3. 開発ホストでのデバッグ実行 (F5)
-1. VSCode で `articles/02/vscode-jev-companion` を開きます。
+# Windows (PowerShell 管理者権限)
+# New-Item -ItemType SymbolicLink -Path "$HOME\.vscode\extensions\jev-companion" -Target (Get-Location)
+```
+リンク設定後、VSCodeを再起動するか `Cmd+Shift+P` -> `Developer: Reload Window` を実行します。
+
+#### 方法 C: 開発ホストでの一時デバッグ実行 (F5)
+1. VSCode で `articles/02/vscode-jev-companion` フォルダを開きます。
 2. `F5` キー（または「実行とデバッグ」タブから「Extension」）を実行します。
-3. 起動した「拡張機能開発ホスト」ウィンドウで、任意のコードファイルを開いてコマンドを試せます。
+3. 起動した「拡張機能開発ホスト」ウィンドウで、任意のコードを開いて動作を試せます。
 
 ---
 
-## 設定項目 (`settings.json`)
+### 2. 初期設定（APIキーの設定）
+
+Jev Companion の判定エンジンを利用するには、TypeSafe AI の API キーが必要です。
+
+#### 設定方法 1: VSCode 設定画面（GUI）から
+1. `Cmd+,`（Windows: `Ctrl+,`）で設定を開きます。
+2. 検索バーに `jev` と入力します。
+3. **`Jev: Api Key`** の欄に取得した API キーを入力します。
+
+#### 設定方法 2: `settings.json` に直接記述
+```json
+{
+  "jev.apiKey": "your-typesafe-api-key",
+  "jev.confidenceThreshold": 0.85,
+  "jev.enableOnSave": true,
+  "jev.enableSpeculativeGate": true
+}
+```
+
+#### 設定方法 3: シェル環境変数で一括管理
+シェル（`~/.zshrc` など）に以下を記述しておけば、設定入力なしで自動認識されます：
+```bash
+export TYPESAFE_API_KEY="your-typesafe-api-key"
+```
+
+---
+
+### 3. 動作確認とチュートリアル
+
+1. **ステータスバーの確認**:
+   VSCode 右下に `$(sparkle) Jev: Ready` が常駐していることを確認します。
+2. **リアルタイム・セキュリティ診断（保存時）**:
+   ファイル保存時（`Cmd+S`）、Jevが自動でコードを評価し、危険度と確信度が高い場合に波線警告を表示します。波線部分で `Cmd+.`（Quick Fix）を押すとワンクリック修正が可能です。
+3. **インテリジェント・インテントディスパッチャー**:
+   コードを選択して `Cmd+Shift+P` -> **`Jev: Smart Intent Dispatcher`** を実行します。Jevがミリ秒で最適な開発者意図を分類し、確率分布を表示します。
+4. **選択範囲の即時診断**:
+   コードを選択して `Cmd+Shift+P` -> **`Jev: Analyze Selected Code`** を実行します。
+
+---
+
+## 開発者向けコマンド一覧
+
+| コマンド | 内容 |
+| :--- | :--- |
+| `npm install` | 依存関係のインストール |
+| `npm test` | Vitest による高速単体テスト実行（13テスト全件検証） |
+| `npm run build` | TypeScript コンパイル（`dist/` 出力） |
+| `npm run watch` | TypeScript 差分監視コンパイル |
+| `npm run package` | 配布用 VSIX パッケージ生成（警告ゼロ） |
+
+---
+
+## 設定項目一覧 (`settings.json`)
 
 | キー | 型 | デフォルト値 | 説明 |
 | :--- | :--- | :--- | :--- |

@@ -67,23 +67,25 @@ pip install -r articles/01/requirements.txt
 pytest articles/01/test_usecases.py
 ```
 
-### 2. VSCode拡張機能のビルド & テスト (Vol. 2)
+### 2. VSCode拡張機能の導入 & 実行 (Vol. 2)
 ```bash
 cd articles/02/vscode-jev-companion
 
-# 依存パッケージのインストール
+# 依存パッケージのインストール & 単体テスト
 npm install
-
-# 単体テストの実行 (Vitest)
 npm test
 
-# ビルド
+# ビルド & VSIX パッケージ作成
 npm run build
-
-# VSIX パッケージの作成と VSCode へのインストール
 npm run package
+
+# 普段使いの VSCode にインストール
 code --install-extension jev-companion-0.1.0.vsix
 ```
+
+#### 初期設定 (APIキー)
+VSCode の「設定（`Cmd+,`）」から `jev` を検索し、**`Jev: Api Key`** に取得した API キーを入力（または環境変数 `TYPESAFE_API_KEY` を設定）すれば完了です。
+詳細は [拡張機能README](./articles/02/vscode-jev-companion/README.md) をご覧ください。
 
 ---
 
