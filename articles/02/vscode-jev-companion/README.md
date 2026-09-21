@@ -147,6 +147,21 @@ source ~/.bashrc
 4. **選択範囲の即時診断**:
    コードを選択して `Cmd+Shift+P` -> **`Jev: Analyze Selected Code`** を実行します。
 
+#### 実機での実行例（実測レスポンス）
+同梱のテストファイル（`test/test.ts`, `test/test2.ts`）で実行した場合のリアルな出力です：
+
+- **通常コード（`test/test.ts`）を選択して実行**:
+  ```text
+  $(check) Jev System One: No security or quality risks detected. (769ms)
+  ```
+  → 不要な警告を出さず、ステータスバーにクリーンな状態が静かに通知されます。
+
+- **シークレット直書きコード（`test/test2.ts`）を選択して実行**:
+  ```text
+  [Jev Security] Potential hardcoded credential or secret detected (Prob: 94.0%, Conf: 100.0%) (584ms)
+  ```
+  → わずか **584ms** で検知。確信度（`Conf: 100.0%`）が高いため、即座にエディタ上に警告波線とQuick Fixが提示されます。
+
 ---
 
 ## 開発者向けコマンド一覧
