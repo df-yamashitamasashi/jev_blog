@@ -181,4 +181,20 @@ npm run build
 ---
 
 ### 📄 ライセンス
-MIT License
+
+**個人利用は無償 / 商用利用は有償** のソースコード公開ライセンスです（オープンソースではありません）。
+
+| 用途 | 可否 |
+| :--- | :--- |
+| 個人利用（私的な遊び・学習・研究・評価・収益化しない個人発信） | **無償** |
+| 商用利用（販売／収益化する製品・サービスへの組み込み、営利組織での社内利用、顧客への納品物、有償の研修・教材） | **要 有償ライセンス** |
+
+商用利用をご検討の場合は事前にご連絡ください。条件・価格は個別に協議のうえ決定します。
+
+> **License (English)**
+> Source-available, **not** open source. Personal use is free of charge;
+> any commercial use requires a paid license obtained in advance.
+
+全文: [`jev-retro-dungeon/LICENSE`](./jev-retro-dungeon/LICENSE)
+
+Copyright (c) 2026 Masashi Yamashita. All rights reserved.
