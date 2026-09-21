@@ -1,0 +1,8 @@
+.vscode/**
+src/**
+test/**
+tsconfig.json
+vitest.config.mts
+*.map
+.gitignore
+.DS_Store

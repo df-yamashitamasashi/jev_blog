@@ -68,18 +68,35 @@ VSCode を起動することなく、モックを用いた高速な単体テス�
 npm test
 ```
 
-### ビルド
-TypeScript のコンパイルを行います（`dist/` 配下に JS を出力）：
+### ビルド & パッケージング (VSIX 作成)
+TypeScript のコンパイルおよび VSCode インストール用 `.vsix` パッケージの作成を行います：
 ```bash
+# TypeScript のビルド
 npm run build
+
+# VSIX パッケージの作成 (jev-companion-0.1.0.vsix が生成されます)
+npm run package
 ```
 
-### VSCode でのデバッグ実行 (Run Extension)
+### VSCode へのインストール方法
+
+#### 1. VSIX からのインストール（普段使いにおすすめ）
+```bash
+# コマンドラインから直接インストール
+code --install-extension jev-companion-0.1.0.vsix
+```
+*または VSCode の「拡張機能」タブ（Cmd+Shift+X）→ 右上の「...」メニュー →「VSIX からのインストール...」から選択。*
+
+#### 2. ローカル拡張機能フォルダへのシンボリックリンク（開発しながら常用）
+```bash
+ln -s "$(pwd)" ~/.vscode/extensions/jev-companion
+```
+VSCode を再起動するか、`Developer: Reload Window` で即座に有効化されます。
+
+#### 3. 開発ホストでのデバッグ実行 (F5)
 1. VSCode で `articles/02/vscode-jev-companion` を開きます。
 2. `F5` キー（または「実行とデバッグ」タブから「Extension」）を実行します。
-3. 新しく起動した「拡張機能開発ホスト」ウィンドウで、任意のコードファイルを開き、以下のコマンドを試すことができます：
-   - `Cmd+Shift+P` -> `Jev: Analyze Selected Code`
-   - `Cmd+Shift+P` -> `Jev: Smart Intent Dispatcher`
+3. 起動した「拡張機能開発ホスト」ウィンドウで、任意のコードファイルを開いてコマンドを試せます。
 
 ---
 

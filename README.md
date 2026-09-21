@@ -79,6 +79,10 @@ npm test
 
 # ビルド
 npm run build
+
+# VSIX パッケージの作成と VSCode へのインストール
+npm run package
+code --install-extension jev-companion-0.1.0.vsix
 ```
 
 ---

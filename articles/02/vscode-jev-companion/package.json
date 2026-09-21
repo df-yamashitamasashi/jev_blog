@@ -4,6 +4,12 @@
   "description": "High-speed, confidence-driven AI decision companion for VSCode powered by TypeSafe Jev (System One)",
   "version": "0.1.0",
   "publisher": "typesafe-ai-community",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/df-yamashitamasashi/jev_blog.git",
+    "directory": "articles/02/vscode-jev-companion"
+  },
   "engines": {
     "vscode": "^1.85.0"
   },
@@ -77,11 +83,13 @@
     "vscode:prepublish": "npm run build",
     "build": "tsc -p ./",
     "watch": "tsc -watch -p ./",
-    "test": "vitest run"
+    "test": "vitest run",
+    "package": "vsce package --no-dependencies"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
     "@types/vscode": "^1.85.0",
+    "@vscode/vsce": "^4.0.0",
     "typescript": "^5.3.3",
     "vitest": "^5.0.1"
   }
