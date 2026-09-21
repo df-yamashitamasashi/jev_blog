@@ -77,7 +77,7 @@ describe("SecurityDiagnosticUseCase", () => {
     const useCase = new SecurityDiagnosticUseCase(mockClient, config);
 
     const result = await useCase.execute({
-      codeSnippet: 'const API_KEY = "sk-live-1234567890abcdef";',
+      codeSnippet: 'const STRIPE_SECRET_KEY = "sk_live_xxxxxxxxxx";',
     });
 
     expect(result).toHaveLength(1);

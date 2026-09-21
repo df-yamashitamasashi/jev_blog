@@ -1,0 +1,17 @@
+{
+  "name": "jev-retro-dungeon",
+  "version": "1.0.0",
+  "description": "8-bit Retro Dungeon Battle Game powered by TypeSafe Jev (System One AI Director)",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.5",
+    "vite": "^5.2.11",
+    "vitest": "^1.6.0"
+  }
+}

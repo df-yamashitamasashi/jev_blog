@@ -12,8 +12,8 @@ TypeSafe AI が発表した新世代の意思決定モデル **「Jev」（Syste
 | :--- | :--- | :--- | :--- |
 | **Vol. 1** | **Jev詳解（実践ユースケース5選）**<br>サポートトリアージ、セキュリティガードレール、モデルルーター、RAGリランク、エージェントスキル選択 | Python 3.12<br>`typesafe-sdk`<br>pytest, mypy, ruff | [`articles/01/`](./articles/01/) |
 | **Vol. 2** | **Jevを活用したVSCode拡張機能の構築**<br>リアルタイム波線診断、インテントディスパッチャー、投機的LLMゲートキーパー | TypeScript<br>Clean Architecture<br>VSCode API, Vitest | [`articles/02/vscode-jev-companion/`](./articles/02/vscode-jev-companion/) |
-| **Vol. 3** | **Jevを活用したRAGの構築** *(Coming Soon)* | Python / TypeScript | `articles/03/` *(準備中)* |
-| **Vol. 4** | **Jevを活用した複雑なプロンプトの構築** *(Coming Soon)* | - | `articles/04/` *(準備中)* |
+| **Vol. 3** | **Jevで創るリアルタイム・レトロダンジョンバトル**<br>AIゲームディレクター、パレットスワップ、リアルタイム装備成長、レトロTCGカード生成＆シェア | TypeScript<br>Clean Architecture<br>Vite, HTML5 Canvas, Web Audio, Vitest | [`articles/03/`](./articles/03/) |
+| **Vol. 4** | **Jevを活用したRAGの構築** *(Coming Soon)* | Python / TypeScript | `articles/04/` *(準備中)* |
 | **Vol. 5** | **Jevを活用したエージェントの構築** *(Coming Soon)* | - | `articles/05/` *(準備中)* |
 
 ---
@@ -33,14 +33,21 @@ jev_blog/
 │   │   ├── 05_agent_skill_router.py    # エージェント・スキルルーター
 │   │   ├── test_usecases.py            # 全ユースケースの単体テスト
 │   │   └── requirements.txt            # Python依存パッケージ
-│   └── 02/                             # Vol. 2: VSCode拡張機能
-│       └── vscode-jev-companion/       # 「Jev Companion」拡張機能本体 (Clean Architecture)
+│   ├── 02/                             # Vol. 2: VSCode拡張機能
+│   │   └── vscode-jev-companion/       # 「Jev Companion」拡張機能本体 (Clean Architecture)
+│   │       ├── package.json
+│   │       ├── tsconfig.json
+│   │       ├── vitest.config.ts
+│   │       ├── README.md               # 拡張機能の詳細ドキュメント
+│   │       ├── src/                    # Domain, Adapters, UseCases, VSCode Presentation
+│   │       └── test/                   # Vitest 単体テストスイート (12 tests)
+│   └── 03/                             # Vol. 3: リアルタイム・レトロダンジョンバトル
+│       ├── 03_jev_retro_dungeon_game.md # 技術解説記事
+│       └── jev-retro-dungeon/          # 8-bit ゲーム本体 (Clean Architecture)
 │           ├── package.json
-│           ├── tsconfig.json
-│           ├── vitest.config.ts
-│           ├── README.md               # 拡張機能の詳細ドキュメント
-│           ├── src/                    # Domain, Adapters, UseCases, VSCode Presentation
-│           └── test/                   # Vitest 単体テストスイート (12 tests)
+│           ├── index.html              # レトロUI & CRTスキャンライン
+│           ├── src/                    # Domain, Adapters, UseCases, Presentation
+│           └── test/                   # Vitest 単体テストスイート (7 tests)
 └── docs/                               # 開発ログ・設計ドキュメント
 ```
 
