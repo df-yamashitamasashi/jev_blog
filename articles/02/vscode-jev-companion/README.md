@@ -103,12 +103,28 @@ ln -s "$(pwd)" ~/.vscode/extensions/jev-companion
 
 Jev Companion の判定エンジンを利用するには、TypeSafe AI の API キーが必要です。
 
-#### 設定方法 1: VSCode 設定画面（GUI）から
-1. `Cmd+,`（Windows: `Ctrl+,`）で設定を開きます。
-2. 検索バーに `jev` と入力します。
-3. **`Jev: Api Key`** の欄に取得した API キーを入力します。
+#### 設定方法 1: VSCode 設定画面（GUI）から【推奨・最も確実】
+キーバインド設定やOS環境に左右されず、最も確実に設定画面を開く手順です：
+1. VSCode 画面左下にある **歯車アイコン ⚙️（管理）** をクリックし、メニューから **「設定」**（英語UIの場合は **「Settings」**）を選択します。
+   *(上部メニューバーの「Code」→「設定...」や、ショートカット `Cmd+,` / `Ctrl+,` でも開けます)*
+2. 設定画面上部の検索バーに **`jev`** と入力します。
+3. 表示された **`Jev: Api Key`** の入力欄に、取得した TypeSafe API キーを貼り付けます（入力内容は自動保存されます）。
 
-#### 設定方法 2: `settings.json` に直接記述
+#### 設定方法 2: シェル環境変数で設定【設定画面を開かずに完了】
+VSCode の設定画面を開かずに、ターミナルから一発で設定したい場合に最も確実です：
+```bash
+# macOS / Linux (zsh)
+echo 'export TYPESAFE_API_KEY="取得したAPIキー"' >> ~/.zshrc
+source ~/.zshrc
+
+# bash
+echo 'export TYPESAFE_API_KEY="取得したAPIキー"' >> ~/.bashrc
+source ~/.bashrc
+```
+設定後、VSCode を再起動（または `Cmd+Shift+P` -> `Developer: Reload Window`）すると自動認識されます。
+
+#### 設定方法 3: `settings.json` に直接記述
+コマンドパレット（`Cmd+Shift+P` / `Ctrl+Shift+P`）から `Preferences: Open User Settings (JSON)` を開き、以下を追記します：
 ```json
 {
   "jev.apiKey": "your-typesafe-api-key",
@@ -116,12 +132,6 @@ Jev Companion の判定エンジンを利用するには、TypeSafe AI の API �
   "jev.enableOnSave": true,
   "jev.enableSpeculativeGate": true
 }
-```
-
-#### 設定方法 3: シェル環境変数で一括管理
-シェル（`~/.zshrc` など）に以下を記述しておけば、設定入力なしで自動認識されます：
-```bash
-export TYPESAFE_API_KEY="your-typesafe-api-key"
 ```
 
 ---

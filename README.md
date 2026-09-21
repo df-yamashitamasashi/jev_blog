@@ -84,7 +84,7 @@ code --install-extension jev-companion-0.1.0.vsix
 ```
 
 #### 初期設定 (APIキー)
-VSCode の「設定（`Cmd+,`）」から `jev` を検索し、**`Jev: Api Key`** に取得した API キーを入力（または環境変数 `TYPESAFE_API_KEY` を設定）すれば完了です。
+VSCode 画面左下の歯車アイコン ⚙️ ->「設定」（または `Cmd+,`）から `jev` を検索し、**`Jev: Api Key`** に取得した API キーを入力（または環境変数 `TYPESAFE_API_KEY` を設定）すれば完了です。
 詳細は [拡張機能README](./articles/02/vscode-jev-companion/README.md) をご覧ください。
 
 ---
