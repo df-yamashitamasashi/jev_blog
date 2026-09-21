@@ -116,4 +116,7 @@ npm run dev
 
 ## ライセンス
 
-本リポジトリのコードは [MIT License](LICENSE) のもとで公開されています。
+本リポジトリのコードは原則として [MIT License](LICENSE) のもとで公開されています。
+
+ただし、以下のコンテンツには個別のライセンスが適用されます：
+- `articles/03/jev-retro-dungeon/`: [独自ライセンス（個人利用無償 / 商用利用有償）](./articles/03/jev-retro-dungeon/LICENSE)

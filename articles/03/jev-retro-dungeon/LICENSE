@@ -14,8 +14,10 @@ before using it.
 and documentation contained in this directory.
 
 "Personal Use" means use by an individual for private enjoyment, learning,
-study, research, evaluation, or non-monetized personal publication (for example,
-a blog post, a talk, or a portfolio piece that is not itself sold).
+study, research, evaluation, or personal publication (for example, a blog post,
+gameplay video streaming, a talk, or a portfolio piece). Personal sharing or
+commentary, including standard ad monetization through video platforms or
+personal blogs by individuals, is considered Personal Use under this license.
 
 "Commercial Use" means any use by or for the benefit of a business, or any use
 that directly or indirectly generates revenue. This includes, without
@@ -97,9 +99,10 @@ Copyright (c) 2026 Masashi Yamashita. All rights reserved.
 「本ソフトウェア」とは、本ディレクトリに含まれるソースコード、アセット、生成される
 画像・音声、およびドキュメントを指します。
 
-「個人利用」とは、個人が私的な娯楽、学習、研究、評価、または収益化を伴わない個人的な
-公表（ブログ記事、発表、ポートフォリオ等。ただしそれ自体を販売しないもの）のために
-行う利用を指します。
+「個人利用」とは、個人が私的な娯楽、学習、研究、評価、または個人的な公表（ブログ記事、
+ゲーム実況・解説動画の配信、発表、ポートフォリオ等）のために行う利用を指します。
+個人による動画配信プラットフォームの広告プログラム（YouTube等の広告収益）や個人ブログでの
+広告表示を伴う紹介・配信・解説は、本ライセンスにおいて個人利用の範囲とみなします。
 
 「商用利用」とは、事業者による利用もしくは事業者の利益のための利用、または直接・間接
 を問わず収益を生む利用を指します。以下を含みますが、これらに限られません。
