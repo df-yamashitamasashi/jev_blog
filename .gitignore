@@ -1,0 +1,8 @@
+.venv/
+__pycache__/
+.ruff_cache/
+*.md
+docs/
+.flake8
+.mypy_cache/
+.DS_Store
