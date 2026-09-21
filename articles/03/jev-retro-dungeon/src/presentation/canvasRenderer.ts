@@ -16,13 +16,41 @@ import { BaseEquipment } from "../domain/equipmentModels";
 import { GenerativeMonsterRenderer } from "./generativeRenderer";
 import { I18nManager } from "./i18nManager";
 
+/** テキストを黒縁で囲うためのオフセット（8方向） */
+const OUTLINE_OFFSETS: ReadonlyArray<readonly [number, number]> = [
+  [-1, -1], [0, -1], [1, -1],
+  [-1, 0], [1, 0],
+  [-1, 1], [0, 1], [1, 1],
+];
+
 export class CanvasRenderer {
   private ctx: CanvasRenderingContext2D;
 
+  /**
+   * 論理座標に対する実ピクセルの倍率。
+   *
+   * 等倍で描くと日本語・中国語・韓国語・ヒンディー語の字形が
+   * 1文字10〜14px相当まで潰れて判読できなくなるため、
+   * バッキングストアを2倍で確保し、描画はすべて論理座標のまま行う
+   * （CSS側は論理サイズのまま＝画面上は同じ大きさで、文字だけ精細になる）。
+   */
+  static readonly RENDER_SCALE = 2;
+
   constructor(canvas: HTMLCanvasElement, private readonly i18n: I18nManager) {
+    const scale = CanvasRenderer.RENDER_SCALE;
+
+    // 呼び出し側がCSSサイズだけを指定していても正しく高解像度化する
+    if (canvas.width !== CANVAS_WIDTH * scale || canvas.height !== CANVAS_HEIGHT * scale) {
+      canvas.width = CANVAS_WIDTH * scale;
+      canvas.height = CANVAS_HEIGHT * scale;
+    }
+    canvas.style.width = `${CANVAS_WIDTH}px`;
+    canvas.style.height = `${CANVAS_HEIGHT}px`;
+
     const context = canvas.getContext("2d");
     if (!context) throw new Error("Could not get Canvas 2D context");
     this.ctx = context;
+    this.ctx.setTransform(scale, 0, 0, scale, 0, 0);
     this.ctx.imageSmoothingEnabled = false;
   }
 
@@ -38,14 +66,18 @@ export class CanvasRenderer {
     isBold: boolean = false
   ): void {
     const ctx = this.ctx;
-    ctx.font = `${isBold ? "bold " : ""}${size}px 'DotGothic16', 'Press Start 2P', monospace, sans-serif`;
+    // ドット字形（DotGothic16）は中間サイズでアンチエイリアスがかかり
+    // 字が「かすれて」読めなくなるため、本文は Noto Sans 系で描く。
+    // 小さい文字は常に太字寄り（500→700）にして黒背景から浮かせる。
+    const weight = isBold || size <= 13 ? 700 : 500;
+    ctx.font = `${weight} ${size}px 'Noto Sans JP', 'Noto Sans SC', 'Noto Sans KR', 'Noto Sans Devanagari', sans-serif`;
     ctx.textBaseline = "top";
 
-    // 視認性を劇的に高めるドロップシャドウ（黒縁）
+    // 8方向の黒縁で囲って、どの背景色の上でも輪郭が立つようにする
     ctx.fillStyle = "#000000";
-    ctx.fillText(text, x + 1, y + 1);
-    ctx.fillText(text, x + 1, y);
-    ctx.fillText(text, x, y + 1);
+    for (const [dx, dy] of OUTLINE_OFFSETS) {
+      ctx.fillText(text, x + dx, y + dy);
+    }
 
     // 前景テキスト
     ctx.fillStyle = color;
@@ -344,7 +376,7 @@ export class CanvasRenderer {
 
       const badge = item.isEquipped ? ` ${t("equipped")}` : "";
       this.drawRetroText(`${item.name}${badge}`, 332, iy, nameColor, 14, isSelected);
-      this.drawRetroText(`  ${item.detail}`, 332, iy + 18, RETRO_PALETTE.wallStone, 12);
+      this.drawRetroText(`  ${item.detail}`, 332, iy + 18, RETRO_PALETTE.textDim, 13);
     });
 
     // 下部：操作ガイド

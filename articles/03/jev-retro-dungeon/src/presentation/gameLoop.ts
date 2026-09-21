@@ -352,7 +352,11 @@ export class GameLoop {
           this.startBattle(monster);
         } else {
           const { shouldEncounter, monster, latencyMs, isSimulated } =
-            await this.gameDirector.checkEncounter(this.hero, this.currentFloor);
+            await this.gameDirector.checkEncounter(
+              this.hero,
+              this.currentFloor,
+              this.stepsSinceLastBattle
+            );
 
           this.jevStatus.lastLatencyMs = latencyMs;
           this.jevStatus.isSimulated = isSimulated;
@@ -604,7 +608,7 @@ export class GameLoop {
     if (monster.isBoss || monster.rarity !== "Common") {
       this.jevStatus.isThinking = true;
       try {
-        const { weapon, awakeningText } = await this.gameDirector.directWeaponAwakening(this.hero);
+        const { weapon, awakeningText } = await this.gameDirector.directWeaponAwakening(this.hero, this.floorNumber);
         this.hero.weapon = weapon;
         this.callbacks.onLogMessage(awakeningText || this.i18n.t("weapon_awakened"), "evolution");
       } catch (err) {

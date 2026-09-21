@@ -55,8 +55,9 @@ export class CardRenderer {
 
     const accent = readable(pal.secondary);
 
+    // カードもゲーム画面と同じく、可読性優先で Noto Sans 系を使う
     const font = (size: number, isBold: boolean) =>
-      `${isBold ? "bold " : ""}${size}px 'DotGothic16', 'Press Start 2P', monospace, sans-serif`;
+      `${isBold || size <= 12 ? 700 : 500} ${size}px 'Noto Sans JP', 'Noto Sans SC', 'Noto Sans KR', 'Noto Sans Devanagari', sans-serif`;
 
     const drawText = (
       text: string,

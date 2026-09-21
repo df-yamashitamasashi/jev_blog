@@ -3,11 +3,11 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>⚔️ JEV RETRO DUNGEON ⚔️ | 2.2B Generative DNA Monsters</title>
+    <title>⚔️ JEV RETRO DUNGEON ⚔️ | 221M Generative DNA Monsters</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=DotGothic16&family=Press+Start+2P&family=Noto+Sans+Devanagari:wght@600;700&family=Noto+Sans+KR:wght@600;700&family=Noto+Sans+SC:wght@600;700&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Noto+Sans+JP:wght@500;700&family=Noto+Sans+SC:wght@500;700&family=Noto+Sans+KR:wght@500;700&family=Noto+Sans+Devanagari:wght@500;700&display=swap"
       rel="stylesheet"
     />
     <style>
@@ -18,7 +18,14 @@
         --accent-gold: #fcd800;
         --accent-cyan: #00e8d8;
         --accent-red: #e40058;
-        --font-retro: 'DotGothic16', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Kaku Gothic ProN', Meiryo, sans-serif;
+        /* 本文用。DotGothic16 はドット字形のため中間サイズで
+           アンチエイリアスがかかり「かすれた」見た目になる。
+           可読性を優先して Noto Sans 系を主フォントにし、
+           レトロ感はパレット・枠線・ドット絵側で担保する。 */
+        --font-retro: 'Noto Sans JP', 'Noto Sans SC', 'Noto Sans KR', 'Noto Sans Devanagari',
+          -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Kaku Gothic ProN', Meiryo, sans-serif;
+        /* ロゴ・見出し用（ラテン文字のみ） */
+        --font-display: 'Press Start 2P', 'Noto Sans JP', monospace;
       }
 
       * {
@@ -33,7 +40,9 @@
         color: #ffffff;
         font-family: var(--font-retro);
         font-size: 14px;
+        font-weight: 500;
         line-height: 1.6;
+        -webkit-font-smoothing: antialiased;
         display: flex;
         flex-direction: column;
         align-items: center;
@@ -61,7 +70,8 @@
       }
 
       h1 {
-        font-size: 22px;
+        font-family: var(--font-display);
+        font-size: 18px;
         color: var(--accent-gold);
         text-shadow: 2px 2px #000;
         letter-spacing: 1px;
@@ -117,9 +127,11 @@
 
       canvas#gameCanvas {
         display: block;
+        /* バッキングストアは2倍（1280x1060）で確保し、表示は等倍にする。
+           image-rendering: pixelated を付けると2:1縮小時に画素が間引かれて
+           文字が壊れるため、ここでは指定しない。 */
         width: 640px;
         height: 530px;
-        image-rendering: pixelated;
       }
 
       .scanlines {
@@ -151,7 +163,8 @@
         border: 2px solid var(--border-color);
         border-radius: 4px;
         padding: 12px;
-        font-size: 13px;
+        font-size: 14px;
+        line-height: 1.6;
         width: 100%;
         box-sizing: border-box;
       }
@@ -173,7 +186,7 @@
         border: 1px solid var(--border-color);
         color: #fff;
         font-family: var(--font-retro);
-        font-size: 13px;
+        font-size: 14px;
         padding: 6px 12px;
         cursor: pointer;
         font-weight: bold;
@@ -184,7 +197,7 @@
       .controls-list {
         line-height: 2.1;
         color: #c8c8e0;
-        font-size: 13px;
+        font-size: 14px;
       }
       .key {
         color: var(--accent-cyan);
@@ -201,7 +214,7 @@
         display: flex;
         flex-direction: column;
         gap: 6px;
-        font-size: 12px;
+        font-size: 13px;
         line-height: 1.5;
       }
 
@@ -264,11 +277,11 @@
       <div class="title-group">
         <h1>⚔️ JEV RETRO DUNGEON ⚔️</h1>
         <div class="subtitle" data-i18n="ui_app_subtitle">
-          22億通りのジェネラティブDNAモンスター ＆ 王道レトロ・コマンドバトル
+          2.2億通りのジェネラティブDNAモンスター ＆ 王道レトロ・コマンドバトル
         </div>
       </div>
       <div class="lang-select-group">
-        <label style="font-size: 11px; color: var(--accent-gold);">🌐 LANGUAGE:</label>
+        <label style="font-size: 12px; color: var(--accent-gold);">🌐 LANGUAGE:</label>
         <select id="langSelect" class="lang-select">
           <option value="ja">日本語 (Japanese)</option>
           <option value="en">English</option>
@@ -284,7 +297,7 @@
 
     <div class="main-container">
       <div class="canvas-wrapper">
-        <canvas id="gameCanvas" width="640" height="530"></canvas>
+        <canvas id="gameCanvas" width="1280" height="1060"></canvas>
         <div class="scanlines"></div>
       </div>
 
@@ -294,7 +307,7 @@
             <span data-i18n="ui_system_config">⚙️ SYSTEM & API CONFIG</span>
           </div>
           <div style="margin-bottom: 8px;">
-            <label style="color: #cfcfe6; font-size: 12px; font-weight: bold;" data-i18n="ui_api_key_label">TYPESAFE_API_KEY (任意):</label>
+            <label style="color: #cfcfe6; font-size: 13px; font-weight: bold;" data-i18n="ui_api_key_label">TYPESAFE_API_KEY (任意):</label>
             <input
               type="password"
               id="apiKeyInput"
@@ -321,9 +334,9 @@
             <div><span class="key">H</span> : <span data-i18n="ui_ctrl_item">H: 道具を使う (やくそう回復)</span></div>
             <div><span class="key">B</span> : <span data-i18n="ui_ctrl_battle">即時エンカウント (Battle)</span></div>
             <div style="margin-top: 6px; color: var(--accent-gold); font-size: 13px;" data-i18n="ui_ctrl_hint">
-              宝箱から装備品ドロップ！22億通りのDNAモンスターを討伐せよ！
+              宝箱から装備品ドロップ！2.2億通りのDNAモンスターを討伐せよ！
             </div>
-            <div style="margin-top: 4px; color: #a0a0c8; font-size: 12px;" data-i18n="ui_ctrl_guide">
+            <div style="margin-top: 4px; color: #a0a0c8; font-size: 13px;" data-i18n="ui_ctrl_guide">
               ※ 階段(青タイル)で地下深くへ進めます
             </div>
           </div>
@@ -332,7 +345,7 @@
         <div class="panel-box" style="flex: 1;">
           <div class="panel-title">
             <span data-i18n="ui_live_log">📡 JEV REALTIME LOG</span>
-            <span id="jevLamp" style="color: #00ff88; font-size: 8px;">● LIVE</span>
+            <span id="jevLamp" style="color: #00ff88; font-size: 10px;">● LIVE</span>
           </div>
           <div id="logContainer"></div>
         </div>

@@ -4,7 +4,8 @@
  * 
  * 8 Gene Slots:
  * Body (12) * Eyes (12) * Mouth (10) * Horns (12) * Wings (10) * Tail (10) * Aura (8) * Palette (16)
- * Total Combinations = 2,211,840,000 (Over 2.2 Billion Variations!)
+ * Total Combinations = 221,184,000 (221 Million Variations)
+ * ※ 実測値。totalGeneCombinations() と test/dnaIdentity.test.ts で検証している。
  */
 
 export interface GenePart {

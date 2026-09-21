@@ -8,7 +8,7 @@
 ## English
 
 ### 📖 Overview
-**JEV RETRO DUNGEON** is a classic retro roguelike RPG powered by the **Jev System One AI Engine**. It combines 8-bit NES-era aesthetics with modern AI-driven procedural generation, featuring over **2.2 billion generative DNA monsters**, real-time **Web Audio API chiptune BGM composition**, full **equipment and inventory management**, and dynamic **8-language localization**.
+**JEV RETRO DUNGEON** is a classic retro roguelike RPG powered by the **Jev System One AI Engine**. It combines retro pixel-art aesthetics (NES-style chiptune audio with SNES-class sprites) with modern AI-driven procedural generation, featuring **221,184,000 generative DNA monsters**, real-time **Web Audio API chiptune BGM composition**, full **equipment and inventory management**, and dynamic **8-language localization**.
 
 All game balance decisions—dungeon layout parameters, monster genetic recombination, encounter timings, dynamic combat tactics, equipment awakening, and monster collectible cards—are directed in real time by Jev System One.
 
@@ -21,8 +21,8 @@ All game balance decisions—dungeon layout parameters, monster genetic recombin
    - Starting position is always safely calibrated at the top-left (`x: 2, y: 2`).
    - Jev evaluates floor danger score, enemy density, and item drops based on the player's level and health.
 
-2. **👾 2.2 Billion Generative DNA Monsters**
-   - Monsters are composed of 4 genetic DNA chromosomes (Race, Element, Palette, Trait) resulting in over 2.2 billion unique visual and statistical combinations.
+2. **👾 221 Million Generative DNA Monsters**
+   - Monsters are composed of 8 gene slots (Body 12 / Eyes 12 / Mouth 10 / Horns 12 / Wings 10 / Tail 10 / Aura 8 / Palette 16), giving exactly 221,184,000 unique visual and statistical combinations. Every combination renders a distinct sprite.
    - Real-time generative pixel rendering on HTML5 Canvas without static sprite sheets.
 
 3. **⚔️ Classic Turn-Based Command Battle**
@@ -103,7 +103,7 @@ src/
 ## 日本語
 
 ### 📖 概要
-**JEV RETRO DUNGEON（Jev レトロダンジョン）** は、**TypeSafe Jev System One AI エンジン** をフル活用した本格的王道レトロローグライクRPGです。ファミコン・8bit時代の温かみのあるドット絵と、現代AIによる超高速意思決定を融合させ、**22億通りを超えるジェネラティブDNAモンスター**、**Web Audio APIによるフロア別リアルタイム作曲BGM**、**装備の収集・着脱システム**、そして**世界8言語の完全多言語対応**を実現しています。
+**JEV RETRO DUNGEON（Jev レトロダンジョン）** は、**TypeSafe Jev System One AI エンジン** をフル活用した本格的王道レトロローグライクRPGです。ファミコン由来のチップチューンと、スーファミ級の多階調ドット絵と、現代AIによる超高速意思決定を融合させ、**2.2億通り（221,184,000通り）のジェネラティブDNAモンスター**、**Web Audio APIによるフロア別リアルタイム作曲BGM**、**装備の収集・着脱システム**、そして**世界8言語の完全多言語対応**を実現しています。
 
 ダンジョンマップの生成から、モンスターのDNA配合、エンカウント歩数判定、戦闘時の敵AI戦術、武器の二つ名覚醒、討伐NFTカードの自動生成に至るまで、すべてのゲームバランスを Jev System One がミリ秒単位でリアルタイムにディレクションします。
 
@@ -116,7 +116,7 @@ src/
    - 階段降下時の勇者スタート位置は必ず左上の安全地帯（`x: 2, y: 2`）に配置。
    - プレイヤーのレベルや現在HPをJevがリアルタイムに分析し、フロアの危険度や宝箱のドロップ率を自動調整。
 
-2. **👾 22億通りのジェネラティブDNAモンスター**
+2. **👾 2.2億通りのジェネラティブDNAモンスター**
    - 種族（スライム、ビースト、ドラゴン、ゴーレム、キメラ等）、属性（通常、紅蓮、氷結、虚無、黄金）、カラーパレット、二つ名の4つの遺伝子コード（DNA）をJevが配合。
    - 静止画スプライトを使わず、HTML5 Canvas上にプロシージャルに巨大ドット絵を描画。
 

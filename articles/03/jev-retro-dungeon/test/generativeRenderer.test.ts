@@ -91,7 +91,7 @@ describe("Generative Monster Renderer — coverage", () => {
   });
 
   it("never writes outside the 32x32 buffer for a wide sample of DNA combinations", () => {
-    // 全組み合わせは22億通りあるため、決定論的にばらけたサンプルを網羅的に検証する
+    // 全組み合わせは2.2億通りあるため、決定論的にばらけたサンプルを網羅的に検証する
     let sampled = 0;
     for (let i = 0; i < DNA_CATALOG.bodies.length; i++) {
       for (let j = 0; j < DNA_CATALOG.horns.length; j++) {

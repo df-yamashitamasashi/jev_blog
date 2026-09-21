@@ -41,13 +41,13 @@ jev_blog/
 │   │       ├── README.md               # 拡張機能の詳細ドキュメント
 │   │       ├── src/                    # Domain, Adapters, UseCases, VSCode Presentation
 │   │       └── test/                   # Vitest 単体テストスイート (12 tests)
-│   └── 03/                             # Vol. 3: 王道レトロダンジョンRPG (22億通りDNAモンスター & BGM自動作曲)
+│   └── 03/                             # Vol. 3: 王道レトロダンジョンRPG (2.2億通りDNAモンスター & BGM自動作曲)
 │       ├── 03_jev_retro_dungeon_game.md # 技術解説記事
 │       ├── README.md                   # バイリンガル（英日）詳細ドキュメント
 │       └── jev-retro-dungeon/          # ゲーム本体 & ギャラリー (Clean Architecture)
 │           ├── package.json
 │           ├── index.html              # レトロUI & CRTスキャンライン
-│           ├── gallery.html            # 22億通りDNAモンスター検証ギャラリー
+│           ├── gallery.html            # 2.2億通りDNAモンスター検証ギャラリー
 │           ├── src/                    # Domain, Adapters, UseCases, Presentation
 │           └── test/                   # Vitest 単体テストスイート (4ファイル・22 tests)
 └── docs/                               # 開発ログ・設計ドキュメント
@@ -109,7 +109,7 @@ npm run dev
 ```
 
 ブラウザで `http://localhost:3000/` を開くとゲームが起動します。
-また、`http://localhost:3000/gallery.html` で22億通りのDNAモンスターを心ゆくまで生成・検証できるモンスターギャラリーを利用可能です。
+また、`http://localhost:3000/gallery.html` で2.2億通りのDNAモンスターを心ゆくまで生成・検証できるモンスターギャラリーを利用可能です。
 詳細は [ゲームREADME](./articles/03/README.md) をご覧ください。
 
 ---

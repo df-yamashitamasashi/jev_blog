@@ -100,6 +100,27 @@ export class JevClient implements IJevClient {
       parsedState = {};
     }
 
+    /**
+     * stateのキー名は呼び出し側ごとに異なる（heroHpRatio / heroHpRemainingRatio /
+     * monsterHpRatio、floor / floorNumber など）。
+     * 単一のキー名だけを見るとどの呼び出しでも既定値に落ちてしまい、
+     * スコアが常に同じ値を返す "効かないシミュレーター" になるため、
+     * 同義のキーを順に探して最初に見つかった数値を採用する。
+     */
+    const pickNumber = (candidates: string[], fallback: number): number => {
+      for (const key of candidates) {
+        const v = parsedState[key];
+        if (typeof v === "number" && Number.isFinite(v)) return v;
+      }
+      return fallback;
+    };
+
+    const hpRatio = pickNumber(["hpRatio", "heroHpRatio", "heroHpRemainingRatio"], 0.8);
+    const floor = pickNumber(["floor", "floorNumber"], 1);
+    const steps = pickNumber(["steps", "stepsTaken"], 0);
+    const danger = pickNumber(["dangerScore"], 2.0);
+    const kills = pickNumber(["consecutiveKills"], 0);
+
     const answers: Record<string, ChoiceAnswer | ScoreAnswer | NoulAnswer> = {};
 
     for (const [qKey, qDef] of Object.entries(request.questions)) {
@@ -107,16 +128,18 @@ export class JevClient implements IJevClient {
         const keys = Object.keys(qDef.criteria);
         // Stateの内容に応じてインテリジェントに選択
         let selectedKey = keys[0];
-        const hpRatio = typeof parsedState.hpRatio === "number" ? parsedState.hpRatio : 0.8;
-        const floor = typeof parsedState.floor === "number" ? parsedState.floor : 1;
 
         if (keys.includes("safe_rest") && hpRatio < 0.3) {
           selectedKey = "safe_rest";
         } else if (keys.includes("boss") && floor % 5 === 0) {
           selectedKey = "boss";
         } else if (keys.includes("crimson") || keys.includes("frost") || keys.includes("shadow")) {
-          const elements = keys.filter((k) => ["crimson", "frost", "shadow", "golden"].includes(k));
-          selectedKey = elements[Math.floor(Math.random() * elements.length)] || keys[0];
+          // フロア属性: 浅い階層では通常属性も出す（従来は normal が一度も選ばれなかった）
+          const elements = keys.filter((k) =>
+            ["normal", "crimson", "frost", "shadow", "golden"].includes(k)
+          );
+          const pool = floor <= 2 ? elements : elements.filter((k) => k !== "normal");
+          selectedKey = pool[Math.floor(Math.random() * pool.length)] || keys[0];
         } else {
           selectedKey = keys[Math.floor(Math.random() * keys.length)];
         }
@@ -131,20 +154,22 @@ export class JevClient implements IJevClient {
           probabilities,
         };
       } else if (qDef.type === "score") {
-        const hpRatio = typeof parsedState.hpRatio === "number" ? parsedState.hpRatio : 0.8;
-        const kills = typeof parsedState.consecutiveKills === "number" ? parsedState.consecutiveKills : 0;
-        // スコア（0.0 〜 4.0）
-        const calcScore = Math.min(4.0, Math.max(0.5, 1.5 + kills * 0.4 - (1 - hpRatio)));
+        // スコア（0.0 〜 4.0）: 階層が深いほど、また消耗しているほど高くなる
+        const calcScore = Math.min(
+          4.0,
+          Math.max(0.5, 1.0 + (floor - 1) * 0.35 + kills * 0.4 + (1 - hpRatio) * 1.2)
+        );
         answers[qKey] = {
           type: "score",
           score: Math.round(calcScore * 10) / 10,
           confidence: 0.92,
         };
       } else if (qDef.type === "noul") {
-        const hpRatio = typeof parsedState.hpRatio === "number" ? parsedState.hpRatio : 0.8;
-        const kills = typeof parsedState.consecutiveKills === "number" ? parsedState.consecutiveKills : 0;
-        // 奇襲確率：キル数が高い、または油断しているときに上昇
-        const noulVal = Math.min(0.95, Math.max(0.1, 0.3 + kills * 0.1 + (hpRatio > 0.8 ? 0.2 : 0)));
+        // 奇襲確率：歩くほど、危険な階層ほど、また油断しているときに上昇
+        const noulVal = Math.min(
+          0.95,
+          Math.max(0.1, 0.10 + steps * 0.05 + danger * 0.04 + kills * 0.05 + (hpRatio >= 0.8 ? 0.05 : 0))
+        );
         answers[qKey] = {
           type: "noul",
           noul: Math.round(noulVal * 100) / 100,

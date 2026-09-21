@@ -103,9 +103,14 @@ export class GameDirectorUseCase {
   }
 
   /**
-   * 1歩歩くごとのJevエンカウント判定（1億パターン以上からDNA配合）
+   * 1歩歩くごとのJevエンカウント判定（2.2億通りからDNA配合）
    */
-  async checkEncounter(hero: Hero, floor: DungeonFloor): Promise<{
+  async checkEncounter(
+    hero: Hero,
+    floor: DungeonFloor,
+    /** 前回の戦闘からの歩数。累計歩数ではなく、この値が遭遇判断の主材料になる */
+    stepsSinceLastBattle = 0
+  ): Promise<{
     shouldEncounter: boolean;
     monster?: Monster;
     latencyMs: number;
@@ -116,7 +121,8 @@ export class GameDirectorUseCase {
       floor: floor.floorNumber,
       floorTheme: floor.ambientElement,
       heroHpRatio: hpRatio,
-      steps: hero.stepsTaken,
+      steps: stepsSinceLastBattle,
+      totalSteps: hero.stepsTaken,
       dangerScore: floor.dangerScore,
     };
 
@@ -165,7 +171,7 @@ export class GameDirectorUseCase {
    * 宝箱を開けたときのJevによる装備ドロップ判定
    */
   async directChestEquipment(floorNumber: number): Promise<BaseEquipment | null> {
-    const state = { floorNumber };
+    const state = { floorNumber, floor: floorNumber };
     const { response } = await this.jevClient.systemOne({
       state,
       questions: {
@@ -279,7 +285,7 @@ export class GameDirectorUseCase {
   /**
    * 勝利後の武器の進化・二つ名覚醒判定
    */
-  async directWeaponAwakening(hero: Hero): Promise<{
+  async directWeaponAwakening(hero: Hero, floorNumber = 1): Promise<{
     weapon: Weapon;
     awakeningText: string;
     latencyMs: number;
@@ -290,6 +296,8 @@ export class GameDirectorUseCase {
       level: hero.weapon.level,
       heroLevel: hero.stats.level,
       gold: hero.stats.gold,
+      floorNumber,
+      heroHpRatio: Math.round((hero.stats.currentHp / hero.stats.maxHp) * 100) / 100,
     };
 
     const { response, latencyMs, isSimulated } = await this.jevClient.systemOne({

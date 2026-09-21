@@ -2,7 +2,7 @@
  * Generative Monster Generator Use Case (CryptoKitties / CryptoPunks Architecture)
  * Clean Architecture - Use Case Layer
  * 
- * Jev (System One) decides the 8 gene slots out of 2.2+ Billion Combinations!
+ * Jev (System One) decides the 8 gene slots out of 221,184,000 combinations.
  */
 
 import { IJevClient } from "../adapters/jevClient";
@@ -95,8 +95,31 @@ export class GenerativeMonsterUseCase {
     const paletteId = getAns("paletteGene", DNA_CATALOG.palettes[0].id);
 
     // ユニークなDNAハッシュの生成（CryptoPunksのtokenIdライク）
-    const dnaHash = `0x${[bodyId, eyesId, mouthId, hornsId, wingsId, tailId, auraId, paletteId]
-      .map((id) => id.split("_")[1].substring(0, 2).toUpperCase())
+    //
+    // 各スロットの「カタログ内インデックス」を1桁の16進数で並べる。
+    // 最大スロット数はパレットの16なので1桁に収まり、8スロット = 8桁で
+    // 221,184,000通りすべてに異なるIDが付く（＝完全に一意）。
+    //
+    // 旧実装は遺伝子IDの先頭2文字を連結していたため、
+    // m_mandible/m_maw → "MA"、h_ears_cat/h_ears_bat → "EA"、
+    // t_fluffy/t_flame → "FL" が衝突し、生成の約26%が
+    // 「見た目が違うのに同じID」になっていた。討伐カードのタイトルは
+    // このIDなので、一意性が崩れるとコレクション性が成立しない。
+    const slotIndex = (list: ReadonlyArray<{ id: string }>, id: string): number => {
+      const i = list.findIndex((e) => e.id === id);
+      return i >= 0 ? i : 0;
+    };
+    const dnaHash = `0x${[
+      slotIndex(DNA_CATALOG.bodies, bodyId),
+      slotIndex(DNA_CATALOG.eyes, eyesId),
+      slotIndex(DNA_CATALOG.mouths, mouthId),
+      slotIndex(DNA_CATALOG.horns, hornsId),
+      slotIndex(DNA_CATALOG.wings, wingsId),
+      slotIndex(DNA_CATALOG.tails, tailId),
+      slotIndex(DNA_CATALOG.auras, auraId),
+      slotIndex(DNA_CATALOG.palettes, paletteId),
+    ]
+      .map((i) => i.toString(16).toUpperCase())
       .join("")}`;
 
     const dna: MonsterDNA = {
