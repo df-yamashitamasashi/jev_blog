@@ -35,8 +35,8 @@
         "category": "Jev"
       },
       {
-        "command": "jev.toggleDiagnostics",
-        "title": "Jev: Toggle Real-time Diagnostics",
+        "command": "jev.clearDiagnostics",
+        "title": "Jev: Clear Diagnostic Warnings",
         "category": "Jev"
       }
     ],

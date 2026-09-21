@@ -7,12 +7,14 @@ import * as vscode from "vscode";
 import { SecurityDiagnosticUseCase } from "../usecases/securityDiagnosticUseCase";
 import { IntentRoutingUseCase } from "../usecases/intentRoutingUseCase";
 import { JevStatusBarItem } from "./statusBar";
+import { JevDiagnosticProvider } from "./diagnosticProvider";
 
 export function registerCommands(
   context: vscode.ExtensionContext,
   securityUseCase: SecurityDiagnosticUseCase,
   intentUseCase: IntentRoutingUseCase,
-  statusBar: JevStatusBarItem
+  statusBar: JevStatusBarItem,
+  diagnosticProvider: JevDiagnosticProvider
 ): void {
   // Command 1: Analyze Selected Code (Security & Quality)
   const analyzeCmd = vscode.commands.registerCommand(
@@ -42,6 +44,18 @@ export function registerCommands(
         });
 
         const latency = Math.round(performance.now() - startTime);
+
+        // 選択範囲（またはカーソル行）を波線の対象レンジとして特定
+        const targetRange = selection.isEmpty
+          ? editor.document.lineAt(selection.active.line).range
+          : new vscode.Range(selection.start, selection.end);
+
+        // ★波線警告をエディタの DiagnosticCollection に反映
+        diagnosticProvider.setDiagnosticsForRange(
+          editor.document,
+          targetRange,
+          diagnostics
+        );
 
         if (diagnostics.length === 0) {
           statusBar.setResult("Safe", 0.95, latency);
@@ -123,5 +137,12 @@ export function registerCommands(
     }
   });
 
-  context.subscriptions.push(analyzeCmd, routeCmd);
+  // Command 3: Clear Diagnostics
+  const clearCmd = vscode.commands.registerCommand("jev.clearDiagnostics", () => {
+    diagnosticProvider.clear();
+    statusBar.setIdle();
+    vscode.window.showInformationMessage("Jev diagnostics cleared.");
+  });
+
+  context.subscriptions.push(analyzeCmd, routeCmd, clearCmd);
 }

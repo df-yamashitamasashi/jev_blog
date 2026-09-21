@@ -88,7 +88,7 @@ export function activate(context: vscode.ExtensionContext): void {
   const diagnosticProvider = new JevDiagnosticProvider(securityUseCase);
 
   // 4. Register Commands & Providers
-  registerCommands(context, securityUseCase, intentUseCase, statusBar);
+  registerCommands(context, securityUseCase, intentUseCase, statusBar, diagnosticProvider);
 
   const codeActionDisposable = vscode.languages.registerCodeActionsProvider(
     { scheme: "file" },

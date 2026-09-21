@@ -25,6 +25,10 @@ export class JevCodeActionProvider implements vscode.CodeActionProvider {
           );
           fix.diagnostics = [diagnostic];
           fix.isPreferred = true;
+          fix.edit = new vscode.WorkspaceEdit();
+          const lineText = _document.getText(diagnostic.range);
+          const replaced = lineText.replace(/["'][^"']+["']/, 'process.env.SECRET_KEY || ""');
+          fix.edit.replace(_document.uri, diagnostic.range, replaced);
           actions.push(fix);
         } else if (diagnostic.code === "jev-unhandled_exception") {
           const fix = new vscode.CodeAction(
