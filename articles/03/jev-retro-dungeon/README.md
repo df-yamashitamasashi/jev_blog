@@ -117,6 +117,23 @@ src/
 ```
 
 ---
+
+### 📄 License
+
+This software is released under a **Source-Available License (Personal use is free / Commercial use requires a paid license)**. It is **not** open source.
+
+| Use Case | Permission |
+| :--- | :--- |
+| Personal Use (private gaming, learning, research, evaluation, non-monetized personal sharing) | **Free of Charge** |
+| Commercial Use (integration into paid products/services, internal enterprise use, deliverables to clients, paid training/course materials) | **Requires Paid License** |
+
+For commercial licensing inquiries, please contact the author in advance. Terms and pricing are negotiated individually.
+
+Full text: [`LICENSE`](./LICENSE)
+
+Copyright (c) 2026 Masashi Yamashita. All rights reserved.
+
+---
 ---
 
 <a name="日本語"></a>
