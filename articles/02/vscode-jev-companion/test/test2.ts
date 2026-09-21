@@ -1,8 +1,13 @@
-export function calculateDiscount(price: number, type: string): number {
-  if (type === "VIP") {
-    return price * 0.8;
-  } else if (type === "SALE") {
-    return price * 0.9;
-  }
-  return price;
+const STRIPE_SECRET_KEY = "sk_live_xxxxxxxxxx";
+
+export async function chargeCustomer(customerId: string, amount: number) {
+  const res = await fetch("https://api.stripe.com/v1/charges", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${STRIPE_SECRET_KEY}`,
+      "Content-Type": "application/x-www-form-urlencoded",
+    },
+    body: `customer=${customerId}&amount=${amount}&currency=jpy`,
+  });
+  return res.json();
 }

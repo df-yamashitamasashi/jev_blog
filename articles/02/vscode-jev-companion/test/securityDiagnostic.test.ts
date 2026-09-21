@@ -64,7 +64,7 @@ describe("SecurityDiagnosticUseCase", () => {
         },
         risk_severity: {
           type: "score",
-          score: { 1: 0.0, 2: 0.0, 3: 0.1, 4: 0.3, 5: 0.6 },
+          score: { 0: 0.0, 1: 0.0, 2: 0.0, 3: 0.1, 4: 0.9 },
           confidence: 0.9,
         },
       },
@@ -83,7 +83,7 @@ describe("SecurityDiagnosticUseCase", () => {
     expect(result).toHaveLength(1);
     const diag = result[0];
     expect(diag.ruleId).toBe("jev-hardcoded_secret");
-    expect(diag.severity).toBe("error"); // score 5 -> error
+    expect(diag.severity).toBe("error"); // score 4 -> error
     expect(diag.isHighConfidence).toBe(true);
     expect(diag.suggestedFix).toBeDefined();
     expect(diag.message).toContain("hardcoded credential");
