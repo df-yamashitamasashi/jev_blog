@@ -4,6 +4,8 @@ __pycache__/
 *.md
 !README.md
 !**/README.md
+!CONTRIBUTING.md
+!.github/**/*.md
 docs/
 .flake8
 .mypy_cache/

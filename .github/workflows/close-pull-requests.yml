@@ -1,0 +1,20 @@
+name: "Auto Close Pull Requests (Fork & Clone Only Repository)"
+
+on:
+  pull_request_target:
+    types: [opened, reopened]
+
+permissions:
+  pull-requests: write
+
+jobs:
+  auto-close:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Close Pull Request and Comment
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+        run: |
+          gh pr comment "$PR_URL" --body "Thank you for your interest! As described in our repository policy, this repository is configured for **Fork and Clone only**. We do not accept Pull Requests to the main repository. Please feel free to develop, customize, and maintain your changes in your own forked repository under the MIT License."
+          gh pr close "$PR_URL"
