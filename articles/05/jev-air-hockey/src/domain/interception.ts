@@ -165,16 +165,22 @@ export interface SolveOptions {
   preferPoint?: Vec2;
   /** 法線を求める反復回数。走査中は粗く、採用した解だけ精密に解き直す */
   iterations?: number;
+  /**
+   * 振りかぶって待つ位置が、打点からどれだけ後方になるか (px)。
+   *
+   * これを渡すと「構えている場所にパックが先に飛び込んでくる打点」を除外する。
+   * 除外しないと、準備中のマレットにパックが当たり、法線が無関係な向きを向いた
+   * ままインパルスが入る — 計測では接触の4割強がこれで、宣言した狙いから
+   * 平均66°ずれていた。
+   */
+  windupPx?: number;
 }
 
-/** 最初の実行可能解からこの秒数ぶんだけ候補を探し続ける */
+/** 条件を満たす解が見つかってから、この秒数ぶんだけ候補を探し続ける */
 const CANDIDATE_WINDOW_SEC = 0.45;
 
 /** 宣言した迎撃点からのズレ 1px を、何秒ぶんの遅れと等価に扱うか */
 const PREFERENCE_WEIGHT_SEC_PER_PX = 1 / 3200;
-
-/** 助走時間の不足 1秒を、何秒ぶんの遅れと等価に扱うか */
-const SETUP_DEFICIT_WEIGHT = 1.6;
 
 /**
  * 軌道上から「狙い通りに打てる最も早い接触」を探す。
@@ -198,18 +204,34 @@ export function solveIntercept(
   const contactDist = config.puckRadius + config.malletRadius;
 
   const iterations = options.iterations ?? 4;
+  const setupSec = options.setupSec ?? 0;
+  const windupPx = options.windupPx ?? 0;
+  const blockRadius = contactDist + 5;
+  // 構え位置の干渉チェックは粗く見れば十分 (パックは1サンプルで数pxしか動かない)
+  const windupStride = Math.max(1, Math.round(0.02 / traj.dt));
 
-  // 実行可能解が無いまま走査し終えたときのために、最も惜しい解を覚えておく
-  let fallback: InterceptSolution | null = null;
-  let best: InterceptSolution | null = null;
-  let bestCost = Number.POSITIVE_INFINITY;
-  let firstFeasibleAt = Number.POSITIVE_INFINITY;
+  /**
+   * 解の選び方は「助走の余裕がある中で最も早い打点」。
+   *
+   * ここを単一のコスト関数 (時刻 + 助走不足のペナルティ) にすると、重み次第で
+   * どちらかの病理に必ず落ちる:
+   *   - 助走不足の重みが 1 より大きい → 待つほど得になり、打点がパックを追って
+   *     自陣ゴール際まで下がり続ける。振りかぶる距離も無くなり、押すだけの弱い
+   *     当たりになる (実測: 入射 900px/s に対して返球 784px/s)。
+   *   - 1 より小さい → 助走は常に無視され、到達と同時に当たる弱い接触になる。
+   * そのため辞書式に選ぶ。
+   */
+  let qualified: InterceptSolution | null = null; // 助走の余裕あり。その中で最速
+  let qualifiedCost = Number.POSITIVE_INFINITY;
+  let mostSlack: InterceptSolution | null = null; // 実行可能な中で最も余裕がある
+  let fallback: InterceptSolution | null = null;  // 間に合わないが最も惜しい
+  let firstQualifiedAt = Number.POSITIVE_INFINITY;
 
   for (let i = 0; i < traj.samples.length; i += stride) {
     const sample = traj.samples[i];
     if (sample.t > maxLook) break;
-    // 最初の実行可能解より十分あとの打点は、もう戦術的な選択肢ではない
-    if (sample.t > firstFeasibleAt + CANDIDATE_WINDOW_SEC) break;
+    // 条件を満たす解より十分あとの打点は、もう戦術的な選択肢ではない
+    if (sample.t > firstQualifiedAt + CANDIDATE_WINDOW_SEC) break;
 
     const desired = aimPoint.sub(sample.pos);
     if (desired.magSq() < 1e-6) continue;
@@ -227,6 +249,21 @@ export function solveIntercept(
 
     // 自陣の外へはみ出す接触点は、いくら早くても実行できない
     if (contact.dist(idealContact) > 1.0) continue;
+
+    /**
+     * 待ち合わせが幾何的に成立しているか。
+     *
+     * 接触点は「接触の瞬間にパックからちょうど contactDist だけ離れた位置」なので、
+     * それより前の時刻でパックがこの点へ近づいてくるなら、その打点では予定より
+     * 早く当たられてしまう (パックの進行方向と法線がずれた角度のある球で起きる)。
+     * 構えて待つ位置についても同じ検査が必要。
+     */
+    if (pathPassesThrough(traj, contact, i, contactDist - 2, windupStride)) continue;
+
+    if (windupPx > 0) {
+      const windupPoint = clampPoint(contact.sub(normal.scale(windupPx)), limits);
+      if (pathPassesThrough(traj, windupPoint, i, blockRadius, windupStride)) continue;
+    }
 
     const toContact = contact.sub(malletPos);
     const dist = toContact.mag();
@@ -252,22 +289,26 @@ export function solveIntercept(
       continue;
     }
 
-    if (sample.t < firstFeasibleAt) firstFeasibleAt = sample.t;
+    if (!mostSlack || slack > mostSlack.slackSec) mostSlack = solution;
 
-    // 早い打点ほど良い。ただし宣言された迎撃点の近さと、振りかぶる余裕は
-    // その差を埋める価値がある
+    // 助走の余裕が足りない打点は、届いても振り抜けない
+    if (slack < setupSec) continue;
+
+    if (sample.t < firstQualifiedAt) firstQualifiedAt = sample.t;
+
+    // 早い打点ほど良い。ただし宣言された迎撃点の近さはその差を埋める価値がある
     const preference = options.preferPoint
       ? contact.dist(options.preferPoint) * PREFERENCE_WEIGHT_SEC_PER_PX
       : 0;
-    const setupDeficit = Math.max(0, (options.setupSec ?? 0) - slack);
-    const cost = sample.t + preference + setupDeficit * SETUP_DEFICIT_WEIGHT;
+    const cost = sample.t + preference;
 
-    if (cost < bestCost) {
-      bestCost = cost;
-      best = solution;
+    if (cost < qualifiedCost) {
+      qualifiedCost = cost;
+      qualified = solution;
     }
   }
 
+  const best = qualified ?? mostSlack;
   if (!best) return fallback;
 
   // 走査は粗い反復で回しているので、採用した打点だけ法線を精密に解き直す。
@@ -290,6 +331,21 @@ export function solveIntercept(
   }
 
   return best;
+}
+
+/** 軌道の [0, untilIndex) の区間が、指定した点の半径 radius 内を通るか */
+function pathPassesThrough(
+  traj: PuckTrajectory,
+  point: Vec2,
+  untilIndex: number,
+  radius: number,
+  stride: number
+): boolean {
+  const radiusSq = radius * radius;
+  for (let i = 0; i < untilIndex; i += stride) {
+    if (traj.samples[i].pos.distSq(point) < radiusSq) return true;
+  }
+  return false;
 }
 
 /**

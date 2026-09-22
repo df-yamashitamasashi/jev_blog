@@ -58,7 +58,8 @@ export function buildShotCandidates(side: PlaySide, config: StadiumConfig): Shot
 
   // ポストの内側を狙う。枠ぎりぎりは外れるので少し内側に入れる
   const inset = config.puckRadius * 1.2;
-  const offsets = [-(half - inset), -(half - inset) * 0.5, 0, (half - inset) * 0.5, half - inset];
+  const reach = half - inset;
+  const offsets = [-reach, -reach * 0.66, -reach * 0.33, 0, reach * 0.33, reach * 0.66, reach];
 
   const candidates: ShotCandidate[] = offsets.map((dx) => {
     const target = new Vec2(center + dx, netY);
@@ -113,14 +114,19 @@ export interface EvaluateContext {
   preferPoint?: Vec2;
 }
 
-/** 打った後の軌道を実際に積分して、相手が触れるまでの余裕を測る */
-function opponentInterceptSlack(
+/**
+ * 打った後の軌道を実際に積分して、相手にとっての難易度を測る。
+ *   slack    — 相手が最も余裕をもって触れるときの余裕 (秒)。小さいほど厳しい
+ *   travelPx — そのとき相手が動かされる距離 (px)。大きいほど陣形が崩れる
+ */
+function opponentPressure(
   postPath: ReturnType<typeof predictPuckPath>,
   ctx: EvaluateContext,
   untilSec: number
-): number {
+): { slackSec: number; travelPx: number } {
   const contactDist = ctx.config.puckRadius + ctx.config.malletRadius;
-  let worst = Number.NEGATIVE_INFINITY;
+  let slackSec = Number.NEGATIVE_INFINITY;
+  let travelPx = 0;
 
   for (const sample of postPath.samples) {
     if (sample.t > untilSec) break;
@@ -136,10 +142,32 @@ function opponentInterceptSlack(
     const need = travelTime(dist, v0, ctx.limits.maxSpeed, ctx.limits.maxAccel);
 
     const slack = sample.t - need;
-    if (slack > worst) worst = slack;
+    if (slack > slackSec) {
+      slackSec = slack;
+      travelPx = dist;
+    }
   }
 
-  return worst === Number.NEGATIVE_INFINITY ? -1 : worst;
+  return slackSec === Number.NEGATIVE_INFINITY ? { slackSec: -1, travelPx: 0 } : { slackSec, travelPx };
+}
+
+/**
+ * 打った後、パックが自陣へ戻ってくるまでの時間とその速度。
+ * 地平線内に戻ってこないなら null (= 相手陣に置いておけた)。
+ * 相手が打ち返す想定は含めない — 含めると相手の判断を仮定することになる。
+ */
+function returnToOwnHalf(
+  postPath: ReturnType<typeof predictPuckPath>,
+  ctx: EvaluateContext
+): { afterSec: number; speed: number } | null {
+  for (const sample of postPath.samples) {
+    const inOwnHalf =
+      ctx.side === "TOP" ? sample.pos.y <= ctx.config.height * 0.52 : sample.pos.y >= ctx.config.height * 0.48;
+    // 打った直後は当然まだ自陣にいるので、一度相手陣へ出るまでは数えない
+    if (sample.t < 0.12) continue;
+    if (inOwnHalf) return { afterSec: sample.t, speed: sample.vel.mag() };
+  }
+  return null;
 }
 
 const GOAL_REWARD = 1200;
@@ -147,6 +175,34 @@ const OWN_GOAL_PENALTY = 4000;
 const OPPONENT_REACH_PENALTY = 900;
 const CONTACT_DELAY_PENALTY = 260;
 const NEAR_MISS_REWARD = 380;
+/** 枠を捉えてはいるが相手に止められる球の価値 */
+const FRAMED_SHOT_REWARD = 150;
+/**
+ * 決まらない球でも「相手を動かせる球」を選ぶための重み。
+ *
+ * これが無いと、相手が余裕をもって届く球はどれも同じ評価になり、両者が同じ
+ * やり取りを機械的に繰り返す周期に入る (自己対戦でラリー上限600に達して
+ * 引き分けになる局面が実際に出た)。取られる前提でも、より遠くへ走らせる球を
+ * 選び続ければ陣形が崩れ、いずれ隙ができる。
+ */
+const OPPONENT_TRAVEL_REWARD = 150;
+/**
+ * 「相手陣にパックを置いておく」ことの価値。
+ *
+ * 1手先しか見ない採点だと、最高速で真っ直ぐ打ち返すのが常に最善になる。両者が
+ * そう指すと、2000px/s の打球を互いに完璧に返し続ける安定した周期に入り、
+ * 1400ラリー・425秒かけても点が動かない局面が実際に発生した。
+ * エアホッケーで点が入るのは相手を動かして陣形を崩したときなので、打球が
+ * 相手陣に留まる時間を評価し、自陣へ高速で跳ね返ってくる球を嫌う。
+ */
+const KEEP_AWAY_REWARD = 320;
+const RETURN_SPEED_PENALTY = 300;
+
+/** 相手にこれ以上の余裕があるなら、枠に入る軌道でも「止められる球」とみなす */
+const SAVEABLE_SLACK_SEC = 0.06;
+
+/** 宣言した狙いと実際の出射方向のずれの許容値 (度) */
+const MAX_AIM_ERROR_DEG = 8;
 
 /**
  * 1つの候補を採点する。実行不可能 (間に合わない) 場合は null。
@@ -170,10 +226,21 @@ export function evaluateShot(
       preferPoint: ctx.preferPoint,
       // サーボ側と同じ基準で「振りかぶれる打点」を選ぶ
       setupSec: ctx.swingSpeed / ctx.limits.maxAccel + 0.04,
+      windupPx: Math.min(150, (ctx.swingSpeed * ctx.swingSpeed) / (2 * ctx.limits.maxAccel)),
     }
   );
 
   if (!solution) return null;
+
+  /**
+   * 宣言した狙いを物理的に実現できない解は採用しない。
+   *
+   * 弱く振ると、飛んでくるパックの運動量が残るぶん出射方向を自由に選べなくなる
+   * (2000px/s の球を 300px/s のマレットで真横へ返すことはできない)。ここを
+   * 通してしまうと、狙いの宣言と実際の打球が食い違う手を「弱く当てて置く球」
+   * として選び続け、宣言と実測の乖離が 43° まで悪化した。
+   */
+  if (solution.aimErrorDeg > MAX_AIM_ERROR_DEG) return null;
 
   // 打った直後のパックを、実際の物理で飛ばしてみる
   const postPath = predictPuckPath(solution.puckPosAtContact, solution.predictedPuckVel, ctx.config, {
@@ -182,8 +249,21 @@ export function evaluateShot(
   });
 
   const opponentSide: PlaySide = ctx.side === "TOP" ? "BOTTOM" : "TOP";
-  const scoredGoal = postPath.goalConcededBy === opponentSide ? postPath.goalAt : null;
   const ownGoal = postPath.goalConcededBy === ctx.side;
+
+  const reachesGoal = postPath.goalConcededBy === opponentSide ? postPath.goalAt : null;
+  const pressure = opponentPressure(postPath, ctx, reachesGoal ?? 1.8);
+
+  /**
+   * 相手が余裕をもって触れる軌道は、枠に入る計算でも得点にはならない。
+   *
+   * ここを「枠に入るか」だけで評価していたため、相手が完璧に守れる真っ直ぐな
+   * 最高速シュートが常に最高点になり、両者がそれを撃ち合う安定した周期に入って
+   * いた (1400ラリー・425秒で点が動かない局面が実際に発生)。守備側の到達時間を
+   * 織り込むと、角度をつけた球やバンクシュートが正しく高く評価される。
+   */
+  const saveable = pressure.slackSec > SAVEABLE_SLACK_SEC;
+  const scoredGoal = reachesGoal !== null && !saveable ? reachesGoal : null;
 
   let score = 0;
 
@@ -198,20 +278,32 @@ export function evaluateShot(
       if (d < closest) closest = d;
     }
     score += NEAR_MISS_REWARD * Math.max(0, 1 - closest / ctx.config.height);
+    // 枠は捉えている = 相手に守備を強制できる。ただし得点としては数えない
+    if (reachesGoal !== null) score += FRAMED_SHOT_REWARD;
   }
 
   if (ownGoal) score -= OWN_GOAL_PENALTY;
 
-  const until = scoredGoal ?? 1.8;
-  const opponentSlack = opponentInterceptSlack(postPath, ctx, until);
-  if (opponentSlack > 0) {
-    score -= OPPONENT_REACH_PENALTY * Math.min(1, opponentSlack / 0.3);
+  if (scoredGoal === null) {
+    const retake = returnToOwnHalf(postPath, ctx);
+    if (retake === null) {
+      score += KEEP_AWAY_REWARD;
+    } else {
+      score += KEEP_AWAY_REWARD * Math.min(1, retake.afterSec / 1.2);
+      score -= RETURN_SPEED_PENALTY * Math.min(1, retake.speed / ctx.config.maxPuckSpeed);
+    }
   }
+
+  // 余裕を飽和させずに評価する。「どうせ届く」球の中でも、より厳しい球を選ぶ
+  if (pressure.slackSec > 0) {
+    score -= OPPONENT_REACH_PENALTY * Math.min(1.5, pressure.slackSec / 0.6);
+  }
+  score += OPPONENT_TRAVEL_REWARD * Math.min(1, pressure.travelPx / (ctx.config.height * 0.5));
 
   score -= solution.contactTime * CONTACT_DELAY_PENALTY;
   if (!solution.feasible) score -= 600 + Math.abs(solution.slackSec) * 1200;
 
-  return { candidate, solution, score, goalInSec: scoredGoal, opponentSlackSec: opponentSlack };
+  return { candidate, solution, score, goalInSec: scoredGoal, opponentSlackSec: pressure.slackSec };
 }
 
 /** 候補群をまとめて採点し、最良のものを返す */

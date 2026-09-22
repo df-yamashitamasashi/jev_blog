@@ -4,8 +4,21 @@
  */
 
 import { AgentTelemetry, DecisionStatus, AGENT_PROFILES, AgentType } from "../domain/jevAgentTypes";
+import { ServoMode } from "../usecases/agentBrainUseCase";
 import { GameMatchState, GameStatus } from "../domain/gameState";
 import { ModelSettings } from "../adapters/modelSettings";
+
+/**
+ * サーボが今やっていること。AIの判断 (どこを狙うか) と、それを実行する機構の
+ * 状態を分けて見せる。これが無いと「AIが動かしているのか、ローカル処理が
+ * 動かしているのか」が画面から判別できない。
+ */
+const SERVO_LABEL: Record<ServoMode, string> = {
+  SETUP: "🎯 打点で構え中",
+  STRIKE: "💥 振り抜き中",
+  DEFEND: "🛡️ 進路を塞ぐ (計画なし)",
+  HOME: "↩️ 守備隊形へ復帰",
+};
 
 const STATUS_LABEL: Record<DecisionStatus, string> = {
   OK: "✅ 有効な判断",
@@ -20,6 +33,15 @@ export class TelemetryHud {
   private currentChatTimeout: number | null = null;
 
   constructor(_container: HTMLElement) {}
+
+  /** サーボの実行状態と、AIの応答待ちかどうかを表示する */
+  updateServoState(mode: ServoMode, awaitingDecision: boolean): void {
+    const el = document.getElementById("hud-servo-mode");
+    if (!el) return;
+
+    el.textContent = awaitingDecision ? `⏳ AI判断待ち / ${SERVO_LABEL[mode]}` : SERVO_LABEL[mode];
+    el.setAttribute("data-stance", awaitingDecision ? "THINKING" : mode);
+  }
 
   updateTelemetry(
     topTelemetry: AgentTelemetry | null,

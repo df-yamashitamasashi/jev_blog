@@ -92,8 +92,8 @@ export class TournamentUseCase {
   abort(): void {
     this.running = false;
     this.matchStarted = false;
-    // 通常のライブ対戦に戻す
-    this.gameLoop.setFairTiming(false);
+    // 通常の対戦に戻す (対戦カードからの自動判定へ)
+    this.gameLoop.setFairTiming(null);
     this.emitProgress();
   }
 
@@ -107,7 +107,7 @@ export class TournamentUseCase {
     const match = this.schedule[this.cursor];
     if (!match) {
       this.running = false;
-      this.gameLoop.setFairTiming(false);
+      this.gameLoop.setFairTiming(null);
       this.emitProgress();
       return;
     }

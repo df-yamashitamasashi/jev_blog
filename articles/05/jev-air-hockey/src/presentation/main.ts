@@ -122,7 +122,10 @@ window.addEventListener("DOMContentLoaded", () => {
   const bgmBtn = document.getElementById("btn-bgm");
 
   startBtn?.addEventListener("click", () => {
-    gameLoop.startMatch();
+    // ライブ対戦はサーブの乱数シードを毎回変える。固定のままだと、同じ対戦カードで
+    // 毎回まったく同じ展開・同じ位置で1点目が入る (トーナメントは再現性が要るので
+    // TournamentUseCase 側が明示的にシードを指定する)
+    gameLoop.startMatch(7, (Date.now() ^ (Math.random() * 0xffffffff)) >>> 0);
   });
 
   pauseBtn?.addEventListener("click", () => {
@@ -318,6 +321,8 @@ window.addEventListener("DOMContentLoaded", () => {
   const MAX_CATCHUP_SEC = 0.5;
 
   let lastSimTime = performance.now();
+  let lastHudSync = 0;
+  const HUD_SYNC_INTERVAL_MS = 100;
 
   const simTick = async () => {
     const now = performance.now();
@@ -334,6 +339,17 @@ window.addEventListener("DOMContentLoaded", () => {
       }
     } catch (e) {
       console.error("シミュレーションの進行でエラーが発生しました:", e);
+    }
+
+    // サーボの状態表示は描画ループではなくここから更新する。
+    // requestAnimationFrame はタブが非表示になると完全に停止するため、描画側に
+    // 置くと「裏で試合は進んでいるのに計器だけ止まっている」状態になる。
+    // DOM更新は毎ティックでは多すぎるので間引く。
+    const now2 = performance.now();
+    if (now2 - lastHudSync > HUD_SYNC_INTERVAL_MS) {
+      lastHudSync = now2;
+      const brain = gameLoop.getTopBrain();
+      hud.updateServoState(brain.getMode(), brain.isAwaitingDecision());
     }
 
     setTimeout(simTick, 8);

@@ -167,12 +167,18 @@ export class PhysicsEngine {
       this.checkMalletCollision(this.jevMallet, "PUCK_MALLET_JEV", subDt, onCollision);
 
       // 3. ゴールライン通過判定 (壁衝突より先に判定してゴール開口部の壁誤衝突を完全防止)
+      //
+      // 判定範囲はゴール開口部そのもの。旧実装は ±10〜±20px の余裕を持たせて
+      // いたため、ポストの外側を通ったパックが得点になることがあった
+      // (実測で x=423 / 開口部は 190〜410 の失点を確認)。守る側の予測は開口部を
+      // 基準にしているので、ここが広いと「守れない失点」になる。
       const nextY = this.puck.pos.y + this.puck.vel.y * subDt;
+      const inMouth = this.puck.pos.x >= goalLeft && this.puck.pos.x <= goalRight;
 
       // Jevゴール (上部 y=0 ライン交差)
       if (
-        (this.puck.vel.y < 0 && this.puck.pos.y >= 0 && nextY <= 0 && this.puck.pos.x >= goalLeft - 10 && this.puck.pos.x <= goalRight + 10) ||
-        (this.puck.pos.y < 0 && this.puck.pos.x >= goalLeft - 20 && this.puck.pos.x <= goalRight + 20) ||
+        (this.puck.vel.y < 0 && this.puck.pos.y >= 0 && nextY <= 0 && inMouth) ||
+        (this.puck.pos.y < 0 && inMouth) ||
         this.puck.pos.y < -30
       ) {
         this.puck.vel.set(0, 0);
@@ -184,8 +190,8 @@ export class PhysicsEngine {
 
       // Playerゴール (下部 y=height ライン交差)
       if (
-        (this.puck.vel.y > 0 && this.puck.pos.y <= this.config.height && nextY >= this.config.height && this.puck.pos.x >= goalLeft - 10 && this.puck.pos.x <= goalRight + 10) ||
-        (this.puck.pos.y > this.config.height && this.puck.pos.x >= goalLeft - 20 && this.puck.pos.x <= goalRight + 20) ||
+        (this.puck.vel.y > 0 && this.puck.pos.y <= this.config.height && nextY >= this.config.height && inMouth) ||
+        (this.puck.pos.y > this.config.height && inMouth) ||
         this.puck.pos.y > this.config.height + 30
       ) {
         this.puck.vel.set(0, 0);
@@ -299,6 +305,14 @@ export class PhysicsEngine {
       // インパルス応答。マレットのスイング速度はここで相対速度として転写されるため、
       // これとは別にスイング分を加算してはならない (運動量の2重計上になる)
       resolveCollisionImpulse(this.puck, mallet, manifold);
+
+      // 速度制限はサブステップの先頭でしか掛かっていないので、衝突で跳ね上がった
+      // ぶんをここで抑える。予測器 ([[puckPredictor]]) は maxPuckSpeed を守る
+      // 前提で積分しているため、ここを放置すると読みがずれる
+      const boosted = this.puck.vel.mag();
+      if (boosted > this.config.maxPuckSpeed) {
+        this.puck.vel = this.puck.vel.scale(this.config.maxPuckSpeed / boosted);
+      }
 
       // 重なり分離 (Penetration resolution)
       const targetDist = this.puck.radius + mallet.radius;

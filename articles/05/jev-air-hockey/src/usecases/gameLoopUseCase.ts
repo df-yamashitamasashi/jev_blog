@@ -1,11 +1,20 @@
 /**
  * Game Loop & Match State Orchestrator (Clean Architecture - UseCases Layer)
  *
- * 固定タイムステップで駆動する。既定 (fairTiming=false) では判断待ちの間も
- * 物理は実時間で進み続け、AIが間に合わなければ普通に空振りになる — ライブ対戦を
- * 見ていて不自然に静止しないようにするため。fairTiming=true (トーナメント実行時)
- * のみ、判断待ちで時間を止め、解決後に全エージェント共通の decisionBudgetMs だけ
- * 一律に時間を進める。回線速度の差を勝敗から切り離すのはこのモードに限られる。
+ * 固定タイムステップで駆動する。
+ *
+ * 判断待ちの扱いには2つのモードがある。
+ *
+ * waitForDecisions=true (クラウドAPIのエージェントが参加している対戦・トーナメント):
+ *   判断待ちの間シミュレーション時間を止め、解決後に全エージェント共通の
+ *   decisionBudgetMs だけ一律に進める。応答に数秒かかるエージェントでも、その判断が
+ *   実際に次の一打を決められるようにするため。止めないと、ラリーが終わってから
+ *   判断が返ってくることになり、AIを差し替えても展開が変わらない — 実際に
+ *   「Gemini対Claudeでも毎回まったく同じ形で1点目が入る」状態になっていた。
+ *   回線速度の差が勝敗に出ないのもこのモードの効果。
+ *
+ * waitForDecisions=false (ローカルCPU同士・人間のみ):
+ *   判断が即座に返るので止める必要がない。物理を実時間で進め続ける。
  */
 
 import {
@@ -68,14 +77,8 @@ export class GameLoopUseCase {
   private advancing = false;
   private maxRallies = Number.POSITIVE_INFINITY;
 
-  /**
-   * true: トーナメント用。判断待ちの間シミュレーション時間を止め、解決後に
-   * 一律の decisionBudgetMs だけ進める (回線速度を勝敗から切り離す)。
-   * false (既定): 通常のライブ対戦用。判断は裏で進行させつつ物理は実時間で
-   * 進み続け、AIが間に合わなければ普通に空振りになる。API呼び出しのたびに
-   * 全体が数秒静止すると「動いていない」ように見えてしまうため。
-   */
-  private fairTiming = false;
+  /** 自動判定 (§waitForDecisions) を、トーナメントが明示的に上書きするためのフラグ */
+  private fairTimingOverride: boolean | null = null;
 
   private onStateChange?: (state: GameMatchState) => void;
   private onCollisionEffect?: (event: CollisionEvent) => void;
@@ -197,9 +200,25 @@ export class GameLoopUseCase {
     return this.matchState.status === GameStatus.GAME_OVER;
   }
 
-  /** トーナメント実行時のみ true にする (§fairTiming のコメント参照) */
-  setFairTiming(enabled: boolean): void {
-    this.fairTiming = enabled;
+  /**
+   * 判断待ちで時間を止めるかを明示指定する (§waitForDecisions のコメント参照)。
+   * null を渡すと対戦カードからの自動判定に戻る。
+   */
+  setFairTiming(enabled: boolean | null): void {
+    this.fairTimingOverride = enabled;
+  }
+
+  /**
+   * 判断待ちで時間を止めるか。
+   *
+   * クラウドAPIのエージェントが1体でも出ているなら止める。止めなければ、応答が
+   * 返る前にラリーが終わってしまい「AIを選んでも中身はローカル処理」という
+   * 見え方になる。キャッシュせず毎回評価するのは、エージェントの差し替えが
+   * setMatchup 以外 (テストやデバッグ) からも起こりうるため。
+   */
+  isWaitingForDecisions(): boolean {
+    if (this.fairTimingOverride !== null) return this.fairTimingOverride;
+    return (this.topBrain.usesLiveApi() || this.bottomBrain?.usesLiveApi()) ?? false;
   }
 
   /**
@@ -234,9 +253,9 @@ export class GameLoopUseCase {
 
   /**
    * 判断が必要なエージェントがいれば問い合わせる。
-   * fairTiming=true の場合のみ、解決を待って共通の思考予算ぶん時間を進める
+   * waitForDecisions=true の場合のみ、解決を待って共通の思考予算ぶん時間を進める
    * (戻り値 true = このティックは思考予算の消費で使い切った)。
-   * fairTiming=false の場合は投げっぱなしにし、物理は同じティックで進み続ける。
+   * false の場合は投げっぱなしにし、物理は同じティックで進み続ける。
    */
   private async resolveDecisions(): Promise<boolean> {
     const puck = this.physics.getPuck();
@@ -284,7 +303,7 @@ export class GameLoopUseCase {
       );
     }
 
-    if (!this.fairTiming) {
+    if (!this.isWaitingForDecisions()) {
       // 裏で進行させるだけ。呼び出し元は待たずに同じティックで物理を進める。
       // requestDecision() は最初の await 前に awaitingDecision を同期的に立てる
       // ため、次の observe() で二重に発火することはない。
@@ -398,14 +417,22 @@ export class GameLoopUseCase {
     const brain = isTop ? this.topBrain : this.bottomBrain;
     if (!brain) return;
 
-    brain.recordContact();
+    // 狙いの評価は recordContact より先に行う。recordContact は実行中の一撃を
+    // 破棄するので、順序を逆にすると「振り抜いた接触」が1件も記録されなくなる
     this.recordAimError(isTop ? this.topStats : this.bottomStats, brain, event.pos);
+    brain.recordContact();
   }
 
-  /** 宣言した狙いと実際の飛翔方向の差を記録する (物理理解度の指標) */
+  /**
+   * 宣言した狙いと実際の飛翔方向の差を記録する (物理理解度の指標)。
+   *
+   * 意図した一撃を振り抜けた接触だけを数える。構えが間に合わずに当てられた
+   * ブロックは、そもそも方向を選べないので指標に含めない (全エージェントに
+   * 同じ基準で適用される)。
+   */
   private recordAimError(stats: AgentStats, brain: AgentBrainUseCase, contactPos: Vec2): void {
     const plan = brain.getPlan();
-    if (!plan) return;
+    if (!plan || !brain.isExecutingStrike()) return;
 
     const error = aimErrorDeg(plan, contactPos, this.physics.getPuck().vel);
     if (error === null) return;

@@ -83,16 +83,18 @@ describe("CpuAgentClient (benchmark control group)", () => {
     expect(plan.swingDirDeg).toBeLessThan(360);
   });
 
-  it("should aim at the opponent goal from either side", async () => {
+  it("should aim past the opponent goal line from either side", async () => {
     const cpu = new CpuAgentClient();
 
+    // 狙い点はゴールラインではなくネットの奥。ライン上を狙うと、そこで
+    // 止まる軌道が「ちょうど届く」と評価されてしまう
     const top = await cpu.decideShot(observation({ side: "TOP" }));
-    expect(top.plan!.aimPoint.y).toBe(CFG.height);
+    expect(top.plan!.aimPoint.y).toBeGreaterThan(CFG.height);
 
     const bottom = await cpu.decideShot(
       observation({ side: "BOTTOM", puckVel: new Vec2(120, 700), myMalletPos: new Vec2(300, 750) })
     );
-    expect(bottom.plan!.aimPoint.y).toBe(0);
+    expect(bottom.plan!.aimPoint.y).toBeLessThan(0);
   });
 
   it("should target the side away from the opponent mallet", async () => {

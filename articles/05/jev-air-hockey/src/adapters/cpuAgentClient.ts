@@ -13,6 +13,7 @@
  */
 
 import { AgentType, AgentTelemetry, MindGameChat } from "../domain/jevAgentTypes";
+import { Vec2 } from "../domain/physics";
 import { validateShotPlan } from "../domain/shotPlanValidator";
 import { predictPuckPath } from "../domain/puckPredictor";
 import { limitsFor } from "../domain/interception";
@@ -29,11 +30,28 @@ import { IAgentClient, AirHockeyObservation } from "./agentClient";
 /** 判断に使う予測の地平線 (秒) */
 const LOOKAHEAD_SEC = 2.0;
 
+/**
+ * 検討する振り抜き速度の比率。
+ *
+ * 最高速だけを候補にすると、両者が最高速の直線シュートを撃ち合う安定した周期に
+ * 入り、完璧に守り合って点が入らなくなる (自己対戦で 1400ラリー・416秒かけて
+ * 0-2 のまま終わる局面が実際に発生した)。強打だけでなく「球威を殺して相手陣に
+ * 置く」選択肢を持たせると、角度を作るための組み立てが成立する。
+ */
+const SWING_SPEED_RATIOS = [1.0, 0.55, 0.3];
+
+/** 直前に狙った地点を避ける強さ (同じ手を読まれ続けないため) */
+const REPEAT_PENALTY = 260;
+const REPEAT_DECAY_PX = 110;
+const REPEAT_MEMORY = 4;
+
 export class CpuAgentClient implements IAgentClient {
   readonly type = AgentType.CPU;
   readonly usesLiveApi = false;
 
   private lastChatTime = 0;
+  /** 直前に狙った地点 (同じ狙いを撃ち続けて読まれるのを避けるため) */
+  private recentTargets: Vec2[] = [];
 
   async decideShot(obs: AirHockeyObservation): Promise<AgentTelemetry> {
     const started = performance.now();
@@ -42,7 +60,7 @@ export class CpuAgentClient implements IAgentClient {
     const traj = predictPuckPath(obs.puckPos, obs.puckVel, config, { horizonSec: LOOKAHEAD_SEC });
     const limits = limitsFor(side, config);
 
-    const ctx: EvaluateContext = {
+    const baseCtx: EvaluateContext = {
       side,
       config,
       limits,
@@ -53,12 +71,24 @@ export class CpuAgentClient implements IAgentClient {
       swingSpeed: config.maxMalletSpeed,
     };
 
-    // 得点を狙う候補をすべて採点し、最良の一手を選ぶ
-    let best = pickBestShot(traj, buildShotCandidates(side, config), ctx, LOOKAHEAD_SEC);
+    const candidates = buildShotCandidates(side, config);
+    let best: ScoredShot | null = null;
+
+    // 狙う地点 × 振り抜く強さ を総当たりで採点する
+    for (const ratio of SWING_SPEED_RATIOS) {
+      const ctx: EvaluateContext = { ...baseCtx, swingSpeed: config.maxMalletSpeed * ratio };
+      const shot = pickBestShot(traj, candidates, ctx, LOOKAHEAD_SEC);
+      if (shot && (!best || this.adjusted(shot) > this.adjusted(best))) best = shot;
+    }
 
     // どれも決まらないなら、確実に自陣から追い出すクリアと比べる
-    const clear = evaluateShot(traj, buildClearCandidate(side, config, obs.opponentMalletPos), ctx, LOOKAHEAD_SEC);
-    if (clear && (!best || clear.score > best.score)) best = clear;
+    const clear = evaluateShot(
+      traj,
+      buildClearCandidate(side, config, obs.opponentMalletPos),
+      baseCtx,
+      LOOKAHEAD_SEC
+    );
+    if (clear && (!best || this.adjusted(clear) > this.adjusted(best))) best = clear;
 
     if (!best) {
       // 迎撃解が1つも立たない = この局面では打ち返せない。計画を出さずに守りへ回す
@@ -71,6 +101,8 @@ export class CpuAgentClient implements IAgentClient {
         latestChat: null,
       };
     }
+
+    this.remember(best);
 
     const { solution, candidate } = best;
     const swingDirDeg = (Math.atan2(solution.swingDir.y, solution.swingDir.x) * 180) / Math.PI;
@@ -95,6 +127,24 @@ export class CpuAgentClient implements IAgentClient {
       isLiveApi: false,
       latestChat: this.buildChat(result.plan?.comment),
     };
+  }
+
+  /**
+   * 直前と同じ狙いを繰り返す手を割り引いた評価値。
+   * 完全に決定論的な実装同士だと、同じ狙いを撃ち合う周期から抜け出せなくなる。
+   * 狙いを散らすのは「読まれないようにする」という実際の戦術でもある。
+   */
+  private adjusted(shot: ScoredShot): number {
+    let penalty = 0;
+    for (const target of this.recentTargets) {
+      penalty += REPEAT_PENALTY * Math.exp(-target.dist(shot.candidate.targetPoint) / REPEAT_DECAY_PX);
+    }
+    return shot.score - penalty;
+  }
+
+  private remember(shot: ScoredShot): void {
+    this.recentTargets.push(shot.candidate.targetPoint);
+    if (this.recentTargets.length > REPEAT_MEMORY) this.recentTargets.shift();
   }
 
   /** 選んだ手の内容をそのまま実況にする (演出のためだけの乱数は使わない) */

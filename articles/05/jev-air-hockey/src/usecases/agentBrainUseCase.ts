@@ -51,24 +51,17 @@ const DESPERATE_SLACK_SEC = -0.32;
 /** 振りかぶりの最大距離 (px)。これ以上下がるとゴールを空ける */
 const MAX_WINDUP_PX = 150;
 
-/** 振り抜きに最低限ほしい助走距離 (px) */
-const MIN_RUNWAY_PX = 38;
-
-/** これ以下の速度なら「こちらが仕掛ける番」。無理に触らず構え直す */
-const LOOSE_PUCK_SPEED = 320;
-
 /** 迎撃解に要求する、助走のための追加余裕 (秒) */
 const SETUP_MARGIN_SEC = 0.04;
-
-/** 振りかぶり点で「構え終わった」とみなす位置・速度のしきい値 */
-const WINDUP_SETTLED_PX = 16;
-const WINDUP_SETTLED_SPEED = 140;
 
 /** 一度当てた直後、パックが離れるまで再コミットを控えるステップ数 */
 const CONTACT_COOLDOWN_STEPS = 8;
 
-/** 目標軌道からのズレを詰める比例ゲイン (1/s) */
+/** スイング軸方向のズレを詰める比例ゲイン (1/s) */
 const TRACKING_GAIN = 14;
+
+/** スイング軸に直交するズレを詰める比例ゲイン (1/s)。狙いの精度を直接決める */
+const LATERAL_TRACKING_GAIN = 36;
 
 /** 接触予定時刻を過ぎてもこの秒数は振り抜き続ける */
 const COMMITMENT_GRACE_SEC = 0.12;
@@ -88,10 +81,13 @@ const CONTACT_GUARD_PX = 14;
 /** 接触法線が自陣ゴールをどれだけ向いていたら危険とみなすか (法線のy成分) */
 const OWN_GOAL_PUSH_TOLERANCE = 0.2;
 
+/** 向き直りに必要な時間へ掛ける安全率 */
+const ALIGN_SAFETY_FACTOR = 0.9;
+
 /** 相手の打球を検知する速度変化のしきい値 (px/s) */
 const OPPONENT_HIT_DELTA = 140;
 
-export type ServoMode = "STRIKE" | "DEFEND" | "HOME";
+export type ServoMode = "SETUP" | "STRIKE" | "DEFEND" | "HOME";
 
 /**
  * 実行中の一撃。振り始めたら接触予定時刻を固定し、自前の時計で追い込む。
@@ -102,6 +98,8 @@ export type ServoMode = "STRIKE" | "DEFEND" | "HOME";
  */
 interface StrikeCommitment {
   contactPoint: Vec2;
+  /** 振りかぶって待つ位置 */
+  windupPoint: Vec2;
   swingDir: Vec2;
   swingSpeed: number;
   /** 接触までの残り時間 (秒)。毎ステップ dt だけ減らす */
@@ -111,6 +109,8 @@ interface StrikeCommitment {
   swingTime: number;
   /** 固定した時点で予測していた接触地点のパック位置 (ズレ検知用) */
   expectedPuckPos: Vec2;
+  /** すでに振り始めたか。振り始めるまではパックに触れない */
+  launched: boolean;
 }
 
 export class AgentBrainUseCase {
@@ -181,6 +181,17 @@ export class AgentBrainUseCase {
     return this.solution;
   }
 
+  /**
+   * 「宣言した狙いを実現する一撃を、いま実際に振り抜いている」か。
+   *
+   * 相手の打球が構えより先に届いてしまった局面 (= 強制的なブロック) では、
+   * どの方向へ返すかを選ぶ余地が物理的に無い。狙いの精度を測るときは、
+   * 意図した一撃だけを対象にしないと指標が雑音で埋まる。
+   */
+  isExecutingStrike(): boolean {
+    return this.commitment?.launched ?? false;
+  }
+
   isAwaitingDecision(): boolean {
     return this.awaitingDecision;
   }
@@ -188,6 +199,11 @@ export class AgentBrainUseCase {
   /** 人間操作の場合は制御しない */
   isControlled(): boolean {
     return this.client !== null;
+  }
+
+  /** このエージェントがクラウドAPIへ問い合わせるか (判断待ちで時間を止めるかの判定に使う) */
+  usesLiveApi(): boolean {
+    return this.client?.usesLiveApi ?? false;
   }
 
   reset(): void {
@@ -406,7 +422,10 @@ export class AgentBrainUseCase {
     const traj = this.trajectory;
     if (!traj) return new Vec2(0, 0);
 
-    if (this.plan) {
+    // 一度振ると決めた一撃は、軌道が変わるまで打点を動かさない。
+    // 毎ステップ解き直すと、打点がパックを追って後退し続け、結果として
+    // 「最初だけ勢いがあって、あとはパックを追いかけるだけ」の動きになる
+    if (!this.commitment && this.plan) {
       const solution = solveIntercept(
         traj,
         myMallet.pos,
@@ -420,14 +439,23 @@ export class AgentBrainUseCase {
           preferPoint: this.plan.interceptPoint,
           // 到達と同時にパックが来る打点では振りかぶれない。助走に使いたい時間を伝える
           setupSec: this.plan.swingSpeed / this.limits.maxAccel + SETUP_MARGIN_SEC,
+          windupPx: this.windupDistance(this.plan.swingSpeed),
         }
       );
 
-      if (solution && (solution.feasible || solution.slackSec > DESPERATE_SLACK_SEC)) {
+      if (
+        solution &&
+        (solution.feasible || solution.slackSec > DESPERATE_SLACK_SEC) &&
+        this.canAlignInTime(myMallet, solution)
+      ) {
         this.solution = solution;
-        this.mode = "STRIKE";
-        return this.strikeVelocity(myMallet, puck, solution);
+        this.commitment = this.buildCommitment(solution);
       }
+    }
+
+    if (this.commitment) {
+      this.mode = this.commitment.launched ? "STRIKE" : "SETUP";
+      return this.executeCommitment(myMallet, puck);
     }
 
     this.solution = null;
@@ -451,60 +479,71 @@ export class AgentBrainUseCase {
    * これをやらないと、迎撃点に到達して停止した死んだマレットにパックが
    * ぶつかるだけになり、球威も角度も出ない。
    */
-  private strikeVelocity(myMallet: CircleBody, puck: CircleBody, sol: InterceptSolution): Vec2 {
+  /**
+   * いまの速度からスイング方向へ向き直る時間が残っているか。
+   *
+   * 壁バウンド等で計画を破棄した直後は、マレットが前の一撃の勢いで別方向へ
+   * 飛んでいることがある。そこへ間髪入れず新しい一撃をコミットすると、向きが
+   * 揃わないまま接触し、狙いと無関係な方向 (計測では最悪 178°) へ打ち出す。
+   * 向き直れないなら一撃を諦めて守りに回る方がよい。
+   */
+  private canAlignInTime(myMallet: CircleBody, sol: InterceptSolution): boolean {
+    const along = Math.max(0, myMallet.vel.dot(sol.swingDir));
+    const misaligned = myMallet.vel.sub(sol.swingDir.scale(along)).mag();
+    const turnSec = misaligned / this.limits.maxAccel;
+    return sol.contactTime >= turnSec * ALIGN_SAFETY_FACTOR;
+  }
+
+  /** 静止から swingSpeed まで加速しきるのに必要な助走距離 */
+  private windupDistance(swingSpeed: number): number {
+    const speed = Math.min(this.limits.maxSpeed, Math.max(1, swingSpeed));
+    return Math.min(MAX_WINDUP_PX, (speed * speed) / (2 * this.limits.maxAccel));
+  }
+
+  /** 迎撃解を「実行する一撃」として固定する */
+  private buildCommitment(sol: InterceptSolution): StrikeCommitment {
     const { maxAccel, maxSpeed } = this.limits;
     const swingSpeed = Math.min(maxSpeed, Math.max(1, sol.swingSpeed));
 
-    // 助走距離: 静止から swingSpeed まで加速しきるのに必要な距離
-    const windup = Math.min(MAX_WINDUP_PX, (swingSpeed * swingSpeed) / (2 * maxAccel));
+    const windup = this.windupDistance(swingSpeed);
     const windupPoint = this.clampToOwnHalf(sol.contactPoint.sub(sol.swingDir.scale(windup)));
     const runUp = windupPoint.dist(sol.contactPoint);
-    const swingTime = travelTime(runUp, 0, swingSpeed, maxAccel);
 
-    // 既に振り始めているなら、固定した時刻に向けて追い込むだけ
-    if (this.commitment) return this.followCommitment(myMallet);
-
-    // スイング軸上でどれだけ後方にいるか (= 残された助走距離)
-    const runway = sol.contactPoint.sub(myMallet.pos).dot(sol.swingDir);
-    const runwayReady = runway >= Math.min(runUp * 0.5, MIN_RUNWAY_PX);
-
-    /**
-     * 助走が無いまま打つと、止まったマレットでパックを押すだけの「ドリブル」に
-     * なり、球威も狙いも出ない (計測では 400px/s 前後の弱い当たりが延々と続いた)。
-     *
-     * 一方、打撃への移行を接触時刻だけで判定すると、止まっているパックに対して
-     * 「構え終わっているのに接触予測時刻が助走時間より先」という状態から抜け出せず、
-     * 振りかぶり点で固まってしまう。そこで判定は2本立てにする:
-     *   - 速い球が来ている  → 接触時刻が来たら振る (ブロック優先)
-     *   - 緩い球 = 自分の番 → 構え終わって助走があれば自分から仕掛ける
-     */
-    const puckIsLive = puck.vel.mag() > LOOSE_PUCK_SPEED;
-    const dueByTiming = sol.contactTime <= swingTime + STRIKE_LEAD_SEC;
-    const settled =
-      myMallet.vel.mag() < WINDUP_SETTLED_SPEED && myMallet.pos.dist(windupPoint) < WINDUP_SETTLED_PX;
-
-    const strikeNow =
-      this.contactCooldownSteps === 0 &&
-      ((dueByTiming && (runwayReady || puckIsLive)) || (settled && runwayReady));
-
-    if (!strikeNow) {
-      // 振りかぶり局面: 打点の手前で速度を殺して構える。
-      // パックを突き飛ばしながら回り込むと自陣へ押し込むので、経路は必ず迂回する
-      const approach = this.routeAroundPuck(myMallet.pos, windupPoint, puck);
-      return this.arriveVelocity(myMallet.pos, approach, maxSpeed);
-    }
-
-    this.commitment = {
+    return {
       contactPoint: sol.contactPoint,
+      windupPoint,
       swingDir: sol.swingDir,
       swingSpeed,
       timeLeft: Math.max(sol.contactTime, 0),
       runUp,
-      swingTime,
+      swingTime: travelTime(runUp, 0, swingSpeed, maxAccel),
       expectedPuckPos: sol.puckPosAtContact,
+      launched: false,
     };
+  }
 
-    return this.followCommitment(myMallet);
+  /**
+   * 固定した一撃を実行する。
+   *   準備局面 — 振りかぶり点へ回り込んで構え、パックには触れない
+   *   打撃局面 — 接触時刻から逆算した加速プロファイルで振り抜く
+   */
+  private executeCommitment(myMallet: CircleBody, puck: CircleBody): Vec2 {
+    const commit = this.commitment!;
+
+    if (!commit.launched) {
+      const ready = commit.timeLeft <= commit.swingTime + STRIKE_LEAD_SEC;
+      // 助走を確保できないまま時間切れになるなら、その場から振り出すしかない
+      if (ready && this.contactCooldownSteps === 0) {
+        commit.launched = true;
+      }
+    }
+
+    if (commit.launched) return this.followCommitment(myMallet);
+
+    // 準備局面: 振りかぶり点で速度を殺して構える。
+    // パックを突き飛ばしながら回り込むと自陣へ押し込むので、経路は必ず迂回する
+    const approach = this.routeAroundPuck(myMallet.pos, commit.windupPoint, puck);
+    return this.arriveVelocity(myMallet.pos, approach, this.limits.maxSpeed);
   }
 
   /**
@@ -519,19 +558,41 @@ export class AgentBrainUseCase {
     const { maxAccel, maxSpeed } = this.limits;
 
     const tau = Math.max(0, commit.timeLeft);
+
+    // 接触時刻から逆算した理想位置。tau=0 でちょうど接触点に一致し、それより先へは出ない
     const behind = Math.min(commit.runUp, 0.5 * maxAccel * tau * tau);
     const idealPos = commit.contactPoint.sub(commit.swingDir.scale(behind));
 
     const elapsed = Math.max(0, commit.swingTime - tau);
     const idealSpeed = Math.min(commit.swingSpeed, maxAccel * elapsed);
 
-    // 接触時刻を過ぎたら、振り抜き速度のまま突き抜ける
-    const feedForward = commit.swingDir.scale(
-      commit.timeLeft <= 0 ? commit.swingSpeed : Math.max(idealSpeed, commit.swingSpeed * 0.15)
-    );
-    const correction = idealPos.sub(myMallet.pos).scale(TRACKING_GAIN);
+    const toIdeal = idealPos.sub(myMallet.pos);
 
-    const desired = feedForward.add(correction);
+    /**
+     * スイング軸方向 — 予定より前に出ていたら速度を落として待つ。
+     *
+     * ここを単純な「フィードフォワード + 位置補正」にすると、予定より早く着いた
+     * 瞬間に補正が軸の逆向きへ振り切れ、マレットが後退しながらパックに当たる。
+     * 計測では実際にこれが起きており、狙いから 178° ずれた打球 (ほぼ真後ろ) が
+     * 出ていた。前に出過ぎた場合は止まって待つのが正しく、決して戻ってはいけない。
+     */
+    const alongError = toIdeal.dot(commit.swingDir);
+    const passedContact = commit.contactPoint.sub(myMallet.pos).dot(commit.swingDir) <= 0;
+
+    let along = idealSpeed + alongError * TRACKING_GAIN;
+    if (commit.timeLeft > 0) {
+      // まだ接触時刻前。接触点を追い越さないよう 0 で下限を切る
+      along = Math.max(0, Math.min(commit.swingSpeed, along));
+      if (passedContact) along = 0;
+    } else {
+      // 接触時刻を過ぎた。振り抜き速度のまま通過する
+      along = commit.swingSpeed;
+    }
+
+    // 軸に直交するズレは接触法線をそのまま回すので、強いゲインで押さえる
+    const lateral = toIdeal.sub(commit.swingDir.scale(alongError)).scale(LATERAL_TRACKING_GAIN);
+
+    const desired = commit.swingDir.scale(along).add(lateral);
     const speed = desired.mag();
     return speed > maxSpeed ? desired.scale(maxSpeed / speed) : desired;
   }
@@ -598,7 +659,7 @@ export class AgentBrainUseCase {
     const alongNormal = desired.dot(normal);
     if (alongNormal <= 0) return desired; // パックから離れる向きなら問題ない
 
-    if (this.commitment) {
+    if (this.commitment?.launched) {
       // 振り抜き中でも、自陣ゴールへ押し込む向きだけは許さない
       const towardOwnGoal = this.side === "TOP" ? -normal.y : normal.y;
       if (towardOwnGoal <= OWN_GOAL_PUSH_TOLERANCE) return desired;
