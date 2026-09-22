@@ -53,9 +53,9 @@ const round = (n: number) => Math.round(n);
  * これが無いと、API応答がハングした瞬間にシミュレーションループ全体が
  * (両陣営・パックともども) 永久に停止する — resolveDecisions() の
  * Promise.all() をゲームの唯一のsimTickが直接 await しているため。
- * decisionBudgetMs (ゲーム内時間) とは無関係な、実時間側の安全装置。
+ * エアホッケーのテンポを損なわないよう、3.5秒で早期タイムアウトさせて緊急守備へ移行する。
  */
-export const DECISION_TIMEOUT_MS = 15000;
+export const DECISION_TIMEOUT_MS = 3500;
 
 class DecisionTimeoutError extends Error {}
 

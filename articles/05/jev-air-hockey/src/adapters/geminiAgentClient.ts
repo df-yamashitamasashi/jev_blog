@@ -62,7 +62,15 @@ export class GeminiAgentClient implements IAgentClient {
       const latencyMs = performance.now() - started;
 
       if (!res.ok) {
-        return failureTelemetry("ERROR", `APIエラー ${res.status}`, latencyMs);
+        let errorDetail = `APIエラー ${res.status}`;
+        try {
+          const errData = await res.json();
+          if (errData?.error?.message) {
+            errorDetail = `${res.status}: ${errData.error.message}`;
+          }
+        } catch {}
+        console.error("Gemini API Error:", errorDetail);
+        return failureTelemetry("ERROR", errorDetail, latencyMs);
       }
 
       const data = await res.json();

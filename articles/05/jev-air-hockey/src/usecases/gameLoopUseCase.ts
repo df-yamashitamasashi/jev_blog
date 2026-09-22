@@ -211,10 +211,11 @@ export class GameLoopUseCase {
   /**
    * 判断待ちで時間を止めるか。
    *
-   * クラウドAPIのエージェントが1体でも出ているなら止める。止めなければ、応答が
-   * 返る前にラリーが終わってしまい「AIを選んでも中身はローカル処理」という
-   * 見え方になる。キャッシュせず毎回評価するのは、エージェントの差し替えが
-   * setMatchup 以外 (テストやデバッグ) からも起こりうるため。
+   * トーナメントなどの公平ベンチマーク (fairTimingOverride === true) では
+   * 回線速度差を排除するため時間を止めて思考予算を一括消費する。
+   * 通常のライブ対戦 (fairTimingOverride !== true) では、ゲームをフリーズ・ワープ
+   * させずに滑らかに動かし続けるため、裏で非同期通信を行い、
+   * AI思考中もマレットは守備体制を維持しながら滑らかに物理を進める。
    */
   isWaitingForDecisions(): boolean {
     if (this.fairTimingOverride !== null) return this.fairTimingOverride;
@@ -505,10 +506,16 @@ export class GameLoopUseCase {
   }
 
   private serve(side: "PLAYER" | "JEV"): void {
-    this.physics.resetPositions(side);
-    // resetPositions は Math.random を使うため、再現性のためにシード付きで上書きする
+    const isHuman = this.matchState.bottomAgent === AgentType.HUMAN;
+    this.physics.resetPositions(side, side === "PLAYER" && isHuman);
     const puck = this.physics.getPuck();
-    puck.vel.set((this.rng() - 0.5) * 120, side === "PLAYER" ? -240 : 240);
+    if (side === "PLAYER" && isHuman) {
+      // 人間プレイヤーサーブ時は手元に静止させ、プレイヤー自身が第1打を打てるようにする
+      puck.vel.set(0, 0);
+    } else {
+      // CPU/AIサーブ時は前進速度を付与してサーブ
+      puck.vel.set((this.rng() - 0.5) * 120, side === "PLAYER" ? -240 : 240);
+    }
 
     this.topBrain.reset();
     this.bottomBrain?.reset();

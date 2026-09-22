@@ -62,7 +62,9 @@ export class CanvasRenderer {
     topTelemetry: AgentTelemetry | null,
     bottomTelemetry: AgentTelemetry | null = null,
     topAgent: AgentType = AgentType.JEV,
-    bottomAgent: AgentType = AgentType.HUMAN
+    bottomAgent: AgentType = AgentType.HUMAN,
+    isTopThinking: boolean = false,
+    isBottomThinking: boolean = false
   ): void {
     const { width, height } = this.config;
     const ctx = this.ctx;
@@ -109,7 +111,8 @@ export class CanvasRenderer {
       topProf.secondaryColor,
       topProf.displayName,
       false, // isHuman
-      isTopLiveAi
+      isTopLiveAi,
+      isTopThinking
     );
     this.renderMallet(
       playerMallet,
@@ -117,8 +120,14 @@ export class CanvasRenderer {
       botProf.secondaryColor,
       botProf.displayName,
       isBotHuman,
-      isBotLiveAi
+      isBotLiveAi,
+      isBottomThinking
     );
+
+    // 7. AI思考中インジケータ (クロックストップ時の演出)
+    if (isTopThinking || isBottomThinking) {
+      this.renderThinkingBanner(width, height, isTopThinking ? topProf.displayName : botProf.displayName);
+    }
 
     ctx.restore();
   }
@@ -339,9 +348,22 @@ export class CanvasRenderer {
     secondaryColor: string,
     displayName: string,
     isHuman: boolean,
-    isLiveAi: boolean
+    isLiveAi: boolean,
+    isThinking: boolean = false
   ): void {
     const ctx = this.ctx;
+
+    // AI思考中パルスリング
+    if (isThinking) {
+      const pulse = (Math.sin(performance.now() * 0.008) + 1) * 0.5;
+      ctx.shadowColor = "#34d399";
+      ctx.shadowBlur = 24;
+      ctx.strokeStyle = `rgba(52, 211, 153, ${0.4 + pulse * 0.6})`;
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(mallet.pos.x, mallet.pos.y, mallet.radius + 8 + pulse * 6, 0, Math.PI * 2);
+      ctx.stroke();
+    }
 
     // 外枠リング & グロー
     ctx.shadowColor = primaryColor;
@@ -458,4 +480,42 @@ export class CanvasRenderer {
     ctx.globalAlpha = 1.0;
     ctx.shadowBlur = 0;
   }
+
+  private renderThinkingBanner(width: number, height: number, aiName: string): void {
+    const ctx = this.ctx;
+    const pulse = (Math.sin(performance.now() * 0.006) + 1) * 0.5;
+
+    ctx.save();
+    const bw = 240;
+    const bh = 32;
+    const bx = (width - bw) * 0.5;
+    const by = height * 0.5 - bh * 0.5;
+
+    // 半透明サイバーバナー
+    ctx.fillStyle = "rgba(8, 11, 24, 0.85)";
+    ctx.strokeStyle = `rgba(52, 211, 153, ${0.5 + pulse * 0.5})`;
+    ctx.lineWidth = 1.5;
+    ctx.shadowColor = "#34d399";
+    ctx.shadowBlur = 12 + pulse * 8;
+
+    ctx.beginPath();
+    if (typeof ctx.roundRect === "function") {
+      ctx.roundRect(bx, by, bw, bh, 6);
+    } else {
+      ctx.rect(bx, by, bw, bh);
+    }
+    ctx.fill();
+    ctx.stroke();
+
+    // テキスト
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = "#34d399";
+    ctx.font = "bold 11px 'JetBrains Mono', monospace";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(`🧠 ${aiName} THINKING...`, width * 0.5, height * 0.5);
+
+    ctx.restore();
+  }
 }
+

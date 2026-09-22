@@ -126,6 +126,8 @@ export class AgentBrainUseCase {
   private decisionArmed = true;
   private lastEngaged = false;
   private touchedThisApproach = false;
+  private hasDecidedThisApproach = false;
+  private apiCooldownUntil = 0;
   private msSinceDecision = Number.POSITIVE_INFINITY;
 
   private trajectory: PuckTrajectory | null = null;
@@ -213,6 +215,8 @@ export class AgentBrainUseCase {
     this.decisionArmed = true;
     this.lastEngaged = false;
     this.touchedThisApproach = false;
+    this.hasDecidedThisApproach = false;
+    this.apiCooldownUntil = 0;
     this.msSinceDecision = Number.POSITIVE_INFINITY;
     this.trajectory = null;
     this.stepsSincePredict = Number.POSITIVE_INFINITY;
@@ -230,6 +234,7 @@ export class AgentBrainUseCase {
     this.commitment = null;
     // 打ち返した直後は状況が一変する。次の局面を考え直す
     this.decisionArmed = true;
+    this.hasDecidedThisApproach = false;
     this.stepsSincePredict = Number.POSITIVE_INFINITY;
   }
 
@@ -241,7 +246,8 @@ export class AgentBrainUseCase {
     this.stepsSincePredict = Number.POSITIVE_INFINITY;
     // 軌道が変わったなら、振っている途中の一撃はもう狙いを実現しない
     this.commitment = null;
-    if (this.lastEngaged) {
+    // Live API では自陣内の壁バウンドごとの再判断を抑制（API上限保護のため。CPUのみ再判断）
+    if (this.lastEngaged && !this.usesLiveApi()) {
       this.decisionArmed = true;
     }
   }
@@ -280,7 +286,7 @@ export class AgentBrainUseCase {
     if (puck.vel.sub(this.lastPuckVel).mag() > OPPONENT_HIT_DELTA) {
       force = true;
       this.commitment = null;
-      if (this.lastEngaged) this.decisionArmed = true;
+      if (this.lastEngaged && !this.usesLiveApi()) this.decisionArmed = true;
     }
     this.lastPuckVel = puck.vel.clone();
 
@@ -311,15 +317,24 @@ export class AgentBrainUseCase {
     if (engaged && !this.lastEngaged) {
       this.decisionArmed = true;
       this.touchedThisApproach = false;
+      this.hasDecidedThisApproach = false;
     } else if (!engaged && this.lastEngaged) {
       approachEnded = this.touchedThisApproach ? "SAVE" : "WHIFF";
+      this.hasDecidedThisApproach = false;
     }
     this.lastEngaged = engaged;
 
+    const inCooldown = Date.now() < this.apiCooldownUntil;
     const dueForRedecision = engaged && this.msSinceDecision >= REDECIDE_SAFETY_NET_MS;
 
+    // Live API の場合は 1アプローチにつき最大 1 回の判断とし、レート制限クールダウン中もリクエストしない
+    // （CPUはローカル演算のため何度でも再考してよい）
+    const shouldDecide = this.usesLiveApi()
+      ? (this.decisionArmed && !this.hasDecidedThisApproach && !inCooldown)
+      : (this.decisionArmed || dueForRedecision);
+
     return {
-      needsDecision: !this.awaitingDecision && engaged && (this.decisionArmed || dueForRedecision),
+      needsDecision: !this.awaitingDecision && engaged && shouldDecide,
       approachEnded,
     };
   }
@@ -328,6 +343,7 @@ export class AgentBrainUseCase {
   finalizeApproach(): "SAVE" | "WHIFF" | null {
     if (!this.client || !this.lastEngaged) return null;
     this.lastEngaged = false;
+    this.hasDecidedThisApproach = false;
     return this.touchedThisApproach ? "SAVE" : "WHIFF";
   }
 
@@ -343,6 +359,7 @@ export class AgentBrainUseCase {
 
     this.awaitingDecision = true;
     this.decisionArmed = false;
+    this.hasDecidedThisApproach = true;
 
     const observation: AirHockeyObservation = {
       side: this.side,
@@ -363,6 +380,17 @@ export class AgentBrainUseCase {
       // 無効な判断はローカルで救済しない。計画が無ければ攻撃はせず、守りに徹する
       this.plan = telemetry.plan;
       this.msSinceDecision = 0;
+
+      // 429 エラー (Quota Exceeded) 時はスマートクールダウンを設定し、連打による悪循環を防ぐ
+      if (telemetry.status === "ERROR") {
+        const errorMsg = telemetry.clampNotes.join(" ");
+        if (errorMsg.includes("429") || errorMsg.toLowerCase().includes("quota") || errorMsg.includes("rate-limit")) {
+          const match = errorMsg.match(/retry in ([0-9.]+)s/i);
+          const waitSec = match ? Math.ceil(parseFloat(match[1])) + 1 : 8;
+          this.apiCooldownUntil = Date.now() + waitSec * 1000;
+        }
+      }
+
       return telemetry;
     } finally {
       this.awaitingDecision = false;
@@ -721,6 +749,11 @@ export class AgentBrainUseCase {
     const applied = deltaV.mag() > maxDelta ? deltaV.normalize().scale(maxDelta) : deltaV;
 
     let next = myMallet.vel.add(applied);
+    // 走っている最中に1ステップで進行方向が逆転するカクつきを防止 (一旦止まってから反転する)
+    if (myMallet.vel.mag() > 50 && next.mag() > 50 && next.dot(myMallet.vel) < 0) {
+      next = new Vec2(0, 0);
+    }
+
     const speed = next.mag();
     if (speed > maxSpeed) {
       next = next.scale(maxSpeed / speed);

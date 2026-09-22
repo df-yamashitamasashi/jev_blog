@@ -3,7 +3,7 @@
  * Clean Architecture - Presentation Layer
  */
 
-import { DEFAULT_STADIUM_CONFIG } from "../domain/gameState";
+import { DEFAULT_STADIUM_CONFIG, GameStatus } from "../domain/gameState";
 import { AgentType } from "../domain/jevAgentTypes";
 import { SoundSynthesizer } from "../adapters/soundSynthesizer";
 import { PhysicsEngine } from "../usecases/physicsEngine";
@@ -121,11 +121,31 @@ window.addEventListener("DOMContentLoaded", () => {
   const pauseBtn = document.getElementById("btn-pause");
   const bgmBtn = document.getElementById("btn-bgm");
 
-  startBtn?.addEventListener("click", () => {
+  const handleStartMatch = () => {
     // ライブ対戦はサーブの乱数シードを毎回変える。固定のままだと、同じ対戦カードで
     // 毎回まったく同じ展開・同じ位置で1点目が入る (トーナメントは再現性が要るので
     // TournamentUseCase 側が明示的にシードを指定する)
     gameLoop.startMatch(7, (Date.now() ^ (Math.random() * 0xffffffff)) >>> 0);
+  };
+
+  startBtn?.addEventListener("click", handleStartMatch);
+
+  // スペースキーでのスタート・一時停止操作
+  window.addEventListener("keydown", (e) => {
+    if (e.code === "Space" || e.key === " ") {
+      // モーダル入力中などの誤爆を防止
+      const activeTag = document.activeElement?.tagName.toLowerCase();
+      if (activeTag === "input" || activeTag === "textarea" || activeTag === "select") {
+        return;
+      }
+      e.preventDefault();
+      const status = gameLoop.getMatchState().status;
+      if (status === GameStatus.READY || status === GameStatus.GAME_OVER) {
+        handleStartMatch();
+      } else if (status === GameStatus.PLAYING || status === GameStatus.PAUSED) {
+        gameLoop.pauseMatch();
+      }
+    }
   });
 
   pauseBtn?.addEventListener("click", () => {
@@ -339,6 +359,10 @@ window.addEventListener("DOMContentLoaded", () => {
       }
     } catch (e) {
       console.error("シミュレーションの進行でエラーが発生しました:", e);
+    } finally {
+      // AI通信待ちなどで実時間が経過しても、それを「遅延」として一括キャッチアップ実行しない。
+      // これをリセットすることで、思考直後に球が画面上をワープする不具合を完全に防止する。
+      lastSimTime = performance.now();
     }
 
     // サーボの状態表示は描画ループではなくここから更新する。
@@ -379,7 +403,9 @@ window.addEventListener("DOMContentLoaded", () => {
       topTelemetry,
       bottomTelemetry,
       matchState.topAgent,
-      matchState.bottomAgent
+      matchState.bottomAgent,
+      topBrain.isAwaitingDecision(),
+      bottomBrain?.isAwaitingDecision() ?? false
     );
 
     hud.updateTelemetry(topTelemetry, bottomTelemetry);

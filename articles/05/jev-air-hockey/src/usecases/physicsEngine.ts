@@ -333,17 +333,20 @@ export class PhysicsEngine {
   }
 
   /** パック・マレットのリセット */
-  resetPositions(servingSide: "PLAYER" | "JEV" = "PLAYER"): void {
+  resetPositions(servingSide: "PLAYER" | "JEV" = "PLAYER", isHumanPlayer: boolean = false): void {
     const { width, height } = this.config;
     const isPlayerServing = servingSide === "PLAYER";
     const puckY = isPlayerServing ? height * 0.65 : height * 0.35;
 
-    // パック初期位置
+    // パック初期位置 (プレイヤーサーブ時は手前に静止して配置し、プレイヤーが第1打を打てるようにする)
     this.puck.pos.set(width * 0.5, puckY);
-    // 相手側またはサーブ側へ向けて穏やかな初期サーブ速度を付与 (ボール停止防止)
-    const randomAngle = (Math.random() - 0.5) * 120;
-    const serveDirY = isPlayerServing ? -240 : 240;
-    this.puck.vel.set(randomAngle, serveDirY);
+    if (isPlayerServing && isHumanPlayer) {
+      this.puck.vel.set(0, 0);
+    } else {
+      const randomAngle = (Math.random() - 0.5) * 120;
+      const serveDirY = isPlayerServing ? -240 : 240;
+      this.puck.vel.set(randomAngle, serveDirY);
+    }
     this.puck.spin = 0;
 
     this.playerMallet.pos.set(width * 0.5, height * 0.85);

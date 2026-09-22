@@ -101,6 +101,49 @@ export function buildClearCandidate(
   return { kind: "CLEAR", aimPoint: target.clone(), targetPoint: target };
 }
 
+/**
+ * この局面が「攻撃（シュート）を仕掛けるチャンス」かどうかを判定する。
+ *
+ * エアホッケーの基本は「守備」。相手陣にある球や、高速で飛んでくる危険な球に対して
+ * むやみに前へ飛び出して大振りを狙うと、空振りや失点、自殺点につながる。
+ * 以下の条件を満たす「チャンス局面」でのみ攻撃ショットを許容し、
+ * それ以外はゴール前でのブロックやセーブ（守備専念）を優先する。
+ */
+export function isOffensiveOpportunity(
+  puckPos: Vec2,
+  puckVel: Vec2,
+  side: PlaySide,
+  config: StadiumConfig,
+  solution?: InterceptSolution | null
+): boolean {
+  const inOwnHalf = side === "TOP" ? puckPos.y <= config.height * 0.52 : puckPos.y >= config.height * 0.48;
+  const headingToMe = side === "TOP" ? puckVel.y < -30 : puckVel.y > 30;
+
+  // 1. パックが相手陣にあり、かつ自陣へ向かっていない時は「守り (待機)」の基本姿勢を維持 (攻撃チャンスではない)
+  if (!inOwnHalf && !headingToMe) {
+    return false;
+  }
+
+  // 2. 迎撃解が与えられている場合:
+  if (solution) {
+    // 実行不能な解は攻撃チャンスではない
+    if (!solution.feasible) return false;
+
+    // 自陣ゴールに危険なほど近すぎる打点 (自殺点リスク) は攻撃ではなくブロックに留める
+    const dangerGoalMargin = config.malletRadius * 1.6;
+    const isDangerZone =
+      side === "TOP"
+        ? solution.contactPoint.y < dangerGoalMargin
+        : solution.contactPoint.y > config.height - dangerGoalMargin;
+    if (isDangerZone) return false;
+
+    return true;
+  }
+
+  // 自陣にあるか、自陣に向かってきている球は反撃・攻撃のチャンス
+  return true;
+}
+
 export interface EvaluateContext {
   side: PlaySide;
   config: StadiumConfig;

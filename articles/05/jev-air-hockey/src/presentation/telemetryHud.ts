@@ -59,13 +59,33 @@ export class TelemetryHud {
 
       const statusEl = document.getElementById("hud-stance");
       if (statusEl) {
-        statusEl.textContent = STATUS_LABEL[topTelemetry.status];
+        if (topTelemetry.status === "ERROR") {
+          const reason = topTelemetry.clampNotes[0] || "通信エラー";
+          if (reason.includes("429") || reason.toLowerCase().includes("quota") || reason.includes("rate-limit")) {
+            statusEl.textContent = "⏳ 無料枠制限 (429)";
+          } else {
+            statusEl.textContent = `❌ ${reason.length > 28 ? reason.slice(0, 28) + "…" : reason}`;
+          }
+        } else {
+          statusEl.textContent = STATUS_LABEL[topTelemetry.status];
+        }
         statusEl.setAttribute("data-stance", topTelemetry.status);
       }
 
       const planEl = document.getElementById("hud-confidence");
       if (planEl) {
-        planEl.textContent = describePlan(topTelemetry);
+        if (topTelemetry.status === "ERROR") {
+          const reason = topTelemetry.clampNotes[0] || "不明";
+          if (reason.includes("429") || reason.toLowerCase().includes("quota") || reason.includes("rate-limit")) {
+            const match = reason.match(/retry in ([0-9.]+)s/i);
+            const waitTime = match ? `${Math.ceil(parseFloat(match[1]))}秒後` : "約7秒後";
+            planEl.textContent = `⏳ Gemini無料枠の上限(5回/分)に達しました。${waitTime}に自動再開します（現在は緊急守備ブロック中）`;
+          } else {
+            planEl.textContent = `⚠️ エラー詳細: ${reason}`;
+          }
+        } else {
+          planEl.textContent = describePlan(topTelemetry);
+        }
       }
 
       const detailEl = document.getElementById("hud-courses-list");
@@ -300,8 +320,11 @@ export class TelemetryHud {
 }
 
 function describePlan(telemetry: AgentTelemetry): string {
-  const { plan } = telemetry;
-  if (!plan) return "打ち返しを放棄 (空振りになります)";
+  const { plan, status } = telemetry;
+  if (!plan) {
+    if (status === "TIMEOUT") return "⏱️ タイムアウト: 緊急守備ブロックで迎撃";
+    return "🛡️ 計画なし: 緊急守備ブロックで迎撃";
+  }
 
   return `迎撃 (${Math.round(plan.interceptPoint.x)}, ${Math.round(plan.interceptPoint.y)}) / 振り抜き ${Math.round(plan.swingDirDeg)}° / ${Math.round(plan.swingSpeed)} px/s`;
 }
