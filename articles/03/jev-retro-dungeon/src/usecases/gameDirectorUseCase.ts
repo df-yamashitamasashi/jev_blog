@@ -76,7 +76,7 @@ export class GameDirectorUseCase {
     const themeAns = response.answers["floorTheme"];
     const dangerAns = response.answers["dangerScore"];
 
-    const chosenTheme = (themeAns?.type === "choice" ? themeAns.choice : "normal") as ElementType;
+    const chosenTheme = (themeAns?.type === "choice" ? pickWeightedChoice(themeAns) : "normal") as ElementType;
     // criteria配列は0始まりなので、従来の1.0〜4.0スケールに合わせるため+1する
     const dangerScore = dangerAns?.type === "score" ? dangerAns.score + 1 : 2.0;
 
@@ -203,7 +203,7 @@ export class GameDirectorUseCase {
     const slotAns = response.answers["equipmentSlot"];
     const tierAns = response.answers["equipmentTier"];
 
-    const slot = (slotAns?.type === "choice" ? slotAns.choice : "weapon") as EquipmentSlot;
+    const slot = (slotAns?.type === "choice" ? pickWeightedChoice(slotAns) : "weapon") as EquipmentSlot;
     // criteria配列は0始まりなので、従来の1.0〜4.0スケールに合わせるため+1する
     const tierScore = tierAns?.type === "score" ? tierAns.score + 1 : 1.5;
 
@@ -270,7 +270,7 @@ export class GameDirectorUseCase {
     });
 
     const actAns = response.answers["monsterAction"];
-    const action = (actAns?.type === "choice" ? actAns.choice : "attack") as
+    const action = (actAns?.type === "choice" ? pickWeightedChoice(actAns) : "attack") as
       | "attack"
       | "spell"
       | "defend"
@@ -344,7 +344,8 @@ export class GameDirectorUseCase {
       miracle: { prefixKey: "weapon_prefix_miracle", elem: "normal" },
     };
 
-    const selected = pMap[prefixAns?.type === "choice" ? prefixAns.choice : "flame"] || pMap.flame;
+    const selected =
+      pMap[prefixAns?.type === "choice" ? pickWeightedChoice(prefixAns) : "flame"] || pMap.flame;
     // criteria配列は0始まりなので、従来の1.0〜4.0スケールに合わせるため+1する
     const bonus = Math.round(((bonusAns?.type === "score" ? bonusAns.score + 1 : 2.0)) * 3);
     const prefix = this.i18n.t(selected.prefixKey);

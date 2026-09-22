@@ -7,6 +7,7 @@ import { Monster, Hero, CardData } from "../domain/models";
 import { JevClient } from "../adapters/jevClient";
 import { I18nManager } from "../presentation/i18nManager";
 import { TranslationDictionary } from "../domain/i18nTypes";
+import { pickWeightedChoice } from "./jevChoice";
 
 export class CardGeneratorUseCase {
   private readonly i18n: I18nManager;
@@ -96,10 +97,10 @@ export class CardGeneratorUseCase {
       lore_d: "card_lore_d",
     };
 
-    const chosenTitleKey = titleAns?.type === "choice" ? titleAns.choice : "legendary_hero";
+    const chosenTitleKey = titleAns?.type === "choice" ? pickWeightedChoice(titleAns) : "legendary_hero";
     // criteria配列は0始まりなので、従来の1.0〜4.0スケールに合わせるため+1する
     const dangerScore = scoreAns?.type === "score" ? scoreAns.score + 1 : 2.5;
-    const chosenLoreKey = loreAns?.type === "choice" ? loreAns.choice : "lore_a";
+    const chosenLoreKey = loreAns?.type === "choice" ? pickWeightedChoice(loreAns) : "lore_a";
 
     const title = this.i18n.t(titleMap[chosenTitleKey] || titleMap.legendary_hero);
     const flavorText = this.i18n.t(loreMap[chosenLoreKey] || loreMap.lore_a);
