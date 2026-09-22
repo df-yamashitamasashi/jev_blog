@@ -8,13 +8,13 @@ TypeSafe AI が発表した新世代の意思決定モデル **「Jev」（Syste
 
 ## 記事シリーズ & サンプルコード一覧
 
-| シリーズ | テーマ | 解説記事 (Qiita) | 主な技術スタック | サンプルコード |
-| :--- | :--- | :--- | :--- | :--- |
-| **Vol. 1** | [**Jev詳解（実践ユースケース5選）**](https://qiita.com/yam_dev/items/e3c69dbb3aec67f092c4)<br>サポートトリアージ、セキュリティガードレール、モデルルーター、RAGリランク、エージェントスキル選択 | [記事を読む ↗](https://qiita.com/yam_dev/items/e3c69dbb3aec67f092c4) | Python 3.12<br>`typesafe-sdk`<br>pytest, mypy, ruff | [`articles/01/`](./articles/01/) |
-| **Vol. 2** | [**Jevを活用したVSCode拡張機能の構築**](https://qiita.com/yam_dev/items/018959baefb3bee4a06a)<br>リアルタイム波線診断、インテントディスパッチャー、投機的LLMゲートキーパー | [記事を読む ↗](https://qiita.com/yam_dev/items/018959baefb3bee4a06a) | TypeScript<br>Clean Architecture<br>VSCode API, Vitest | [`articles/02/vscode-jev-companion/`](./articles/02/vscode-jev-companion/) |
-| **Vol. 3** | [**Jevで創るリアルタイム・レトロダンジョンバトル**](https://qiita.com/yam_dev/items/4c0ff700a6b265f96c8a)<br>AIゲームディレクター、パレットスワップ、リアルタイム装備成長、レトロTCGカード生成＆シェア | [記事を読む ↗](https://qiita.com/yam_dev/items/4c0ff700a6b265f96c8a) | TypeScript<br>Clean Architecture<br>Vite, HTML5 Canvas, Web Audio, Vitest | [`articles/03/`](./articles/03/) |
-| **Vol. 4** | **Jevを活用したRAGの構築** *(Coming Soon)* | *(準備中)* | Python / TypeScript | `articles/04/` *(準備中)* |
-| **Vol. 5** | **Jevを活用したエージェントの構築** *(Coming Soon)* | *(準備中)* | - | `articles/05/` *(準備中)* |
+| シリーズ | テーマ | 主な技術スタック | サンプルコード |
+| :--- | :--- | :--- | :--- |
+| **Vol. 1** | [**Jev詳解（実践ユースケース5選）**](https://qiita.com/yam_dev/items/e3c69dbb3aec67f092c4)<br>サポートトリアージ、セキュリティガードレール、モデルルーター、RAGリランク、エージェントスキル選択 | Python 3.12<br>`typesafe-sdk`<br>pytest, mypy, ruff | [`articles/01/`](./articles/01/) |
+| **Vol. 2** | [**Jevを活用したVSCode拡張機能の構築**](https://qiita.com/yam_dev/items/018959baefb3bee4a06a)<br>リアルタイム波線診断、インテントディスパッチャー、投機的LLMゲートキーパー | TypeScript<br>Clean Architecture<br>VSCode API, Vitest | [`articles/02/vscode-jev-companion/`](./articles/02/vscode-jev-companion/) |
+| **Vol. 3** | [**Jevで創るリアルタイム・レトロダンジョンバトル**](https://qiita.com/yam_dev/items/4c0ff700a6b265f96c8a)<br>AIゲームディレクター、パレットスワップ、リアルタイム装備成長、レトロTCGカード生成＆シェア | TypeScript<br>Clean Architecture<br>Vite, HTML5 Canvas, Web Audio, Vitest | [`articles/03/`](./articles/03/) |
+| **Vol. 4** | **Jevを活用したRAGの構築** *(Coming Soon)* | Python / TypeScript | `articles/04/` *(準備中)* |
+| **Vol. 5** | **Jevを活用したエージェントの構築** *(Coming Soon)* | - | `articles/05/` *(準備中)* |
 
 ---
 
