@@ -81,9 +81,12 @@ export class GenerativeMonsterUseCase {
       },
     });
 
+    // 「2.2億通り」を謳うDNA生成では、8スロットそれぞれがJevの最尤解に
+    // 収束しすぎないよう、分布を平坦化して探索性を強めに取る
+    const GENE_TEMPERATURE = 2.2;
     const getAns = (key: string, fallback: string) => {
       const ans = response.answers[key];
-      return ans?.type === "choice" ? pickWeightedChoice(ans) : fallback;
+      return ans?.type === "choice" ? pickWeightedChoice(ans, GENE_TEMPERATURE) : fallback;
     };
 
     const bodyId = getAns("bodyGene", DNA_CATALOG.bodies[0].id);
