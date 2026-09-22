@@ -8,6 +8,7 @@
 import { IJevClient } from "../adapters/jevClient";
 import { Monster, DungeonFloor, ElementType, MonsterType } from "../domain/models";
 import { DNA_CATALOG, MonsterDNA } from "../domain/dnaModels";
+import { pickWeightedChoice } from "./jevChoice";
 
 export class GenerativeMonsterUseCase {
   constructor(private readonly jevClient: IJevClient) {}
@@ -82,7 +83,7 @@ export class GenerativeMonsterUseCase {
 
     const getAns = (key: string, fallback: string) => {
       const ans = response.answers[key];
-      return ans?.type === "choice" ? ans.choice : fallback;
+      return ans?.type === "choice" ? pickWeightedChoice(ans) : fallback;
     };
 
     const bodyId = getAns("bodyGene", DNA_CATALOG.bodies[0].id);

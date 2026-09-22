@@ -48,9 +48,10 @@ export class JevClient implements IJevClient {
   constructor(options: JevClientOptions = {}) {
     this.apiKey = options.apiKey || (typeof window !== "undefined" ? localStorage.getItem("jev_api_key") || "" : "");
     this.baseUrl = (options.baseUrl || DEFAULT_JEV_BASE_URL).replace(/\/+$/, "");
-    // Jev System OneはLLMバックエンドのため、2秒では正常なレスポンスでも
-    // タイムアウトしてシミュレーターに落ちてしまうことがあった。実運用に耐える値に緩和。
-    this.timeoutMs = options.timeoutMs ?? 8000;
+    // Jev System OneはLLMバックエンドのため、特にモンスターDNA生成のような
+    // 一度に8問を問い合わせる重いリクエストでは数秒かかることがある。
+    // 短すぎるタイムアウトは正常なレスポンスすら打ち切ってしまうため、余裕を持たせる。
+    this.timeoutMs = options.timeoutMs ?? 15000;
     this.onFallback = options.onFallback;
   }
 
@@ -87,8 +88,10 @@ export class JevClient implements IJevClient {
           "Content-Type": "application/json",
           Authorization: `Bearer ${this.apiKey}`,
         },
+        // TypeSafe API仕様上 state は string | object | array をそのまま受け付けるため、
+        // 二重にJSON文字列化しない（以前はオブジェクトを文字列化して埋め込んでいた）
         body: JSON.stringify({
-          state: typeof request.state === "string" ? request.state : JSON.stringify(request.state),
+          state: request.state,
           model: request.model ?? DEFAULT_JEV_MODEL,
           questions: request.questions,
         }),
@@ -98,7 +101,22 @@ export class JevClient implements IJevClient {
       clearTimeout(timer);
 
       if (!res.ok) {
-        throw new Error(`Jev API HTTP error: ${res.status}`);
+        // サーバーが返す詳細メッセージ（例: 「APIキーを確認してください」）を
+        // そのままログに出せるよう、可能な限り本文を読み取って添える
+        let serverMessage = "";
+        try {
+          const body = await res.clone().json();
+          serverMessage = body?.detail?.message || body?.message || body?.error || "";
+        } catch {
+          try {
+            serverMessage = (await res.clone().text()).slice(0, 200);
+          } catch {
+            serverMessage = "";
+          }
+        }
+        throw new Error(
+          `Jev API HTTP error: ${res.status}${serverMessage ? ` - ${serverMessage}` : ""}`
+        );
       }
 
       const json = (await res.json()) as JevSystemOneResponse;

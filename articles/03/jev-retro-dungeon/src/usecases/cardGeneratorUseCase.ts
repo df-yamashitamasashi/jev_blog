@@ -56,12 +56,12 @@ export class CardGeneratorUseCase {
         dangerScore: {
           type: "score",
           instructions: "この戦闘の死闘度・ドラマチック度を0.0〜4.0でスコアリングしてください",
-          legend: {
-            "1": "小競り合い、勇者の圧勝",
-            "2": "白熱したコマンドの応酬",
-            "3": "死闘、呪文と刃が交錯する緊迫感",
-            "4": "奇跡的勝利、残り僅かなHPでの劇的な討伐",
-          },
+          criteria: [
+            "小競り合い、勇者の圧勝",
+            "白熱したコマンドの応酬",
+            "死闘、呪文と刃が交錯する緊迫感",
+            "奇跡的勝利、残り僅かなHPでの劇的な討伐",
+          ],
         },
         flavorLore: {
           type: "choice",
@@ -97,7 +97,8 @@ export class CardGeneratorUseCase {
     };
 
     const chosenTitleKey = titleAns?.type === "choice" ? titleAns.choice : "legendary_hero";
-    const dangerScore = scoreAns?.type === "score" ? scoreAns.score : 2.5;
+    // criteria配列は0始まりなので、従来の1.0〜4.0スケールに合わせるため+1する
+    const dangerScore = scoreAns?.type === "score" ? scoreAns.score + 1 : 2.5;
     const chosenLoreKey = loreAns?.type === "choice" ? loreAns.choice : "lore_a";
 
     const title = this.i18n.t(titleMap[chosenTitleKey] || titleMap.legendary_hero);

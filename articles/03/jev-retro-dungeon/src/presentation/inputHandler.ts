@@ -14,6 +14,18 @@ export interface BattleInput {
   cancelPressed: boolean;
 }
 
+/**
+ * APIキー入力欄など、フォーム要素にフォーカスがある間はゲームのキー操作を無効化する。
+ * これが無いと、WASD/Space/Enter/Backspace等が全てグローバルに奪われ、
+ * テキスト入力（バックスペースでの削除やWASDを含む文字の入力）が一切できなくなる。
+ */
+export function isTypingInFormField(): boolean {
+  const el = document.activeElement;
+  if (!el) return false;
+  const tag = el.tagName;
+  return tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || (el as HTMLElement).isContentEditable;
+}
+
 export class InputHandler {
   private lastMoveDir: "up" | "down" | "left" | "right" | null = null;
 
@@ -26,6 +38,8 @@ export class InputHandler {
 
   constructor(canvas: HTMLCanvasElement) {
     window.addEventListener("keydown", (e) => {
+      if (isTypingInFormField()) return;
+
       // 探索時移動
       if (e.code === "ArrowUp" || e.code === "KeyW") {
         this.lastMoveDir = "up";

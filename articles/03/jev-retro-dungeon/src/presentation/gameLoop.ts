@@ -18,7 +18,7 @@ import { CardGeneratorUseCase } from "../usecases/cardGeneratorUseCase";
 import { BgmComposerUseCase } from "../usecases/bgmComposerUseCase";
 import { ISoundEngine } from "../adapters/soundEngine";
 import { CanvasRenderer } from "./canvasRenderer";
-import { InputHandler } from "./inputHandler";
+import { InputHandler, isTypingInFormField } from "./inputHandler";
 import { CardRenderer } from "./cardRenderer";
 import { I18nManager } from "./i18nManager";
 import { AudioSynthesizer } from "./audioSynthesizer";
@@ -149,6 +149,8 @@ export class GameLoop {
     this.callbacks.onLogMessage(this.i18n.t("log_dungeon_start"), "jev");
 
     window.addEventListener("keydown", async (e) => {
+      if (isTypingInFormField()) return;
+
       if (e.code === "KeyE") {
         if (this.mode === "dungeon") {
           this.mode = "equip_menu";

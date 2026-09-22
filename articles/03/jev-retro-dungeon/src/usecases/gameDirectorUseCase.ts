@@ -17,6 +17,7 @@ import { GenerativeMonsterUseCase } from "./generativeMonsterUseCase";
 import { MAP_COLS, MAP_ROWS } from "../domain/constants";
 import { I18nManager } from "../presentation/i18nManager";
 import { TranslationDictionary } from "../domain/i18nTypes";
+import { pickWeightedChoice } from "./jevChoice";
 
 export class GameDirectorUseCase {
   private readonly generativeMonsterUseCase: GenerativeMonsterUseCase;
@@ -62,12 +63,12 @@ export class GameDirectorUseCase {
         dangerScore: {
           type: "score",
           instructions: "この階層の魔物の凶暴度とエンカウント危険度を評価してください",
-          legend: {
-            "1": "初級の洞窟、魔物の気配は疎ら",
-            "2": "中級の迷宮、適度な警戒が必要",
-            "3": "上級の魔境、強力な魔物が徘徊",
-            "4": "最深層の地獄、死と隣り合わせの試練",
-          },
+          criteria: [
+            "初級の洞窟、魔物の気配は疎ら",
+            "中級の迷宮、適度な警戒が必要",
+            "上級の魔境、強力な魔物が徘徊",
+            "最深層の地獄、死と隣り合わせの試練",
+          ],
         },
       },
     });
@@ -76,7 +77,8 @@ export class GameDirectorUseCase {
     const dangerAns = response.answers["dangerScore"];
 
     const chosenTheme = (themeAns?.type === "choice" ? themeAns.choice : "normal") as ElementType;
-    const dangerScore = dangerAns?.type === "score" ? dangerAns.score : 2.0;
+    // criteria配列は0始まりなので、従来の1.0〜4.0スケールに合わせるため+1する
+    const dangerScore = dangerAns?.type === "score" ? dangerAns.score + 1 : 2.0;
 
     const themeTitles: Record<ElementType, string> = {
       normal: "古の迷宮洞窟",
@@ -188,12 +190,12 @@ export class GameDirectorUseCase {
         equipmentTier: {
           type: "score",
           instructions: "武具のレアリティと強さを評価してください",
-          legend: {
-            "1": "一般的な武具（Common）",
-            "2": "鍛えられた良品（Rare）",
-            "3": "名工の業物（Epic）",
-            "4": "神話に謳われし神器（Legendary）",
-          },
+          criteria: [
+            "一般的な武具（Common）",
+            "鍛えられた良品（Rare）",
+            "名工の業物（Epic）",
+            "神話に謳われし神器（Legendary）",
+          ],
         },
       },
     });
@@ -202,7 +204,8 @@ export class GameDirectorUseCase {
     const tierAns = response.answers["equipmentTier"];
 
     const slot = (slotAns?.type === "choice" ? slotAns.choice : "weapon") as EquipmentSlot;
-    const tierScore = tierAns?.type === "score" ? tierAns.score : 1.5;
+    // criteria配列は0始まりなので、従来の1.0〜4.0スケールに合わせるため+1する
+    const tierScore = tierAns?.type === "score" ? tierAns.score + 1 : 1.5;
 
     const rarity =
       tierScore >= 3.5 ? "Legendary" : tierScore >= 2.6 ? "Epic" : tierScore >= 1.8 ? "Rare" : "Common";
@@ -317,12 +320,12 @@ export class GameDirectorUseCase {
         attackBonus: {
           type: "score",
           instructions: "武器攻撃力の上昇幅を評価してください",
-          legend: {
-            "1": "わずかな研ぎ澄まし（ATK +3）",
-            "2": "鋭利な切れ味の覚醒（ATK +6）",
-            "3": "名工を越える業物（ATK +10）",
-            "4": "神話級の覚醒（ATK +15）",
-          },
+          criteria: [
+            "わずかな研ぎ澄まし（ATK +3）",
+            "鋭利な切れ味の覚醒（ATK +6）",
+            "名工を越える業物（ATK +10）",
+            "神話級の覚醒（ATK +15）",
+          ],
         },
       },
     });
@@ -342,7 +345,8 @@ export class GameDirectorUseCase {
     };
 
     const selected = pMap[prefixAns?.type === "choice" ? prefixAns.choice : "flame"] || pMap.flame;
-    const bonus = Math.round((bonusAns?.type === "score" ? bonusAns.score : 2.0) * 3);
+    // criteria配列は0始まりなので、従来の1.0〜4.0スケールに合わせるため+1する
+    const bonus = Math.round(((bonusAns?.type === "score" ? bonusAns.score + 1 : 2.0)) * 3);
     const prefix = this.i18n.t(selected.prefixKey);
     const oldWeaponName = hero.weapon.name;
 

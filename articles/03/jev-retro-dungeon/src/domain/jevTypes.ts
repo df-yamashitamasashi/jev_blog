@@ -14,7 +14,13 @@ export interface ChoiceQuestionDefinition {
 export interface ScoreQuestionDefinition {
   type: "score";
   instructions?: string;
-  legend: Record<string, string>;
+  /**
+   * 2〜10段階のレベル説明を「配列」で渡す（実APIの必須フィールド名は
+   * legend ではなく criteria。以前はlegendという独自形式で送っており、
+   * サーバー側のスキーマ検証で422 Unprocessable Entityになっていた）。
+   * 配列のインデックス（0始まり）がそのままレスポンスscoreの尺度になる。
+   */
+  criteria: string[];
 }
 
 export interface NoulQuestionDefinition {
@@ -49,6 +55,8 @@ export interface ScoreAnswer {
   score: number;
   confidence: number;
   probabilities?: Record<string, number>;
+  /** レスポンスに付与される、criteria配列のインデックス→説明文の対応表 */
+  legend?: Record<string, string>;
 }
 
 export interface NoulAnswer {

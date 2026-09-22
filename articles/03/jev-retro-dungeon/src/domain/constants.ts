@@ -77,5 +77,7 @@ export const ELEMENT_PALETTES: Record<
   },
 };
 
-export const DEFAULT_JEV_BASE_URL = "https://api.typesafe.ai";
+// ブラウザから直接 https://api.typesafe.ai を叩くとCORSでブロックされるため、
+// Vite開発/プレビューサーバーのプロキシ（vite.config.ts の /jev-api）を経由する。
+export const DEFAULT_JEV_BASE_URL = "/jev-api";
 export const DEFAULT_JEV_MODEL = "jev-latest";

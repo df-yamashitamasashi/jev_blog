@@ -10,7 +10,7 @@ import { BattleUseCase } from "./usecases/battleUseCase";
 import { CardGeneratorUseCase } from "./usecases/cardGeneratorUseCase";
 import { BgmComposerUseCase } from "./usecases/bgmComposerUseCase";
 import { CanvasRenderer } from "./presentation/canvasRenderer";
-import { InputHandler } from "./presentation/inputHandler";
+import { InputHandler, isTypingInFormField } from "./presentation/inputHandler";
 import { GameLoop } from "./presentation/gameLoop";
 import { CardRenderer } from "./presentation/cardRenderer";
 import { I18nManager } from "./presentation/i18nManager";
@@ -75,7 +75,7 @@ window.addEventListener("DOMContentLoaded", () => {
   const jevClient = new JevClient({
     apiKey: savedKey,
     onFallback: ({ reason, detail }) => {
-      appendLog(`${i18n.t("ui_jev_fallback_warn")} (${reason})`, "info");
+      appendLog(`${i18n.t("ui_jev_fallback_warn")} (${reason}): ${detail}`, "info");
       console.warn("[Jev] fallback detail:", detail);
     },
   });
@@ -143,6 +143,7 @@ window.addEventListener("DOMContentLoaded", () => {
 
   window.addEventListener("keydown", (e) => {
     if (cardModal.style.display !== "flex") return;
+    if (isTypingInFormField()) return;
     if (e.code === "Escape" || e.code === "KeyX" || e.code === "Backspace") {
       e.preventDefault();
       closeCardModal();
