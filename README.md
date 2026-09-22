@@ -14,7 +14,7 @@ TypeSafe AI が発表した新世代の意思決定モデル **「Jev」（Syste
 | **Vol. 2** | [**Jevを活用したVSCode拡張機能の構築**](https://qiita.com/yam_dev/items/018959baefb3bee4a06a)<br>リアルタイム波線診断、インテントディスパッチャー、投機的LLMゲートキーパー | TypeScript<br>Clean Architecture<br>VSCode API, Vitest | [`articles/02/vscode-jev-companion/`](./articles/02/vscode-jev-companion/) |
 | **Vol. 3** | [**Jevで創るリアルタイム・レトロダンジョンバトル**](https://qiita.com/yam_dev/items/4c0ff700a6b265f96c8a)<br>AIゲームディレクター、パレットスワップ、リアルタイム装備成長、レトロTCGカード生成＆シェア | TypeScript<br>Clean Architecture<br>Vite, HTML5 Canvas, Web Audio, Vitest | [`articles/03/`](./articles/03/) |
 | **Vol. 4** | **Jevを活用したRAGの構築**<br>5-Stage System One ゲート、超低遅延・トークン70%削減・ゼロハルシネーション、A/Bベンチマーク | TypeScript / Python<br>Clean Architecture<br>Vite, In-Memory Hybrid Search, Vitest, pytest | [`articles/04/`](./articles/04/) |
-| **Vol. 5** | **Jevを活用したエージェントの構築** *(Coming Soon)* | - | `articles/05/` *(準備中)* |
+| **Vol. 5** | [**Jevで創るリアルタイム・エアホッケーAI**](./articles/05/README.md)<br>120fps物理空間におけるSystem One意思決定エージェント、10サブステップ連続衝突判定（CCD）、リアルタイム煽り心理戦 | TypeScript<br>Clean Architecture<br>Vite, HTML5 Canvas, Web Audio, Vitest | [`articles/05/`](./articles/05/) |
 
 ---
 
@@ -62,6 +62,14 @@ jev_blog/
 │   │       ├── rag_pipeline.py         # Clean Architecture準拠パイプライン
 │   │       ├── test_rag_pipeline.py    # pytest 単体テストスイート (4 tests)
 │   │       └── requirements.txt
+│   └── 05/                             # Vol. 5: Jev Cyber Air Hockey (System One Reactive Agent)
+│       ├── 05_jev_air_hockey_agent.md  # 技術解説記事
+│       ├── README.md                   # バイリンガル（英日）詳細ドキュメント
+│       └── jev-air-hockey/             # ゲーム本体 & HUD (Clean Architecture)
+│           ├── package.json
+│           ├── index.html              # サイバーパンク・ネオンリンクUI
+│           ├── src/                    # Domain, Adapters, UseCases, Presentation
+│           └── test/                   # Vitest 単体テストスイート (5ファイル・44 tests)
 └── docs/                               # 開発ログ・設計ドキュメント
 ```
 
@@ -144,6 +152,21 @@ pytest test_rag_pipeline.py -v
 python rag_pipeline.py
 ```
 詳細は [RAG README](./articles/04/README.md) をご覧ください。
+
+### 5. Jev Cyber Air Hockey の起動 (Vol. 5)
+```bash
+cd articles/05/jev-air-hockey
+
+# 依存パッケージのインストール & 単体テスト (44 tests 全パス)
+npm install
+npm test
+
+# ゲーム起動 (Vite)
+npm run dev
+```
+
+ブラウザで `http://localhost:5174/` を開くと、120fpsの物理シミュレーションとJevのミリ秒思考ログが連動するサイバーエアホッケースタジアムが起動します。
+詳細は [エアホッケーREADME](./articles/05/README.md) をご覧ください。
 
 ---
 

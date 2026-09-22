@@ -1,0 +1,1143 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Jev Cyber Air Hockey — Multi-Agent Battle Arena</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;800&family=Outfit:wght@400;600;800;900&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-main: #050711;
+      --panel-bg: rgba(13, 19, 38, 0.75);
+      --panel-border: rgba(0, 240, 255, 0.18);
+      --neon-cyan: #00f0ff;
+      --neon-pink: #ff0055;
+      --neon-blue: #388bfd;
+      --neon-amber: #d97706;
+      --text-main: #ffffff;
+      --text-muted: #f1f5f9;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+    }
+
+    body {
+      background-color: var(--bg-main);
+      color: var(--text-main);
+      font-family: 'Outfit', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px 16px;
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: radial-gradient(circle at 50% 20%, rgba(157, 0, 255, 0.08) 0%, transparent 60%),
+                  radial-gradient(circle at 80% 80%, rgba(0, 240, 255, 0.05) 0%, transparent 50%);
+      pointer-events: none;
+      z-index: -1;
+    }
+
+    header {
+      width: 100%;
+      max-width: 1140px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 14px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .title-group h1 {
+      font-size: 1.65rem;
+      font-weight: 900;
+      letter-spacing: 1px;
+      background: linear-gradient(135deg, #00f0ff 0%, #ffffff 50%, #ff0055 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .title-group p {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-top: 3px;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .header-controls {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .btn {
+      background: rgba(255, 255, 255, 0.06);
+      color: var(--text-main);
+      border: 1px solid var(--panel-border);
+      padding: 8px 14px;
+      border-radius: 8px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      font-family: 'Outfit', sans-serif;
+    }
+
+    .btn:hover {
+      background: rgba(0, 240, 255, 0.15);
+      border-color: var(--neon-cyan);
+      box-shadow: 0 0 12px rgba(0, 240, 255, 0.3);
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #00f0ff, #0088ff);
+      color: #050711;
+      border: none;
+      font-weight: 800;
+      box-shadow: 0 0 16px rgba(0, 240, 255, 0.4);
+    }
+
+    .btn-primary:hover {
+      background: linear-gradient(135deg, #33f3ff, #1a94ff);
+      box-shadow: 0 0 24px rgba(0, 240, 255, 0.6);
+      transform: translateY(-1px);
+    }
+
+    /* エージェントエンジン稼働状態ステータスバー */
+    .agent-engine-bar {
+      width: 100%;
+      max-width: 1140px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: rgba(13, 20, 42, 0.85);
+      border: 1px solid rgba(0, 240, 255, 0.25);
+      border-radius: 10px;
+      padding: 8px 16px;
+      margin-bottom: 12px;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+      backdrop-filter: blur(8px);
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .engine-bar-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.82rem;
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--neon-cyan);
+    }
+
+    .engine-bar-sub {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      font-weight: 400;
+    }
+
+    .pulse-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #00f0ff;
+      box-shadow: 0 0 8px #00f0ff;
+      animation: dotBlink 1.5s infinite;
+    }
+
+    @keyframes dotBlink {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.8); }
+    }
+
+    .engine-chips-container {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .engine-chip {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      border: 1px solid transparent;
+    }
+
+    .engine-chip:hover {
+      transform: translateY(-1px);
+      filter: brightness(1.2);
+    }
+
+    .engine-chip.cpu {
+      background: rgba(217, 119, 6, 0.18);
+      color: #fbbf24;
+      border-color: rgba(217, 119, 6, 0.45);
+    }
+
+    .engine-chip.live {
+      background: rgba(16, 185, 129, 0.22);
+      color: #34d399;
+      border-color: rgba(16, 185, 129, 0.6);
+      box-shadow: 0 0 10px rgba(16, 185, 129, 0.35);
+      animation: livePulse 2s infinite;
+    }
+
+    .chip-name {
+      color: #ffffff;
+    }
+
+    /* 対戦カード ドロップダウンセレクタパネル */
+    .matchup-selector-panel {
+      width: 100%;
+      max-width: 1140px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 16px;
+      background: rgba(13, 19, 38, 0.85);
+      border: 1px solid var(--panel-border);
+      border-radius: 12px;
+      padding: 12px 18px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+      backdrop-filter: blur(10px);
+      flex-wrap: wrap;
+    }
+
+    .selector-box {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      flex: 1;
+      min-width: 250px;
+    }
+
+    .selector-label {
+      font-size: 0.78rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 700;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .court-dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+
+    .court-dot.top-dot {
+      background: var(--neon-pink);
+      box-shadow: 0 0 8px var(--neon-pink);
+    }
+
+    .court-dot.bot-dot {
+      background: var(--neon-cyan);
+      box-shadow: 0 0 8px var(--neon-cyan);
+    }
+
+    .cyber-select {
+      background: rgba(5, 7, 17, 0.9);
+      border: 1px solid rgba(0, 240, 255, 0.35);
+      border-radius: 8px;
+      padding: 9px 14px;
+      color: #ffffff;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.85rem;
+      font-weight: 600;
+      outline: none;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      appearance: none;
+      -webkit-appearance: none;
+      background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2300f0ff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+      background-repeat: no-repeat;
+      background-position: right 12px center;
+      background-size: 16px;
+    }
+
+    .cyber-select:hover {
+      border-color: var(--neon-cyan);
+      box-shadow: 0 0 10px rgba(0, 240, 255, 0.25);
+    }
+
+    .cyber-select:focus {
+      border-color: var(--neon-cyan);
+      box-shadow: 0 0 16px rgba(0, 240, 255, 0.45);
+    }
+
+    .cyber-select optgroup {
+      background: #0d1326;
+      color: var(--neon-cyan);
+      font-weight: 800;
+      font-size: 0.8rem;
+    }
+
+    .cyber-select option {
+      background: #070b18;
+      color: #ffffff;
+      font-weight: 600;
+      padding: 6px;
+    }
+
+    .cyber-select option:disabled {
+      color: #64748b !important;
+      background: #04060d;
+      font-style: italic;
+    }
+
+    .matchup-vs-badge {
+      font-size: 1.15rem;
+      font-weight: 900;
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--neon-pink);
+      text-shadow: 0 0 10px rgba(255, 0, 85, 0.6);
+      padding: 6px 14px;
+      border-radius: 20px;
+      background: rgba(255, 0, 85, 0.12);
+      border: 1px solid rgba(255, 0, 85, 0.4);
+      align-self: center;
+      letter-spacing: 1px;
+    }
+
+    /* メインレイアウト */
+    .arena-container {
+      display: flex;
+      gap: 24px;
+      width: 100%;
+      max-width: 1140px;
+      align-items: flex-start;
+      justify-content: center;
+    }
+
+    .canvas-wrapper {
+      background: #080b18;
+      border-radius: 16px;
+      padding: 12px;
+      box-shadow: 0 0 35px rgba(0, 0, 0, 0.8), 0 0 20px rgba(0, 240, 255, 0.15);
+      border: 1px solid rgba(0, 240, 255, 0.3);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+    }
+
+    /* 一体型スタジアムスコアボード (コート・ゴールを遮らない上部非干渉ヘッダー) */
+    .scoreboard-bar {
+      width: 100%;
+      max-width: 480px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: rgba(13, 20, 42, 0.95);
+      border: 1px solid var(--panel-border);
+      border-radius: 12px;
+      padding: 10px 16px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+      backdrop-filter: blur(12px);
+    }
+
+    .score-team {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+
+    .score-team.top-team {
+      align-items: flex-start;
+      text-align: left;
+    }
+
+    .score-team.bot-team {
+      align-items: flex-end;
+      text-align: right;
+    }
+
+    .team-name {
+      font-size: 0.76rem;
+      font-family: 'JetBrains Mono', monospace;
+      color: #ffffff;
+      letter-spacing: 0.5px;
+      font-weight: 800;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 170px;
+    }
+
+    .scoreboard-mode-tag {
+      font-size: 0.65rem;
+      font-family: 'JetBrains Mono', monospace;
+      padding: 2px 7px;
+      border-radius: 4px;
+      margin-top: 4px;
+      font-weight: 800;
+      letter-spacing: 0.5px;
+      white-space: nowrap;
+      display: inline-block;
+    }
+
+    .scoreboard-mode-tag.cpu {
+      background: rgba(217, 119, 6, 0.25);
+      color: #fbbf24;
+      border: 1px solid rgba(217, 119, 6, 0.6);
+    }
+
+    .scoreboard-mode-tag.live {
+      background: rgba(16, 185, 129, 0.25);
+      color: #34d399;
+      border: 1px solid rgba(16, 185, 129, 0.7);
+      box-shadow: 0 0 10px rgba(16, 185, 129, 0.4);
+      animation: livePulse 1.8s infinite;
+    }
+
+    .scoreboard-mode-tag.human {
+      background: rgba(0, 240, 255, 0.2);
+      color: var(--neon-cyan);
+      border: 1px solid rgba(0, 240, 255, 0.5);
+    }
+
+    .score-digits-wrapper {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      padding: 0 14px;
+    }
+
+    .score-num {
+      font-size: 2.2rem;
+      font-weight: 900;
+      font-family: 'JetBrains Mono', monospace;
+      line-height: 1;
+      min-width: 28px;
+      text-align: center;
+    }
+
+    .score-num.player {
+      color: var(--neon-cyan);
+      text-shadow: 0 0 10px rgba(0, 240, 255, 0.6);
+    }
+
+    .score-num.jev {
+      color: var(--neon-pink);
+      text-shadow: 0 0 10px rgba(255, 0, 85, 0.6);
+    }
+
+    .score-colon {
+      font-size: 1.8rem;
+      font-family: 'JetBrains Mono', monospace;
+      color: rgba(255, 255, 255, 0.65);
+      font-weight: 900;
+      line-height: 1;
+    }
+
+    .canvas-relative-container {
+      position: relative;
+      width: 480px;
+      height: 720px;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 0 20px rgba(0, 0, 0, 0.6);
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      border-radius: 12px;
+      cursor: crosshair;
+      touch-action: none;
+    }
+
+    /* 動作モード詳細比較カード */
+    .engine-match-info {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-bottom: 12px;
+    }
+
+    .engine-match-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.82rem;
+    }
+
+    .match-role {
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--text-main);
+    }
+
+    .engine-desc {
+      font-size: 0.73rem;
+      color: var(--text-muted);
+      font-family: 'JetBrains Mono', monospace;
+      padding-left: 8px;
+      border-left: 2px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .engine-guide-box {
+      background: rgba(0, 0, 0, 0.35);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 8px;
+      padding: 8px 10px;
+      font-size: 0.72rem;
+      line-height: 1.5;
+      color: var(--text-muted);
+    }
+
+    .engine-guide-box strong {
+      color: var(--text-main);
+      display: block;
+      margin-bottom: 4px;
+    }
+
+    .engine-guide-box ul {
+      padding-left: 14px;
+      margin: 0;
+    }
+
+    .engine-guide-box li {
+      margin-bottom: 4px;
+    }
+
+    .live-bullet {
+      color: #34d399;
+      font-weight: 700;
+    }
+
+    .cpu-bullet {
+      color: #fbbf24;
+      font-weight: 700;
+    }
+
+    /* 中央アナウンスバナー */
+    .game-banner {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(5, 7, 17, 0.92);
+      border: 2px solid var(--neon-cyan);
+      box-shadow: 0 0 30px rgba(0, 240, 255, 0.5);
+      padding: 14px 28px;
+      border-radius: 12px;
+      font-size: 1.25rem;
+      font-weight: 900;
+      letter-spacing: 2px;
+      color: #ffffff;
+      text-align: center;
+      pointer-events: none;
+      z-index: 20;
+      display: none;
+    }
+
+    /* AIチャット吹出し */
+    .jev-chat-bubble {
+      position: absolute;
+      top: 95px;
+      left: 50%;
+      transform: translateX(-50%) translateY(-10px);
+      background: rgba(13, 19, 38, 0.92);
+      border: 1px solid var(--neon-pink);
+      box-shadow: 0 0 18px rgba(255, 0, 85, 0.35);
+      color: #ffffff;
+      padding: 8px 18px;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      font-family: 'JetBrains Mono', monospace;
+      pointer-events: none;
+      opacity: 0;
+      transition: all 0.3s ease;
+      z-index: 15;
+      white-space: nowrap;
+    }
+
+    .jev-chat-bubble.visible {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    .hud-panel {
+      flex: 1;
+      min-width: 320px;
+      max-width: 440px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .card {
+      background: var(--panel-bg);
+      border: 1px solid var(--panel-border);
+      border-radius: 14px;
+      padding: 16px;
+      backdrop-filter: blur(12px);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+    }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      padding-bottom: 8px;
+    }
+
+    .card-title {
+      font-size: 0.82rem;
+      font-weight: 800;
+      letter-spacing: 1px;
+      color: var(--neon-cyan);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .telemetry-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+      font-size: 0.85rem;
+    }
+
+    .telemetry-label {
+      color: var(--text-muted);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.8rem;
+    }
+
+    .badge {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      padding: 4px 8px;
+      border-radius: 6px;
+      font-weight: 700;
+    }
+
+    .badge-fast {
+      background: rgba(0, 240, 255, 0.15);
+      color: var(--neon-cyan);
+      border: 1px solid rgba(0, 240, 255, 0.3);
+    }
+
+    .badge-stance {
+      background: rgba(255, 0, 85, 0.15);
+      color: var(--neon-pink);
+      border: 1px solid rgba(255, 0, 85, 0.3);
+    }
+
+    .mode-tag {
+      font-size: 0.7rem;
+      padding: 2px 6px;
+      border-radius: 4px;
+      margin-left: 6px;
+      font-weight: 800;
+      letter-spacing: 0.5px;
+    }
+
+    .mode-tag.cpu {
+      background: rgba(217, 119, 6, 0.2);
+      color: #fbbf24;
+      border: 1px solid rgba(217, 119, 6, 0.5);
+    }
+
+    .mode-tag.live {
+      background: rgba(16, 185, 129, 0.2);
+      color: #34d399;
+      border: 1px solid rgba(16, 185, 129, 0.5);
+      animation: livePulse 1.8s infinite;
+    }
+
+    @keyframes livePulse {
+      0% { box-shadow: 0 0 0 0 rgba(52, 211, 153, 0.4); }
+      70% { box-shadow: 0 0 0 6px rgba(52, 211, 153, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(52, 211, 153, 0); }
+    }
+
+    .courses-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .course-item {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 8px;
+      padding: 8px 10px;
+      transition: all 0.2s ease;
+    }
+
+    .course-item.selected {
+      background: rgba(255, 170, 0, 0.08);
+      border-color: #ffaa00;
+      box-shadow: 0 0 10px rgba(255, 170, 0, 0.2);
+    }
+
+    .course-header {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.75rem;
+      font-family: 'JetBrains Mono', monospace;
+      margin-bottom: 4px;
+    }
+
+    .course-score {
+      color: #ffaa00;
+      font-weight: 700;
+    }
+
+    .score-bar-bg {
+      height: 4px;
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+
+    .score-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #ffaa00, #ff0055);
+      border-radius: 2px;
+      transition: width 0.1s ease;
+    }
+
+    .difficulty-group {
+      display: flex;
+      gap: 6px;
+      width: 100%;
+    }
+
+    .diff-btn {
+      flex: 1;
+      padding: 6px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: var(--text-muted);
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 700;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.2s ease;
+    }
+
+    .diff-btn.active {
+      background: rgba(0, 240, 255, 0.2);
+      border-color: var(--neon-cyan);
+      color: #ffffff;
+      box-shadow: 0 0 10px rgba(0, 240, 255, 0.3);
+    }
+
+    .instructions-list {
+      list-style: none;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .instructions-list li {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--text-muted);
+    }
+
+    .key-tag {
+      background: rgba(255, 255, 255, 0.1);
+      padding: 2px 6px;
+      border-radius: 4px;
+      color: #fff;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.7rem;
+    }
+
+    /* API Key設定モーダル */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(5, 7, 17, 0.85);
+      backdrop-filter: blur(8px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+    }
+
+    .modal-card {
+      background: #0d1326;
+      border: 1px solid var(--panel-border);
+      box-shadow: 0 0 40px rgba(0, 240, 255, 0.25);
+      border-radius: 16px;
+      width: 90%;
+      max-width: 520px;
+      padding: 24px;
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 18px;
+    }
+
+    .modal-header h2 {
+      font-size: 1.2rem;
+      color: var(--neon-cyan);
+    }
+
+    .modal-body {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .input-group label {
+      display: block;
+      font-size: 0.8rem;
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+    }
+
+    .input-group input {
+      width: 100%;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 8px;
+      padding: 10px 14px;
+      color: #fff;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.85rem;
+    }
+
+    .input-group input:focus {
+      outline: none;
+      border-color: var(--neon-cyan);
+      box-shadow: 0 0 10px rgba(0, 240, 255, 0.3);
+    }
+
+    .modal-note {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      line-height: 1.4;
+    }
+
+    .model-info-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 6px;
+      font-size: 0.72rem;
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--text-muted);
+    }
+
+    .model-name-badge {
+      color: #34d399;
+      background: rgba(16, 185, 129, 0.15);
+      border: 1px solid rgba(16, 185, 129, 0.4);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-weight: 700;
+    }
+
+    .btn-mini {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      color: var(--text-main);
+      border-radius: 4px;
+      padding: 2px 8px;
+      font-size: 0.7rem;
+      cursor: pointer;
+      font-family: 'Outfit', sans-serif;
+      transition: all 0.2s;
+    }
+
+    .btn-mini:hover {
+      background: rgba(0, 240, 255, 0.2);
+      border-color: var(--neon-cyan);
+      color: #ffffff;
+    }
+
+    .modal-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="title-group">
+      <h1>⚡ CYBER AIR HOCKEY ARENA</h1>
+      <p>Multi-Agent Real-Time Battle: Jev · Gemini · Claude · Human</p>
+    </div>
+    <div class="header-controls">
+      <button id="btn-bgm" class="btn">🎵 BGM: OFF</button>
+      <button id="btn-api-key" class="btn">🔑 API Keys</button>
+      <button id="btn-pause" class="btn">⏸️ 一時停止</button>
+      <button id="btn-start" class="btn btn-primary">▶️ START MATCH</button>
+    </div>
+  </header>
+
+  <!-- エージェント稼働状態バナー (AI vs CPU 識別) -->
+  <div class="agent-engine-bar">
+    <div class="engine-bar-title">
+      <span class="pulse-dot"></span>
+      <strong>ENGINE STATUS:</strong>
+      <span class="engine-bar-sub">（API設定でクラウド実AIと交信 / 未設定時は内蔵CPUシミュレータ）</span>
+    </div>
+    <div class="engine-chips-container">
+      <div id="chip-jev" class="engine-chip cpu" title="クリックでAPIキー設定を開く">
+        <span class="chip-name">Jev:</span>
+        <span id="chip-jev-text" class="chip-status">🖥️ CPU (Simulator)</span>
+      </div>
+      <div id="chip-gemini" class="engine-chip cpu" title="クリックでAPIキー設定を開く">
+        <span class="chip-name">Gemini:</span>
+        <span id="chip-gemini-text" class="chip-status">🖥️ CPU (Simulator)</span>
+      </div>
+      <div id="chip-claude" class="engine-chip cpu" title="クリックでAPIキー設定を開く">
+        <span class="chip-name">Claude:</span>
+        <span id="chip-claude-text" class="chip-status">🖥️ CPU (Simulator)</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 対戦カード ドロップダウンセレクタ -->
+  <div class="matchup-selector-panel">
+    <div class="selector-box">
+      <label for="select-top-agent" class="selector-label">
+        <span class="court-dot top-dot"></span> TOP プレイヤー (コート奥 / 赤側)
+      </label>
+      <select id="select-top-agent" class="cyber-select">
+        <optgroup label="🖥️ 内蔵シミュレータ (API不要・即プレイ可)">
+          <option value="CPU" selected>🖥️ CPU (Simulator / 物理予測)</option>
+        </optgroup>
+        <optgroup label="🤖 クラウド実AI (API連携)">
+          <option value="JEV" id="opt-top-jev">⚡ Jev AI (System One)</option>
+          <option value="GEMINI" id="opt-top-gemini">♊ Gemini AI (Flash)</option>
+          <option value="CLAUDE" id="opt-top-claude">🧠 Claude AI (Strategic)</option>
+        </optgroup>
+        <optgroup label="👤 プレイヤー操作">
+          <option value="HUMAN">👤 人間 (Human Player)</option>
+        </optgroup>
+      </select>
+    </div>
+
+    <div class="matchup-vs-badge">VS</div>
+
+    <div class="selector-box">
+      <label for="select-bottom-agent" class="selector-label">
+        <span class="court-dot bot-dot"></span> BOTTOM プレイヤー (コート手前 / 青側)
+      </label>
+      <select id="select-bottom-agent" class="cyber-select">
+        <optgroup label="👤 プレイヤー操作">
+          <option value="HUMAN" selected>👤 人間 (Human Player)</option>
+        </optgroup>
+        <optgroup label="🖥️ 内蔵シミュレータ (API不要・即プレイ可)">
+          <option value="CPU">🖥️ CPU (Simulator / 物理予測)</option>
+        </optgroup>
+        <optgroup label="🤖 クラウド実AI (API連携)">
+          <option value="JEV" id="opt-bot-jev">⚡ Jev AI (System One)</option>
+          <option value="GEMINI" id="opt-bot-gemini">♊ Gemini AI (Flash)</option>
+          <option value="CLAUDE" id="opt-bot-claude">🧠 Claude AI (Strategic)</option>
+        </optgroup>
+      </select>
+    </div>
+  </div>
+
+  <div class="arena-container">
+    <div class="canvas-wrapper">
+      <!-- 一体型スタジアムスコアボード (コートやゴールを遮らない上部非干渉ヘッダー) -->
+      <div class="scoreboard-bar">
+        <div class="score-team top-team">
+          <div id="label-top" class="team-name">JEV (SYSTEM ONE)</div>
+          <div id="status-badge-top" class="scoreboard-mode-tag cpu">🖥️ CPU (SIMULATOR)</div>
+        </div>
+        <div class="score-digits-wrapper">
+          <span id="score-jev" class="score-num jev">0</span>
+          <span class="score-colon">:</span>
+          <span id="score-player" class="score-num player">0</span>
+        </div>
+        <div class="score-team bot-team">
+          <div id="label-bottom" class="team-name">PLAYER (HUMAN)</div>
+          <div id="status-badge-bottom" class="scoreboard-mode-tag human">👤 HUMAN (PLAYER)</div>
+        </div>
+      </div>
+
+      <div class="canvas-relative-container">
+        <div id="game-banner" class="game-banner">PRESS START TO PLAY</div>
+        <div id="jev-chat-bubble" class="jev-chat-bubble">System One準備完了。</div>
+        <canvas id="air-hockey-canvas"></canvas>
+      </div>
+    </div>
+
+    <!-- Telemetry HUD -->
+    <div id="hud-container" class="hud-panel">
+      <!-- 動作モード識別カード -->
+      <div class="card" style="border-color: rgba(0, 240, 255, 0.4); background: rgba(13, 24, 48, 0.85);">
+        <div class="card-header">
+          <div class="card-title">⚡ CURRENT MATCH ENGINE (動作種別)</div>
+        </div>
+        <div class="engine-match-info">
+          <div class="engine-match-row">
+            <span class="match-role">TOP: <strong id="hud-top-name">JEV</strong></span>
+            <span id="hud-top-engine-badge" class="scoreboard-mode-tag cpu">🖥️ CPU (Simulator)</span>
+          </div>
+          <div class="engine-desc" id="hud-top-desc">
+            内蔵の物理・幾何学エンジンで即時迎撃
+          </div>
+          <div class="engine-match-row" style="margin-top: 8px;">
+            <span class="match-role">BOTTOM: <strong id="hud-bot-name">PLAYER</strong></span>
+            <span id="hud-bot-engine-badge" class="scoreboard-mode-tag human">👤 HUMAN (Player)</span>
+          </div>
+          <div class="engine-desc" id="hud-bot-desc">
+            プレイヤーのマウス/タッチ追従操作
+          </div>
+        </div>
+        <div class="engine-guide-box">
+          <strong>💡 AI と CPU の決定的な違い：</strong>
+          <ul>
+            <li><span class="live-bullet">🟢 本物AI (Cloud)</span>: クラウドAPI（Gemini/Claude/Jev）とリアルタイム交信し、LLMが戦術推論と煽り台詞を動的生成。</li>
+            <li><span class="cpu-bullet">🖥️ CPU (Simulator)</span>: APIキー未設定時、ブラウザ内の高速な角度計算・軌道予測で完全自律駆動。</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">🧠 AI INFERENCE TELEMETRY</div>
+          <span id="hud-latency" class="badge badge-fast">18 ms</span>
+        </div>
+        <div class="telemetry-row">
+          <span class="telemetry-label">Tactical Stance</span>
+          <span id="hud-stance" class="badge badge-stance">🛡️ DEFENSIVE WALL</span>
+        </div>
+        <div class="telemetry-row">
+          <span class="telemetry-label">Inference Confidence</span>
+          <span id="hud-confidence" class="telemetry-label" style="color: var(--neon-cyan); font-weight: bold;">94%</span>
+        </div>
+        <div class="telemetry-row">
+          <span class="telemetry-label">Continuous Rally</span>
+          <span id="hud-rally" class="telemetry-label">0 hits</span>
+        </div>
+        <div class="telemetry-row">
+          <span class="telemetry-label">Puck Max Speed</span>
+          <span id="hud-max-speed" class="telemetry-label">0 px/s</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">🎯 SHOT COURSE SCORING</div>
+        </div>
+        <div id="hud-courses-list" class="courses-list"></div>
+      </div>
+
+      <div id="tournament-panel" class="card"></div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">🎮 MULTI-AGENT ARENA</div>
+        </div>
+        <ul class="instructions-list">
+          <li>👥 <span class="key-tag">Matchups</span> 上部バーで対戦カード（AI vs 人間 / AI vs AI 観戦）を切替</li>
+          <li>🖱️ <span class="key-tag">Human</span> 人間操作時はマウス/タッチで下側マレット操作</li>
+          <li>👀 <span class="key-tag">Spectator</span> AI同士対戦時は両者が完全自律駆動（観戦モード）</li>
+          <li>🔑 <span class="key-tag">API Keys</span> 設定したAIのみ参加可能。未設定のAIは選択できません</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- API Key設定モーダル -->
+  <div id="api-key-modal" class="modal-overlay">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h2>🔑 API Keys Manager</h2>
+        <button id="modal-close-btn" class="btn">✕</button>
+      </div>
+      <div class="modal-body">
+        <p class="modal-note" style="background: rgba(0, 240, 255, 0.08); padding: 10px; border-radius: 8px; border: 1px solid rgba(0, 240, 255, 0.2);">
+          <strong>【AI（本物）と CPU（シミュレータ）の違い】</strong><br>
+          ・<strong>未設定</strong>：ブラウザ内蔵の高速CPUシミュレータで動作します（スコアボードに <code>[🖥️ CPU]</code> と表示）。<br>
+          ・<strong>キー設定後</strong>：各社のクラウドAPI（Jev, Gemini, Claude）と実際にリアルタイム通信を行い、本物のAIが戦術や煽りセリフを生成して対戦します（スコアボードに <code>[🟢 AI]</code> と表示）。
+        </p>
+        <div class="input-group">
+          <label>TypeSafe Jev API Key <span id="status-jev-key" class="mode-tag cpu">🖥️ CPUモード</span></label>
+          <input id="input-jev-key" type="password" placeholder="jev_api_key_..." />
+          <div class="model-info-row">
+            <span>稼働モデル: <span class="model-name-badge">Jev System One (Reactive / 15ms)</span></span>
+            <span style="font-size: 0.68rem; color: var(--text-muted);">※自律型物理迎撃</span>
+          </div>
+        </div>
+        <div class="input-group">
+          <label>Google Gemini API Key <span id="status-gemini-key" class="mode-tag cpu">🖥️ CPUモード</span></label>
+          <input id="input-gemini-key" type="password" placeholder="AIzaSy..." />
+          <div class="model-info-row">
+            <span>選択中モデル: <span id="model-gemini-name" class="model-name-badge">gemini-1.5-flash-8b</span></span>
+            <button id="btn-refresh-gemini-models" class="btn-mini" type="button">🔄 最新モデル自動更新</button>
+          </div>
+        </div>
+        <div class="input-group">
+          <label>Anthropic Claude API Key <span id="status-claude-key" class="mode-tag cpu">🖥️ CPUモード</span></label>
+          <input id="input-claude-key" type="password" placeholder="sk-ant-..." />
+          <div class="model-info-row">
+            <span>選択中モデル: <span id="model-claude-name" class="model-name-badge">claude-3-5-haiku-latest</span></span>
+            <button id="btn-refresh-claude-models" class="btn-mini" type="button">🔄 最新モデル自動更新</button>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="save-keys-btn" class="btn btn-primary">設定を保存</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="/src/presentation/main.ts"></script>
+</body>
+</html>

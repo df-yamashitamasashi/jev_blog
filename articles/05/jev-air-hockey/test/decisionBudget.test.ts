@@ -1,0 +1,118 @@
+/**
+ * Latency Fairness Tests (Vitest)
+ *
+ * ベンチマークの根幹: 実測レイテンシが違っても、消費されるシミュレーション時間は
+ * 同一でなければならない。そうでないと「推論力」ではなく「回線速度」を測ることになる。
+ */
+
+import { describe, it, expect } from "vitest";
+import { GameLoopUseCase } from "../src/usecases/gameLoopUseCase";
+import { PhysicsEngine } from "../src/usecases/physicsEngine";
+import { AgentBrainUseCase } from "../src/usecases/agentBrainUseCase";
+import { CpuAgentClient } from "../src/adapters/cpuAgentClient";
+import { IAgentClient, AirHockeyObservation } from "../src/adapters/agentClient";
+import { AgentType, AgentTelemetry } from "../src/domain/jevAgentTypes";
+import { DEFAULT_STADIUM_CONFIG as CFG, GameStatus } from "../src/domain/gameState";
+import { ISoundSynthesizer } from "../src/adapters/soundSynthesizer";
+
+class SilentSound implements ISoundSynthesizer {
+  playHitPuck = () => {};
+  playWallBounce = () => {};
+  playSmashHit = () => {};
+  playGoal = () => {};
+  playCountDown = () => {};
+  toggleBgm = () => {};
+  isBgmActive = () => false;
+}
+
+/** 実際の通信遅延を模したラッパー。判断内容そのものは一切変えない */
+class DelayedClient implements IAgentClient {
+  constructor(private readonly inner: IAgentClient, private readonly delayMs: number) {}
+
+  get type(): AgentType {
+    return this.inner.type;
+  }
+
+  get usesLiveApi(): boolean {
+    return this.inner.usesLiveApi;
+  }
+
+  async decideShot(obs: AirHockeyObservation): Promise<AgentTelemetry> {
+    await new Promise((resolve) => setTimeout(resolve, this.delayMs));
+    return this.inner.decideShot(obs);
+  }
+}
+
+async function playMatch(delayMs: number) {
+  const physics = new PhysicsEngine(CFG);
+  const topBrain = new AgentBrainUseCase(new CpuAgentClient(), CFG, "TOP", AgentType.CPU);
+  const loop = new GameLoopUseCase(
+    physics,
+    topBrain,
+    new SilentSound(),
+    CFG,
+    AgentType.CPU,
+    AgentType.CPU
+  );
+
+  // setMatchup 後のクライアントを遅延付きに差し替える
+  loop.getTopBrain().setClient(new DelayedClient(new CpuAgentClient(), delayMs), AgentType.CPU);
+  loop
+    .getBottomBrain()!
+    .setClient(new DelayedClient(new CpuAgentClient(), delayMs), AgentType.CPU);
+
+  loop.startMatch(2, 1234, 25);
+
+  const startedAt = Date.now();
+  for (let i = 0; i < 500 && !loop.isFinished(); i++) {
+    await loop.advance(120);
+  }
+
+  const state = loop.getMatchState();
+  return {
+    finished: loop.isFinished(),
+    wallClockMs: Date.now() - startedAt,
+    simSeconds: state.matchDurationSec,
+    score: `${state.score.jev}-${state.score.player}`,
+    rallies: state.rallyCount,
+  };
+}
+
+describe("Latency fairness", () => {
+  it("should produce an identical match regardless of API latency", async () => {
+    const fast = await playMatch(0);
+    const slow = await playMatch(25);
+
+    expect(fast.finished).toBe(true);
+    expect(slow.finished).toBe(true);
+
+    // 実時間は遅い方が明確に長いが…
+    expect(slow.wallClockMs).toBeGreaterThan(fast.wallClockMs);
+
+    // …ゲーム内の結果は完全に一致する
+    expect(slow.score).toBe(fast.score);
+    expect(slow.rallies).toBe(fast.rallies);
+    expect(slow.simSeconds).toBeCloseTo(fast.simSeconds, 6);
+  }, 30000);
+
+  it("should consume exactly the decision budget of simulation time per decision", async () => {
+    const physics = new PhysicsEngine(CFG);
+    const brain = new AgentBrainUseCase(new CpuAgentClient(), CFG, "TOP", AgentType.CPU);
+    const loop = new GameLoopUseCase(physics, brain, new SilentSound(), CFG, AgentType.CPU, AgentType.CPU);
+
+    loop.startMatch(9, 5, 400);
+
+    // パックが上へ向かっている状態から1判断ぶんだけ進める
+    const puck = physics.getPuck();
+    puck.pos.set(CFG.width * 0.5, CFG.height * 0.5);
+    puck.vel.set(0, -600);
+
+    const before = loop.getMatchState().matchDurationSec;
+    await loop.advance(1);
+    const elapsedMs = (loop.getMatchState().matchDurationSec - before) * 1000;
+
+    expect(loop.getMatchState().status).toBe(GameStatus.PLAYING);
+    // 判断が走ったフレームでは、思考予算ぶんの時間だけが進む
+    expect(elapsedMs).toBeCloseTo(CFG.decisionBudgetMs, 3);
+  });
+});
