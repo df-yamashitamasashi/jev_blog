@@ -10,6 +10,7 @@ import {
   sweepCircleVsCircle,
   sweepCircleVsSegment,
   resolveCollisionImpulse,
+  ContactManifold,
 } from "../domain/physics";
 import { StadiumConfig } from "../domain/gameState";
 
@@ -139,9 +140,13 @@ export class PhysicsEngine {
     const goalLeft = (this.config.width - this.config.goalWidth) * 0.5;
     const goalRight = (this.config.width + this.config.goalWidth) * 0.5;
 
+    // airResistance は「1秒あたりの速度保持率」。dt に依存させないと、
+    // step() の呼び出し頻度が変わるたびに実効的な減衰速度が変わってしまう
+    // (例: 60Hzから120Hzに呼び出し頻度を倍にすると、減衰が体感で倍近く強くなる)。
+    const subFriction = Math.pow(this.puck.material.airResistance, subDt);
+
     for (let stepIdx = 0; stepIdx < this.subSteps; stepIdx++) {
       // 1. パックの速度に摩擦とスピン効果を適用
-      const subFriction = Math.pow(this.puck.material.airResistance, 1 / this.subSteps);
       this.puck.vel = this.puck.vel.scale(subFriction);
 
       // マグヌス風スピンによる微小横加速度
@@ -190,24 +195,8 @@ export class PhysicsEngine {
         return "GOAL_JEV";
       }
 
-      // 4. 壁との連続衝突判定 (ゴール開口部以外の壁)
-      for (const wall of this.walls) {
-        const manifold = sweepCircleVsSegment(this.puck.pos, this.puck.vel, this.puck.radius, wall, subDt);
-        if (manifold) {
-          this.puck.vel = this.puck.vel.reflect(manifold.normal).scale(wall.material.restitution);
-          this.puck.pos = this.puck.pos.add(manifold.normal.scale(manifold.penetration + 0.1));
-          if (onCollision) {
-            onCollision({
-              type: "PUCK_WALL",
-              pos: manifold.point,
-              impactSpeed: this.puck.vel.mag(),
-            });
-          }
-        }
-      }
-
-      // 5. パック位置の積分
-      this.puck.pos = this.puck.pos.add(this.puck.vel.scale(subDt));
+      // 4. 壁との連続衝突判定 + 位置の積分 (衝突時刻順に解く)
+      this.advanceWithWalls(subDt, onCollision);
 
       // 横方向の場外フェイルセーフ
       if (this.puck.pos.x < -20 || this.puck.pos.x > this.config.width + 20) {
@@ -217,6 +206,77 @@ export class PhysicsEngine {
     }
 
     return null;
+  }
+
+  /**
+   * 壁衝突を「衝突時刻(TOI)の早い順」に解きながら、サブステップ分だけパックを進める。
+   *
+   * 反射してから改めてサブステップ全体を積分すると、跳ね返った瞬間の位置が
+   * 壁の手前ではなく「壁にぶつかる前の位置 + 反射後の速度 × 全時間」になり、
+   * 1回のバウンドで最大で半径ぶん近い誤差が出る。予測器 ([[puckPredictor]]) が
+   * 同じ軌道を再現できなくなると、エージェントは読んでいるのに当たらなくなるため、
+   * ここは衝突時刻で区切って積分する。
+   */
+  private advanceWithWalls(subDt: number, onCollision?: (event: CollisionEvent) => void): void {
+    let remaining = subDt;
+
+    // 同一サブステップ内での多重衝突 (コーナー) は数回で必ず打ち切る
+    for (let guard = 0; guard < 4 && remaining > 1e-9; guard++) {
+      let earliest: ContactManifold | null = null;
+      let earliestWall: WallSegment | null = null;
+
+      for (const wall of this.walls) {
+        const manifold = sweepCircleVsSegment(this.puck.pos, this.puck.vel, this.puck.radius, wall, remaining);
+        if (manifold && (!earliest || manifold.timeOfImpact < earliest.timeOfImpact)) {
+          earliest = manifold;
+          earliestWall = wall;
+        }
+      }
+
+      if (!earliest || !earliestWall) break;
+
+      // 衝突の瞬間まで進める
+      const toi = earliest.timeOfImpact * remaining;
+      if (toi > 0) {
+        this.puck.pos = this.puck.pos.add(this.puck.vel.scale(toi));
+        remaining -= toi;
+      }
+
+      // 法線成分だけを反発係数で跳ね返す。接線成分は壁の摩擦ぶんだけ落とす。
+      // 速度ベクトル全体に反発係数を掛けると、擦るようなバウンドでも
+      // 速度が一律に落ちてラリーが不自然に失速する。
+      const normal = earliest.normal;
+      const vn = this.puck.vel.dot(normal);
+      if (vn < 0) {
+        const tangentVel = this.puck.vel.sub(normal.scale(vn));
+        const tangentKeep = 1 - earliestWall.material.friction * 0.5;
+        this.puck.vel = tangentVel
+          .scale(tangentKeep)
+          .add(normal.scale(-vn * earliestWall.material.restitution));
+
+        // 接線方向の摩擦はスピンに変わる
+        this.puck.spin += tangentVel.dot(new Vec2(-normal.y, normal.x)) * 0.0004;
+      }
+
+      // めり込みの解消
+      if (earliest.penetration > 0) {
+        this.puck.pos = this.puck.pos.add(normal.scale(earliest.penetration + 0.05));
+      } else {
+        this.puck.pos = this.puck.pos.add(normal.scale(0.01));
+      }
+
+      if (onCollision) {
+        onCollision({
+          type: "PUCK_WALL",
+          pos: earliest.point,
+          impactSpeed: this.puck.vel.mag(),
+        });
+      }
+    }
+
+    if (remaining > 0) {
+      this.puck.pos = this.puck.pos.add(this.puck.vel.scale(remaining));
+    }
   }
 
   private checkMalletCollision(

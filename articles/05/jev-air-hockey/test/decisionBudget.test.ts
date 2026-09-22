@@ -3,6 +3,10 @@
  *
  * ベンチマークの根幹: 実測レイテンシが違っても、消費されるシミュレーション時間は
  * 同一でなければならない。そうでないと「推論力」ではなく「回線速度」を測ることになる。
+ *
+ * この公平タイミング (fairTiming) はトーナメント実行時のみ有効になる。
+ * 通常のライブ対戦では無効 (実時間で進行し、遅いAIは普通に空振りする) なので、
+ * このテストでは明示的に setFairTiming(true) を呼ぶ。
  */
 
 import { describe, it, expect } from "vitest";
@@ -61,6 +65,7 @@ async function playMatch(delayMs: number) {
     .getBottomBrain()!
     .setClient(new DelayedClient(new CpuAgentClient(), delayMs), AgentType.CPU);
 
+  loop.setFairTiming(true);
   loop.startMatch(2, 1234, 25);
 
   const startedAt = Date.now();
@@ -100,6 +105,7 @@ describe("Latency fairness", () => {
     const brain = new AgentBrainUseCase(new CpuAgentClient(), CFG, "TOP", AgentType.CPU);
     const loop = new GameLoopUseCase(physics, brain, new SilentSound(), CFG, AgentType.CPU, AgentType.CPU);
 
+    loop.setFairTiming(true);
     loop.startMatch(9, 5, 400);
 
     // パックが上へ向かっている状態から1判断ぶんだけ進める
@@ -114,5 +120,45 @@ describe("Latency fairness", () => {
     expect(loop.getMatchState().status).toBe(GameStatus.PLAYING);
     // 判断が走ったフレームでは、思考予算ぶんの時間だけが進む
     expect(elapsedMs).toBeCloseTo(CFG.decisionBudgetMs, 3);
+  });
+});
+
+describe("Live match timing (fairTiming disabled, the default)", () => {
+  it("should not block simulation progress while a decision is pending", async () => {
+    const physics = new PhysicsEngine(CFG);
+    const topBrain = new AgentBrainUseCase(new CpuAgentClient(), CFG, "TOP", AgentType.CPU);
+    const loop = new GameLoopUseCase(
+      physics,
+      topBrain,
+      new SilentSound(),
+      CFG,
+      AgentType.CPU,
+      AgentType.CPU
+    );
+
+    // 現実のAPI遅延を模して、意図的に「絶対に速攻では解決しない」クライアントにする
+    const SLOW_MS = 500;
+    loop.getTopBrain().setClient(new DelayedClient(new CpuAgentClient(), SLOW_MS), AgentType.CPU);
+    loop.getBottomBrain()!.setClient(new DelayedClient(new CpuAgentClient(), SLOW_MS), AgentType.CPU);
+
+    loop.startMatch(9, 1, 2000);
+
+    const puck = physics.getPuck();
+    puck.pos.set(CFG.width * 0.5, CFG.height * 0.5);
+    puck.vel.set(0, -500); // 判断が必要になるようTOP側へ向かわせる
+
+    const before = loop.getMatchState().matchDurationSec;
+    const wallStart = Date.now();
+
+    // 遅延(500ms)よりずっと短い時間しかかからないはず — ブロックしていれば
+    // ここで500ms以上かかる
+    await loop.advance(30);
+
+    const wallElapsedMs = Date.now() - wallStart;
+    const simElapsedSec = loop.getMatchState().matchDurationSec - before;
+
+    expect(wallElapsedMs).toBeLessThan(SLOW_MS);
+    // 判断待ちでもシミュレーション時間は実時間相当で進み続けている
+    expect(simElapsedSec).toBeCloseTo(30 * CFG.fixedDt, 6);
   });
 });

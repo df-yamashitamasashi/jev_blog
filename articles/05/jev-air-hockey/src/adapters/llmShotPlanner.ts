@@ -47,6 +47,35 @@ export const SHOT_PLAN_SCHEMA = {
 const round = (n: number) => Math.round(n);
 
 /**
+ * 判断1回あたりの実時間上限 (ms)。
+ * これが無いと、API応答がハングした瞬間にシミュレーションループ全体が
+ * (両陣営・パックともども) 永久に停止する — resolveDecisions() の
+ * Promise.all() をゲームの唯一のsimTickが直接 await しているため。
+ * decisionBudgetMs (ゲーム内時間) とは無関係な、実時間側の安全装置。
+ */
+export const DECISION_TIMEOUT_MS = 15000;
+
+class DecisionTimeoutError extends Error {}
+
+/** 実際のAPI呼び出しに実時間の上限を設ける */
+export async function withTimeout<T>(promise: Promise<T>, ms: number = DECISION_TIMEOUT_MS): Promise<T> {
+  let timer: ReturnType<typeof setTimeout>;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new DecisionTimeoutError(`${ms}ms以内に応答がありませんでした`)), ms);
+  });
+
+  try {
+    return await Promise.race([promise, timeout]);
+  } finally {
+    clearTimeout(timer!);
+  }
+}
+
+export function isDecisionTimeout(e: unknown): e is DecisionTimeoutError {
+  return e instanceof DecisionTimeoutError;
+}
+
+/**
  * 盤面の完全な物理状態を文章化する。
  * 迎撃点の計算に必要な定数をすべて開示し、AIが自力で軌道を解けるようにする。
  */

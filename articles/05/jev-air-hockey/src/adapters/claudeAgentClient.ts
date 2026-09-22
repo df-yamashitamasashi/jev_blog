@@ -13,6 +13,8 @@ import {
   buildShotPlanPrompt,
   toTelemetry,
   failureTelemetry,
+  withTimeout,
+  isDecisionTimeout,
 } from "./llmShotPlanner";
 import { ModelSettings } from "./modelSettings";
 
@@ -40,15 +42,17 @@ export class ClaudeAgentClient implements IAgentClient {
     const started = performance.now();
 
     try {
-      const response = await this.client.messages.create({
-        model: ModelSettings.getClaudeModel(),
-        max_tokens: 16000,
-        output_config: {
-          effort: ModelSettings.getEffort(),
-          format: { type: "json_schema", schema: SHOT_PLAN_SCHEMA },
-        },
-        messages: [{ role: "user", content: buildShotPlanPrompt(obs) }],
-      });
+      const response = await withTimeout(
+        this.client.messages.create({
+          model: ModelSettings.getClaudeModel(),
+          max_tokens: 16000,
+          output_config: {
+            effort: ModelSettings.getEffort(),
+            format: { type: "json_schema", schema: SHOT_PLAN_SCHEMA },
+          },
+          messages: [{ role: "user", content: buildShotPlanPrompt(obs) }],
+        })
+      );
 
       const latencyMs = performance.now() - started;
 
@@ -69,7 +73,11 @@ export class ClaudeAgentClient implements IAgentClient {
 
       return toTelemetry(safeParse(text), obs, latencyMs);
     } catch (e) {
-      return failureTelemetry("ERROR", describeError(e), performance.now() - started);
+      const latencyMs = performance.now() - started;
+      if (isDecisionTimeout(e)) {
+        return failureTelemetry("TIMEOUT", e.message, latencyMs);
+      }
+      return failureTelemetry("ERROR", describeError(e), latencyMs);
     }
   }
 }

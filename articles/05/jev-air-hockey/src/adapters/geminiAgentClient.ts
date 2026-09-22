@@ -12,6 +12,8 @@ import {
   buildShotPlanPrompt,
   toTelemetry,
   failureTelemetry,
+  withTimeout,
+  isDecisionTimeout,
 } from "./llmShotPlanner";
 import { ModelSettings } from "./modelSettings";
 
@@ -35,21 +37,26 @@ export class GeminiAgentClient implements IAgentClient {
     const started = performance.now();
     const model = ModelSettings.getGeminiModel();
 
+    const controller = new AbortController();
+
     try {
-      const res = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(this.apiKey)}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            contents: [{ parts: [{ text: buildShotPlanPrompt(obs) }] }],
-            generationConfig: {
-              temperature: 0.4,
-              responseMimeType: "application/json",
-              responseSchema: toGeminiSchema(SHOT_PLAN_SCHEMA),
-            },
-          }),
-        }
+      const res = await withTimeout(
+        fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(this.apiKey)}`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            signal: controller.signal,
+            body: JSON.stringify({
+              contents: [{ parts: [{ text: buildShotPlanPrompt(obs) }] }],
+              generationConfig: {
+                temperature: 0.4,
+                responseMimeType: "application/json",
+                responseSchema: toGeminiSchema(SHOT_PLAN_SCHEMA),
+              },
+            }),
+          }
+        )
       );
 
       const latencyMs = performance.now() - started;
@@ -67,8 +74,13 @@ export class GeminiAgentClient implements IAgentClient {
 
       return toTelemetry(safeParse(text), obs, latencyMs);
     } catch (e) {
+      const latencyMs = performance.now() - started;
+      if (isDecisionTimeout(e)) {
+        controller.abort();
+        return failureTelemetry("TIMEOUT", e.message, latencyMs);
+      }
       const message = e instanceof Error ? e.message : String(e);
-      return failureTelemetry("ERROR", message, performance.now() - started);
+      return failureTelemetry("ERROR", message, latencyMs);
     }
   }
 }

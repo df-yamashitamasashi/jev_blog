@@ -12,6 +12,8 @@ import {
   buildShotPlanPrompt,
   toTelemetry,
   failureTelemetry,
+  withTimeout,
+  isDecisionTimeout,
 } from "./llmShotPlanner";
 
 export class JevAgentClient implements IAgentClient {
@@ -35,19 +37,24 @@ export class JevAgentClient implements IAgentClient {
 
     const started = performance.now();
 
+    const controller = new AbortController();
+
     try {
-      const res = await fetch(`${this.baseUrl}/v1/systemone`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${this.apiKey}`,
-        },
-        body: JSON.stringify({
-          model: "jev-latest",
-          prompt: buildShotPlanPrompt(obs),
-          responseSchema: SHOT_PLAN_SCHEMA,
-        }),
-      });
+      const res = await withTimeout(
+        fetch(`${this.baseUrl}/v1/systemone`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${this.apiKey}`,
+          },
+          signal: controller.signal,
+          body: JSON.stringify({
+            model: "jev-latest",
+            prompt: buildShotPlanPrompt(obs),
+            responseSchema: SHOT_PLAN_SCHEMA,
+          }),
+        })
+      );
 
       const latencyMs = performance.now() - started;
 
@@ -62,8 +69,13 @@ export class JevAgentClient implements IAgentClient {
 
       return toTelemetry(parsed, obs, latencyMs);
     } catch (e) {
+      const latencyMs = performance.now() - started;
+      if (isDecisionTimeout(e)) {
+        controller.abort();
+        return failureTelemetry("TIMEOUT", e.message, latencyMs);
+      }
       const message = e instanceof Error ? e.message : String(e);
-      return failureTelemetry("ERROR", message, performance.now() - started);
+      return failureTelemetry("ERROR", message, latencyMs);
     }
   }
 }

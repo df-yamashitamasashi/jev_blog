@@ -143,7 +143,9 @@ export class TournamentPanel {
     const pairings = (agents.length * (agents.length - 1)) / 2;
     const totalMatches = pairings * config.matchesPerPairing;
     const llmAgents = agents.filter((a) => a !== AgentType.CPU).length;
-    const worstCaseCalls = totalMatches * config.maxRallies * llmAgents;
+    // 接近中は一定間隔で判断を更新し続けるため、1ラリーあたり複数回APIを呼びうる
+    const DECISIONS_PER_RALLY_ESTIMATE = 3;
+    const worstCaseCalls = totalMatches * config.maxRallies * llmAgents * DECISIONS_PER_RALLY_ESTIMATE;
 
     if (
       llmAgents > 0 &&

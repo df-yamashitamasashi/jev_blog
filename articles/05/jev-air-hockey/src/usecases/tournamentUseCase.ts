@@ -84,12 +84,16 @@ export class TournamentUseCase {
     this.matchStarted = false;
 
     this.totals = new Map(config.agents.map((a) => [a, createEmptyStats(a)]));
+    // トーナメント中は回線速度を勝敗から切り離すため、判断待ちで時間を止める
+    this.gameLoop.setFairTiming(true);
     this.emitProgress();
   }
 
   abort(): void {
     this.running = false;
     this.matchStarted = false;
+    // 通常のライブ対戦に戻す
+    this.gameLoop.setFairTiming(false);
     this.emitProgress();
   }
 
@@ -103,6 +107,7 @@ export class TournamentUseCase {
     const match = this.schedule[this.cursor];
     if (!match) {
       this.running = false;
+      this.gameLoop.setFairTiming(false);
       this.emitProgress();
       return;
     }

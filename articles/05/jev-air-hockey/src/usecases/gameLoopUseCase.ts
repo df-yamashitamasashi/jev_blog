@@ -1,9 +1,11 @@
 /**
  * Game Loop & Match State Orchestrator (Clean Architecture - UseCases Layer)
  *
- * 実時間ではなく「シミュレーション時間」で駆動する。AIの判断を待つ間、時計は止まる。
- * 応答が返ったら、実測レイテンシに関わらず全エージェント共通の decisionBudgetMs だけ
- * 時間を進める。これにより回線速度の差が勝敗から切り離され、比較が成立する。
+ * 固定タイムステップで駆動する。既定 (fairTiming=false) では判断待ちの間も
+ * 物理は実時間で進み続け、AIが間に合わなければ普通に空振りになる — ライブ対戦を
+ * 見ていて不自然に静止しないようにするため。fairTiming=true (トーナメント実行時)
+ * のみ、判断待ちで時間を止め、解決後に全エージェント共通の decisionBudgetMs だけ
+ * 一律に時間を進める。回線速度の差を勝敗から切り離すのはこのモードに限られる。
  */
 
 import {
@@ -27,8 +29,14 @@ import { AgentFactory } from "../adapters/agentFactory";
 
 /** ゴール後の待機時間 (ゲーム内時間) */
 const GOAL_PAUSE_MS = 1200;
-/** 膠着からの自動サーブまでの時間 (ゲーム内時間) */
-const STAGNATION_LIMIT_SEC = 2.0;
+/**
+ * 膠着 (デッドボール) 判定のしきい値。
+ * ゴールポケットの隅などで物理的に本当に動けなくなった場合の最終救済であり、
+ * 通常のラリー中の減速では発動しないよう、速度は「ほぼ完全停止」、
+ * 継続時間は「明らかに動きがない」と言える長さに設定する。
+ */
+const STAGNATION_SPEED_THRESHOLD = 20;
+const STAGNATION_LIMIT_SEC = 3.5;
 
 /** 再現性のためのシード付き擬似乱数 (mulberry32) */
 function createRng(seed: number): () => number {
@@ -59,6 +67,15 @@ export class GameLoopUseCase {
   private rng: () => number;
   private advancing = false;
   private maxRallies = Number.POSITIVE_INFINITY;
+
+  /**
+   * true: トーナメント用。判断待ちの間シミュレーション時間を止め、解決後に
+   * 一律の decisionBudgetMs だけ進める (回線速度を勝敗から切り離す)。
+   * false (既定): 通常のライブ対戦用。判断は裏で進行させつつ物理は実時間で
+   * 進み続け、AIが間に合わなければ普通に空振りになる。API呼び出しのたびに
+   * 全体が数秒静止すると「動いていない」ように見えてしまうため。
+   */
+  private fairTiming = false;
 
   private onStateChange?: (state: GameMatchState) => void;
   private onCollisionEffect?: (event: CollisionEvent) => void;
@@ -180,6 +197,11 @@ export class GameLoopUseCase {
     return this.matchState.status === GameStatus.GAME_OVER;
   }
 
+  /** トーナメント実行時のみ true にする (§fairTiming のコメント参照) */
+  setFairTiming(enabled: boolean): void {
+    this.fairTiming = enabled;
+  }
+
   /**
    * シミュレーションを最大 maxSteps 回の固定ステップ進める。
    * AI の判断待ちが発生した場合はそこで時計を止め、応答後に一律の思考予算だけ進める。
@@ -210,7 +232,12 @@ export class GameLoopUseCase {
     }
   }
 
-  /** 判断が必要なエージェントがいれば問い合わせ、共通の思考予算を消費する */
+  /**
+   * 判断が必要なエージェントがいれば問い合わせる。
+   * fairTiming=true の場合のみ、解決を待って共通の思考予算ぶん時間を進める
+   * (戻り値 true = このティックは思考予算の消費で使い切った)。
+   * fairTiming=false の場合は投げっぱなしにし、物理は同じティックで進み続ける。
+   */
   private async resolveDecisions(): Promise<boolean> {
     const puck = this.physics.getPuck();
     const bottomMallet = this.physics.getPlayerMallet();
@@ -257,6 +284,14 @@ export class GameLoopUseCase {
       );
     }
 
+    if (!this.fairTiming) {
+      // 裏で進行させるだけ。呼び出し元は待たずに同じティックで物理を進める。
+      // requestDecision() は最初の await 前に awaitingDecision を同期的に立てる
+      // ため、次の observe() で二重に発火することはない。
+      void Promise.all(requests);
+      return false;
+    }
+
     await Promise.all(requests);
 
     // 実測レイテンシに関わらず、消費するゲーム内時間は常に同じ
@@ -290,12 +325,14 @@ export class GameLoopUseCase {
       this.matchState.maxSpeedReached = Math.round(speed);
     }
 
-    if (speed < 45) {
+    if (speed < STAGNATION_SPEED_THRESHOLD) {
       this.stagnationTimer += dt;
       if (this.stagnationTimer > STAGNATION_LIMIT_SEC) {
         this.stagnationTimer = 0;
-        puck.vel.set((this.rng() - 0.5) * 160, this.rng() > 0.5 ? 260 : -260);
-        this.sound.playHitPuck(0.4);
+        // デッドボール再開。通常のサーブと同じ演出 (カウントダウン音) にして、
+        // 「誰にも触れられていないのに勝手に動いた」という見え方を避ける
+        puck.vel.set((this.rng() - 0.5) * 160, this.rng() > 0.5 ? 220 : -220);
+        this.sound.playCountDown();
       }
     } else {
       this.stagnationTimer = 0;
@@ -348,6 +385,9 @@ export class GameLoopUseCase {
 
     if (event.type === "PUCK_WALL") {
       this.sound.playWallBounce();
+      // 軌道が変わったので、接近中のエージェントに再判断の機会を与える
+      this.topBrain.notifyWallBounce();
+      this.bottomBrain?.notifyWallBounce();
       return;
     }
 

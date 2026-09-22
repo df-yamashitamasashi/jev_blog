@@ -3,17 +3,31 @@
  *
  * 外部APIを一切使わない幾何解ソルバー。LLM勢の対照群(ベースライン)として、
  * 他エージェントと完全に同じ ShotPlan を返し、同じガードレールを通る。
+ *
+ * やっていることは人間の上級者の思考と同じ順序:
+ *   1. パックの未来位置を壁反射込みで読む
+ *   2. 直接シュート・左右のバンクシュート・クリアを候補として並べる
+ *   3. それぞれ「打ったらどう飛ぶか」を実際に積分し、決まるか・相手に取られるかで採点
+ *   4. 最良の一手を宣言する
+ * 乱数は一切使わない (同じ盤面なら常に同じ判断 = 再現可能なベンチマーク)。
  */
 
 import { AgentType, AgentTelemetry, MindGameChat } from "../domain/jevAgentTypes";
-import { Vec2 } from "../domain/physics";
 import { validateShotPlan } from "../domain/shotPlanValidator";
+import { predictPuckPath } from "../domain/puckPredictor";
+import { limitsFor } from "../domain/interception";
 import {
-  IAgentClient,
-  AirHockeyObservation,
-  predictCrossing,
-  opponentGoalCenter,
-} from "./agentClient";
+  EvaluateContext,
+  ScoredShot,
+  buildClearCandidate,
+  buildShotCandidates,
+  evaluateShot,
+  pickBestShot,
+} from "../domain/shotTactics";
+import { IAgentClient, AirHockeyObservation } from "./agentClient";
+
+/** 判断に使う予測の地平線 (秒) */
+const LOOKAHEAD_SEC = 2.0;
 
 export class CpuAgentClient implements IAgentClient {
   readonly type = AgentType.CPU;
@@ -23,34 +37,51 @@ export class CpuAgentClient implements IAgentClient {
 
   async decideShot(obs: AirHockeyObservation): Promise<AgentTelemetry> {
     const started = performance.now();
-    const { config, side, puckPos, puckVel } = obs;
+    const { config, side } = obs;
 
-    // 自陣内に引いた迎撃ライン。ゴールから離しすぎると裏を取られる
-    const interceptLineY = side === "TOP" ? config.height * 0.22 : config.height * 0.78;
-    const crossing = predictCrossing(puckPos, puckVel, interceptLineY, config);
+    const traj = predictPuckPath(obs.puckPos, obs.puckVel, config, { horizonSec: LOOKAHEAD_SEC });
+    const limits = limitsFor(side, config);
 
-    const interceptPoint = crossing
-      ? crossing.point
-      : // 予測が取れない場合はゴール前中央で待つ
-        new Vec2(config.width * 0.5, interceptLineY);
+    const ctx: EvaluateContext = {
+      side,
+      config,
+      limits,
+      malletPos: obs.myMalletPos,
+      malletVel: obs.myMalletVel,
+      opponentMalletPos: obs.opponentMalletPos,
+      opponentMalletVel: obs.opponentMalletVel,
+      swingSpeed: config.maxMalletSpeed,
+    };
 
-    // 相手マレットの逆サイドを狙う
-    const goal = opponentGoalCenter(side, config);
-    const opponentOffset = obs.opponentMalletPos.x - config.width * 0.5;
-    const aimX = goal.x + (opponentOffset > 0 ? -config.goalWidth * 0.35 : config.goalWidth * 0.35);
-    const aimPoint = new Vec2(aimX, goal.y);
+    // 得点を狙う候補をすべて採点し、最良の一手を選ぶ
+    let best = pickBestShot(traj, buildShotCandidates(side, config), ctx, LOOKAHEAD_SEC);
 
-    // 迎撃点から狙い点へ向かう方向へ振り抜く
-    const swing = aimPoint.sub(interceptPoint);
-    const swingDirDeg = (Math.atan2(swing.y, swing.x) * 180) / Math.PI;
+    // どれも決まらないなら、確実に自陣から追い出すクリアと比べる
+    const clear = evaluateShot(traj, buildClearCandidate(side, config, obs.opponentMalletPos), ctx, LOOKAHEAD_SEC);
+    if (clear && (!best || clear.score > best.score)) best = clear;
+
+    if (!best) {
+      // 迎撃解が1つも立たない = この局面では打ち返せない。計画を出さずに守りへ回す
+      return {
+        plan: null,
+        status: "INVALID",
+        rawLatencyMs: performance.now() - started,
+        clampNotes: ["到達可能な迎撃点が存在しない"],
+        isLiveApi: false,
+        latestChat: null,
+      };
+    }
+
+    const { solution, candidate } = best;
+    const swingDirDeg = (Math.atan2(solution.swingDir.y, solution.swingDir.x) * 180) / Math.PI;
 
     const result = validateShotPlan(
       {
-        interceptPoint: { x: interceptPoint.x, y: interceptPoint.y },
-        aimPoint: { x: aimPoint.x, y: aimPoint.y },
+        interceptPoint: { x: solution.contactPoint.x, y: solution.contactPoint.y },
+        aimPoint: { x: candidate.aimPoint.x, y: candidate.aimPoint.y },
         swingDirDeg,
-        swingSpeed: config.maxMalletSpeed,
-        comment: this.pickChat(),
+        swingSpeed: solution.swingSpeed,
+        comment: this.pickChat(best),
       },
       side,
       config
@@ -66,18 +97,33 @@ export class CpuAgentClient implements IAgentClient {
     };
   }
 
-  private pickChat(): string | undefined {
+  /** 選んだ手の内容をそのまま実況にする (演出のためだけの乱数は使わない) */
+  private pickChat(shot: ScoredShot): string | undefined {
     const now = performance.now();
-    if (now - this.lastChatTime < 5000) return undefined;
+    if (now - this.lastChatTime < 4000) return undefined;
     this.lastChatTime = now;
 
-    const lines = [
-      "[CPU] 軌道ベクトル解析完了。迎撃点を算出しました。",
-      "[CPU] 反射角を計算中。相手マレットの逆サイドを狙います。",
-      "[CPU] 幾何解ソルバー実行中。最短経路で迎撃します。",
-      "[CPU] 壁反射を折り込んだ着弾予測を更新しました。",
-    ];
-    return lines[Math.floor(Math.random() * lines.length)];
+    if (shot.goalInSec !== null) {
+      const ms = Math.round(shot.goalInSec * 1000);
+      switch (shot.candidate.kind) {
+        case "BANK_LEFT":
+          return `[CPU] 左バンク。${ms}ms後に決まる解を選択。`;
+        case "BANK_RIGHT":
+          return `[CPU] 右バンク。${ms}ms後に決まる解を選択。`;
+        case "CLEAR":
+          return `[CPU] クリアがそのまま通る。${ms}ms後に到達。`;
+        default:
+          return `[CPU] 直接シュート。${ms}ms後に枠内へ。`;
+      }
+    }
+
+    if (shot.candidate.kind === "CLEAR") {
+      return "[CPU] 得点解なし。自陣から確実に追い出します。";
+    }
+    if (!shot.solution.feasible) {
+      return `[CPU] ${Math.round(-shot.solution.slackSec * 1000)}ms 足りない。全力で追います。`;
+    }
+    return "[CPU] 決定解なし。相手の届かない位置へ通します。";
   }
 
   private buildChat(comment: string | undefined): MindGameChat | null {
