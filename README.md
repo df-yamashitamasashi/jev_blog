@@ -13,7 +13,7 @@ TypeSafe AI が発表した新世代の意思決定モデル **「Jev」（Syste
 | **Vol. 1** | [**Jev詳解（実践ユースケース5選）**](https://qiita.com/yam_dev/items/e3c69dbb3aec67f092c4)<br>サポートトリアージ、セキュリティガードレール、モデルルーター、RAGリランク、エージェントスキル選択 | Python 3.12<br>`typesafe-sdk`<br>pytest, mypy, ruff | [`articles/01/`](./articles/01/) |
 | **Vol. 2** | [**Jevを活用したVSCode拡張機能の構築**](https://qiita.com/yam_dev/items/018959baefb3bee4a06a)<br>リアルタイム波線診断、インテントディスパッチャー、投機的LLMゲートキーパー | TypeScript<br>Clean Architecture<br>VSCode API, Vitest | [`articles/02/vscode-jev-companion/`](./articles/02/vscode-jev-companion/) |
 | **Vol. 3** | [**Jevで創るリアルタイム・レトロダンジョンバトル**](https://qiita.com/yam_dev/items/4c0ff700a6b265f96c8a)<br>AIゲームディレクター、パレットスワップ、リアルタイム装備成長、レトロTCGカード生成＆シェア | TypeScript<br>Clean Architecture<br>Vite, HTML5 Canvas, Web Audio, Vitest | [`articles/03/`](./articles/03/) |
-| **Vol. 4** | **Jevを活用したRAGの構築** *(Coming Soon)* | Python / TypeScript | `articles/04/` *(準備中)* |
+| **Vol. 4** | **Jevを活用したRAGの構築**<br>5-Stage System One ゲート、超低遅延・トークン70%削減・ゼロハルシネーション、A/Bベンチマーク | TypeScript / Python<br>Clean Architecture<br>Vite, In-Memory Hybrid Search, Vitest, pytest | [`articles/04/`](./articles/04/) |
 | **Vol. 5** | **Jevを活用したエージェントの構築** *(Coming Soon)* | - | `articles/05/` *(準備中)* |
 
 ---
@@ -41,15 +41,27 @@ jev_blog/
 │   │       ├── README.md               # 拡張機能の詳細ドキュメント
 │   │       ├── src/                    # Domain, Adapters, UseCases, VSCode Presentation
 │   │       └── test/                   # Vitest 単体テストスイート (12 tests)
-│   └── 03/                             # Vol. 3: 王道レトロダンジョンRPG (2.2億通りDNAモンスター & BGM自動作曲)
-│       ├── 03_jev_retro_dungeon_game.md # 技術解説記事
-│       ├── README.md                   # バイリンガル（英日）詳細ドキュメント
-│       └── jev-retro-dungeon/          # ゲーム本体 & ギャラリー (Clean Architecture)
-│           ├── package.json
-│           ├── index.html              # レトロUI & CRTスキャンライン
-│           ├── gallery.html            # 2.2億通りDNAモンスター検証ギャラリー
-│           ├── src/                    # Domain, Adapters, UseCases, Presentation
-│           └── test/                   # Vitest 単体テストスイート (4ファイル・22 tests)
+│   ├── 03/                             # Vol. 3: 王道レトロダンジョンRPG (2.2億通りDNAモンスター & BGM自動作曲)
+│   │   ├── 03_jev_retro_dungeon_game.md # 技術解説記事
+│   │   ├── README.md                   # バイリンガル（英日）詳細ドキュメント
+│   │   └── jev-retro-dungeon/          # ゲーム本体 & ギャラリー (Clean Architecture)
+│   │       ├── package.json
+│   │       ├── index.html              # レトロUI & CRTスキャンライン
+│   │       ├── gallery.html            # 2.2億通りDNAモンスター検証ギャラリー
+│   │       ├── src/                    # Domain, Adapters, UseCases, Presentation
+│   │       └── test/                   # Vitest 単体テストスイート (4ファイル・22 tests)
+│   ├── 04/                             # Vol. 4: Jev Adaptive RAG Workbench (5-Stage System One Studio)
+│   │   ├── 04_jev_rag_architecture.md  # 技術解説記事 (Qiita)
+│   │   ├── README.md                   # バイリンガル（英日）詳細ドキュメント
+│   │   ├── jev-rag-workbench/          # 対話型スタジオ (Clean Architecture)
+│   │   │   ├── package.json
+│   │   │   ├── index.html              # ガラスモーフィズム・リアルタイム可視化UI
+│   │   │   ├── src/                    # Domain, Adapters, UseCases, Presentation
+│   │   │   └── test/                   # Vitest 単体テストスイート (5ファイル・13 tests)
+│   │   └── python/                     # Python本番パイプライン
+│   │       ├── rag_pipeline.py         # Clean Architecture準拠パイプライン
+│   │       ├── test_rag_pipeline.py    # pytest 単体テストスイート (4 tests)
+│   │       └── requirements.txt
 └── docs/                               # 開発ログ・設計ドキュメント
 ```
 
@@ -111,6 +123,27 @@ npm run dev
 ブラウザで `http://localhost:3000/` を開くとゲームが起動します。
 また、`http://localhost:3000/gallery.html` で2.2億通りのDNAモンスターを心ゆくまで生成・検証できるモンスターギャラリーを利用可能です。
 詳細は [ゲームREADME](./articles/03/README.md) をご覧ください。
+
+### 4. Jev Adaptive RAG Workbench の起動 (Vol. 4)
+```bash
+cd articles/04/jev-rag-workbench
+
+# 依存パッケージのインストール & 単体テスト (13 tests 全パス)
+npm install
+npm test
+
+# インタラクティブ・スタジオの起動 (Vite)
+npm run dev
+```
+
+ブラウザで `http://localhost:3000/` を開くと、5段階の Jev System One 意思決定ゲート（トリアージ、クエリ分解、高速リランク、十分性判定、引用事実検証）がリアルタイムにステップ可視化されるワークベンチが起動します。
+また、自社システムにそのまま組み込める Python 実装も即座に実行可能です：
+```bash
+cd articles/04/python
+pytest test_rag_pipeline.py -v
+python rag_pipeline.py
+```
+詳細は [RAG README](./articles/04/README.md) をご覧ください。
 
 ---
 
