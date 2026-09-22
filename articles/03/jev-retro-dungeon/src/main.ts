@@ -60,13 +60,36 @@ window.addEventListener("DOMContentLoaded", () => {
     apiKeyInput.value = savedKey;
   }
 
-  saveKeyBtn.addEventListener("click", () => {
-    localStorage.setItem("jev_api_key", apiKeyInput.value.trim());
-    alert(i18n.t("ui_save") + ": JEV API KEY");
-  });
+  const appendLog = (msg: string, type: "info" | "jev" | "combat" | "evolution") => {
+    const item = document.createElement("div");
+    item.className = `log-item log-${type}`;
+    const timeStr = new Date().toLocaleTimeString().slice(3);
+    item.textContent = `[${timeStr}] ${msg}`;
+    logContainer.appendChild(item);
+    logContainer.scrollTop = logContainer.scrollHeight;
+  };
 
   // アダプター & ユースケースのDI
-  const jevClient = new JevClient({ apiKey: savedKey });
+  // APIキーが設定されている限り必ずJev実APIを呼び出す。実呼び出しが失敗した場合のみ
+  // （キー未設定時の想定内フォールバックとは区別して）ログパネルに警告を表示する。
+  const jevClient = new JevClient({
+    apiKey: savedKey,
+    onFallback: ({ reason, detail }) => {
+      appendLog(`${i18n.t("ui_jev_fallback_warn")} (${reason})`, "info");
+      console.warn("[Jev] fallback detail:", detail);
+    },
+  });
+
+  saveKeyBtn.addEventListener("click", () => {
+    const key = apiKeyInput.value.trim();
+    localStorage.setItem("jev_api_key", key);
+    // ページ再読み込みなしで即座にLIVE呼び出しへ切り替える
+    jevClient.setApiKey(key);
+    if (key) {
+      appendLog(i18n.t("ui_jev_key_applied"), "jev");
+    }
+  });
+
   const soundEngine = new RetroSoundEngine();
   const gameDirector = new GameDirectorUseCase(jevClient, i18n);
   const battleUseCase = new BattleUseCase(i18n);
@@ -83,15 +106,6 @@ window.addEventListener("DOMContentLoaded", () => {
   const inputHandler = new InputHandler(canvas);
 
   let currentCard: CardData | null = null;
-
-  const appendLog = (msg: string, type: "info" | "jev" | "combat" | "evolution") => {
-    const item = document.createElement("div");
-    item.className = `log-item log-${type}`;
-    const timeStr = new Date().toLocaleTimeString().slice(3);
-    item.textContent = `[${timeStr}] ${msg}`;
-    logContainer.appendChild(item);
-    logContainer.scrollTop = logContainer.scrollHeight;
-  };
 
   const gameLoop = new GameLoop(
     canvasRenderer,

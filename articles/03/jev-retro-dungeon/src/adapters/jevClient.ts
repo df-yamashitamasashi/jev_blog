@@ -20,21 +20,47 @@ export interface IJevClient {
   }>;
 }
 
+export type JevFallbackReason = "timeout" | "http_error" | "network_error";
+
+export interface JevFallbackInfo {
+  reason: JevFallbackReason;
+  detail: string;
+}
+
 export interface JevClientOptions {
   apiKey?: string;
   baseUrl?: string;
   timeoutMs?: number;
+  /**
+   * APIキーが設定されているにもかかわらず実API呼び出しが失敗し、
+   * シミュレーターへフォールバックした場合にのみ呼ばれる（キー未設定時の
+   * 想定内フォールバックでは呼ばれない）。UI側で可視化するためのフック。
+   */
+  onFallback?: (info: JevFallbackInfo) => void;
 }
 
 export class JevClient implements IJevClient {
-  private readonly apiKey: string;
+  private apiKey: string;
   private readonly baseUrl: string;
   private readonly timeoutMs: number;
+  private readonly onFallback?: (info: JevFallbackInfo) => void;
 
   constructor(options: JevClientOptions = {}) {
     this.apiKey = options.apiKey || (typeof window !== "undefined" ? localStorage.getItem("jev_api_key") || "" : "");
     this.baseUrl = (options.baseUrl || DEFAULT_JEV_BASE_URL).replace(/\/+$/, "");
-    this.timeoutMs = options.timeoutMs ?? 2000;
+    // Jev System OneはLLMバックエンドのため、2秒では正常なレスポンスでも
+    // タイムアウトしてシミュレーターに落ちてしまうことがあった。実運用に耐える値に緩和。
+    this.timeoutMs = options.timeoutMs ?? 8000;
+    this.onFallback = options.onFallback;
+  }
+
+  /** APIキーをその場で反映する（ページ再読み込み不要でLIVE呼び出しに切り替える） */
+  setApiKey(apiKey: string): void {
+    this.apiKey = apiKey.trim();
+  }
+
+  hasApiKey(): boolean {
+    return this.apiKey.length > 0;
   }
 
   async systemOne(request: JevSystemOneRequest): Promise<{
@@ -80,7 +106,17 @@ export class JevClient implements IJevClient {
       return { response: json, latencyMs, isSimulated: false };
     } catch (err) {
       clearTimeout(timer);
+      const reason: JevFallbackReason =
+        err instanceof DOMException && err.name === "AbortError"
+          ? "timeout"
+          : err instanceof Error && err.message.startsWith("Jev API HTTP error")
+          ? "http_error"
+          : "network_error";
+      const detail = err instanceof Error ? err.message : String(err);
       console.warn("[JevClient] Falling back to intelligent simulator due to error:", err);
+      // APIキーがあるのにLIVE呼び出しが失敗した場合のみ、UIへ通知する
+      // （キー未設定時の想定内フォールバックは通知不要）
+      this.onFallback?.({ reason, detail });
       const simulated = this.simulateDecision(request);
       const latencyMs = Math.round(performance.now() - startTime);
       return { response: simulated, latencyMs, isSimulated: true };

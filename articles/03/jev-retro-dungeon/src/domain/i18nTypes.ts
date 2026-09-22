@@ -65,6 +65,8 @@ export interface TranslationDictionary {
   ui_save: string;
   ui_bgm_on: string;
   ui_bgm_off: string;
+  ui_jev_key_applied: string;
+  ui_jev_fallback_warn: string;
   ui_controls_title: string;
   ui_ctrl_move: string;
   ui_ctrl_action: string;
@@ -256,6 +258,8 @@ export const I18N_DICTIONARIES: Record<LanguageCode, TranslationDictionary> = {
     ui_save: "保存",
     ui_bgm_on: "BGM: ON",
     ui_bgm_off: "BGM: OFF",
+    ui_jev_key_applied: "APIキーを適用しました。次回以降 JEV API (LIVE) を使用します。",
+    ui_jev_fallback_warn: "⚠ Jev API 接続失敗 → シミュレーターにフォールバックしました",
     ui_controls_title: "操作方法",
     ui_ctrl_move: "移動 / コマンド選択",
     ui_ctrl_action: "決定 / 宝箱調べる",
@@ -431,6 +435,8 @@ export const I18N_DICTIONARIES: Record<LanguageCode, TranslationDictionary> = {
     ui_save: "SAVE",
     ui_bgm_on: "BGM: ON",
     ui_bgm_off: "BGM: OFF",
+    ui_jev_key_applied: "API key applied. JEV API (LIVE) will be used from now on.",
+    ui_jev_fallback_warn: "⚠ Jev API connection failed -> falling back to simulator",
     ui_controls_title: "Controls",
     ui_ctrl_move: "Move / Select",
     ui_ctrl_action: "Confirm / Inspect Chest",
@@ -606,6 +612,8 @@ export const I18N_DICTIONARIES: Record<LanguageCode, TranslationDictionary> = {
     ui_save: "ENREGISTRER",
     ui_bgm_on: "BGM: ACTIVÉE",
     ui_bgm_off: "BGM: COUPÉE",
+    ui_jev_key_applied: "Clé API appliquée. L'API JEV (LIVE) sera utilisée désormais.",
+    ui_jev_fallback_warn: "⚠ Échec de connexion à l'API Jev -> repli sur le simulateur",
     ui_controls_title: "Contrôles",
     ui_ctrl_move: "Déplacer / Sélection",
     ui_ctrl_action: "Confirmer / Ouvrir coffre",
@@ -781,6 +789,8 @@ export const I18N_DICTIONARIES: Record<LanguageCode, TranslationDictionary> = {
     ui_save: "SALVA",
     ui_bgm_on: "BGM: ON",
     ui_bgm_off: "BGM: OFF",
+    ui_jev_key_applied: "Chiave API applicata. Da ora verrà usata l'API JEV (LIVE).",
+    ui_jev_fallback_warn: "⚠ Connessione all'API Jev fallita -> passaggio al simulatore",
     ui_controls_title: "Comandi",
     ui_ctrl_move: "Movimento / Selezione",
     ui_ctrl_action: "Conferma / Apri baule",
@@ -956,6 +966,8 @@ export const I18N_DICTIONARIES: Record<LanguageCode, TranslationDictionary> = {
     ui_save: "SPEICHERN",
     ui_bgm_on: "BGM: AN",
     ui_bgm_off: "BGM: AUS",
+    ui_jev_key_applied: "API-Schlüssel übernommen. Ab jetzt wird die JEV-API (LIVE) verwendet.",
+    ui_jev_fallback_warn: "⚠ Jev-API-Verbindung fehlgeschlagen -> Rückfall auf Simulator",
     ui_controls_title: "Steuerung",
     ui_ctrl_move: "Bewegen / Auswahl",
     ui_ctrl_action: "Bestätigen / Truhe öffnen",
@@ -1131,6 +1143,8 @@ export const I18N_DICTIONARIES: Record<LanguageCode, TranslationDictionary> = {
     ui_save: "保存",
     ui_bgm_on: "音乐: 开",
     ui_bgm_off: "音乐: 关",
+    ui_jev_key_applied: "已应用API密钥。此后将使用JEV API（LIVE）。",
+    ui_jev_fallback_warn: "⚠ Jev API 连接失败 → 已回退至模拟器",
     ui_controls_title: "操作说明",
     ui_ctrl_move: "移动 / 指令选择",
     ui_ctrl_action: "确认 / 调查宝箱",
@@ -1306,6 +1320,8 @@ export const I18N_DICTIONARIES: Record<LanguageCode, TranslationDictionary> = {
     ui_save: "저장",
     ui_bgm_on: "BGM: 켜짐",
     ui_bgm_off: "BGM: 꺼짐",
+    ui_jev_key_applied: "API 키가 적용되었습니다. 이제부터 JEV API(LIVE)를 사용합니다.",
+    ui_jev_fallback_warn: "⚠ Jev API 연결 실패 → 시뮬레이터로 전환되었습니다",
     ui_controls_title: "조작 방법",
     ui_ctrl_move: "이동 / 명령어 선택",
     ui_ctrl_action: "결정 / 보물상자 조사",
@@ -1481,6 +1497,8 @@ export const I18N_DICTIONARIES: Record<LanguageCode, TranslationDictionary> = {
     ui_save: "सहेजें",
     ui_bgm_on: "संगीत: चालू",
     ui_bgm_off: "संगीत: बंद",
+    ui_jev_key_applied: "एपीआई कुंजी लागू हो गई। अब से JEV API (LIVE) का उपयोग होगा।",
+    ui_jev_fallback_warn: "⚠ Jev API कनेक्शन विफल → सिम्युलेटर पर स्विच किया गया",
     ui_controls_title: "नियंत्रण",
     ui_ctrl_move: "चलना / आदेश चुनना",
     ui_ctrl_action: "पुष्टि / संदूक खोलना",
