@@ -8,9 +8,8 @@ Jev Adaptive RAG Pipeline (Production Reference Implementation)
   Gate 5: Faithfulness & Citation Verification (Noul)
 """
 
-from dataclasses import dataclass, field
 import os
-import re
+from dataclasses import dataclass, field
 from typing import Any
 
 try:
@@ -23,6 +22,7 @@ try:
         ScoreAnswer,
         TypeSafeClient,
     )
+
     HAS_TYPESAFE_SDK = True
 except ImportError:
     HAS_TYPESAFE_SDK = False
@@ -63,16 +63,21 @@ except ImportError:
         confidence: float = 0.9
         type: str = "noul"
 
+
 class StandaloneSimulatorClient:
     """Offline System One decision simulator when TYPESAFE_API_KEY is not provided."""
 
     def system_one(self, state: dict[str, Any], questions: dict[str, Any]):
         answers = {}
         for k, q in questions.items():
-            if isinstance(q, Score) or (hasattr(q, "criteria") and isinstance(q.criteria, list)):
+            if isinstance(q, Score) or (
+                hasattr(q, "criteria") and isinstance(q.criteria, list)
+            ):
                 query = str(state.get("query", "")).lower()
                 passage = str(state.get("passage", "")).lower()
-                if ("有給" in query or "有休" in query) and ("有給" in passage or "有休" in passage):
+                if ("有給" in query or "有休" in query) and (
+                    "有給" in passage or "有休" in passage
+                ):
                     score = 1.9
                 elif any(w in passage for w in query.split()):
                     score = 1.2
@@ -85,7 +90,9 @@ class StandaloneSimulatorClient:
                     legend={},
                     probabilities={},
                 )
-            elif isinstance(q, Choice) or (hasattr(q, "criteria") and isinstance(q.criteria, dict)):
+            elif isinstance(q, Choice) or (
+                hasattr(q, "criteria") and isinstance(q.criteria, dict)
+            ):
                 query = str(state.get("query", "")).lower()
                 if any(g in query for g in ["こんにちは", "hello", "ありがとう"]):
                     answers[k] = ChoiceAnswer(
@@ -116,7 +123,14 @@ class StandaloneSimulatorClient:
                 elif "十分" in instr:
                     query = str(state.get("query", ""))
                     context = str(state.get("context", ""))
-                    noul = 0.92 if (("有給" in query or "有休" in query) and ("有給" in context or "有休" in context)) else 0.1
+                    noul = (
+                        0.92
+                        if (
+                            ("有給" in query or "有休" in query)
+                            and ("有給" in context or "有休" in context)
+                        )
+                        else 0.1
+                    )
                 else:  # Faithfulness
                     claim = str(state.get("claim", ""))
                     noul = 0.2 if "無制限" in claim or "100日" in claim else 0.94
@@ -184,7 +198,10 @@ class JevAdaptiveRagPipeline:
             DocumentChunk(
                 id="hr_01_c2",
                 doc_title="社内就業規程・有休制度",
-                text="未使用の有給休暇は、翌年度に限り1年間の繰り越しが認められます。ただし繰り越し可能な日数は最大20日を限度とし、それを超える日数は失効します。",
+                text=(
+                    "未使用の有給休暇は、翌年度に限り1年間の繰り越しが認められます。"
+                    "ただし繰り越し可能な日数は最大20日を限度とし、それを超える日数は失効します。"
+                ),
             ),
             DocumentChunk(
                 id="general_01",
@@ -281,7 +298,11 @@ class JevAdaptiveRagPipeline:
         reranked.sort(key=lambda p: p.relevance_score, reverse=True)
         accepted = [p for p in reranked if p.is_accepted]
         accepted_chars = sum(len(p.chunk.text) for p in accepted)
-        tokens_saved = int(((initial_chars - accepted_chars) / initial_chars) * 100) if initial_chars else 0
+        tokens_saved = (
+            int(((initial_chars - accepted_chars) / initial_chars) * 100)
+            if initial_chars
+            else 0
+        )
 
         # ----------------------------------------------------
         # GATE 4: Context Sufficiency Check
@@ -289,7 +310,9 @@ class JevAdaptiveRagPipeline:
         if not accepted:
             return self._create_fallback_result(query, reranked, tokens_saved)
 
-        context_text = "\n\n".join(f"[{p.chunk.doc_title}]\n{p.chunk.text}" for p in accepted)
+        context_text = "\n\n".join(
+            f"[{p.chunk.doc_title}]\n{p.chunk.text}" for p in accepted
+        )
         suff_resp = self.client.system_one(
             state={"query": query, "context": context_text},
             questions={
@@ -307,7 +330,10 @@ class JevAdaptiveRagPipeline:
         # SYSTEM TWO: Grounded Generation (LLM)
         # ----------------------------------------------------
         # Synthesize factual response
-        raw_answer = "社内就業規程に基づき、未使用の有給休暇は翌年度に限り繰り越しが可能です。ただし繰り越し可能な日数は最大20日を限度として定められています。"
+        raw_answer = (
+            "社内就業規程に基づき、未使用の有給休暇は翌年度に限り繰り越しが可能です。"
+            "ただし繰り越し可能な日数は最大20日を限度として定められています。"
+        )
         claims = [
             "未使用の有給休暇は翌年度に限り繰り越しが可能です。",
             "繰り越し可能な日数は最大20日を限度として定められています。",
@@ -336,7 +362,9 @@ class JevAdaptiveRagPipeline:
             )
 
         passed_count = sum(1 for c in verified_claims if c.is_supported)
-        attribution_score = int((passed_count / len(verified_claims)) * 100) if verified_claims else 100
+        attribution_score = (
+            int((passed_count / len(verified_claims)) * 100) if verified_claims else 100
+        )
 
         return RagPipelineResult(
             query=query,
@@ -355,7 +383,10 @@ class JevAdaptiveRagPipeline:
     ) -> RagPipelineResult:
         return RagPipelineResult(
             query=query,
-            final_answer="社内ナレッジベースを確認しましたが、該当する客観的な根拠や情報は見当たりませんでした。（ハルシネーション防止のため生成をスキップしました）",
+            final_answer=(
+                "社内ナレッジベースを確認しましたが、該当する客観的な根拠や情報は見当たりませんでした。"
+                "（ハルシネーション防止のため生成をスキップしました）"
+            ),
             is_direct_answer=False,
             is_clarification_needed=False,
             is_fallback=True,
@@ -378,5 +409,8 @@ if __name__ == "__main__":
         print(f"\n====================\nQuery: {q}\n====================")
         res = pipeline.run(q)
         print(f"DirectAnswer: {res.is_direct_answer} | Fallback: {res.is_fallback}")
-        print(f"Tokens Saved: {res.tokens_saved_percent}% | Attribution Score: {res.attribution_score}%")
+        print(
+            f"Tokens Saved: {res.tokens_saved_percent}% | "
+            f"Attribution Score: {res.attribution_score}%"
+        )
         print(f"Answer: {res.final_answer}")
