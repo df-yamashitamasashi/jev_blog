@@ -8,13 +8,13 @@ TypeSafe AI が発表した新世代の意思決定モデル **「Jev」（Syste
 
 ## 記事シリーズ & サンプルコード一覧
 
-| シリーズ | テーマ | 主な技術スタック | サンプルコード |
-| :--- | :--- | :--- | :--- |
-| **Vol. 1** | [**Jev詳解（実践ユースケース5選）**](https://qiita.com/yam_dev/items/e3c69dbb3aec67f092c4)<br>サポートトリアージ、セキュリティガードレール、モデルルーター、RAGリランク、エージェントスキル選択 | Python 3.12<br>`typesafe-sdk`<br>pytest, mypy, ruff | [`articles/01/`](./articles/01/) |
-| **Vol. 2** | [**Jevを活用したVSCode拡張機能の構築**](https://qiita.com/yam_dev/items/018959baefb3bee4a06a)<br>リアルタイム波線診断、インテントディスパッチャー、投機的LLMゲートキーパー | TypeScript<br>Clean Architecture<br>VSCode API, Vitest | [`articles/02/vscode-jev-companion/`](./articles/02/vscode-jev-companion/) |
-| **Vol. 3** | [**Jevで創るリアルタイム・レトロダンジョンバトル**](https://qiita.com/yam_dev/items/4c0ff700a6b265f96c8a)<br>AIゲームディレクター、パレットスワップ、リアルタイム装備成長、レトロTCGカード生成＆シェア | TypeScript<br>Clean Architecture<br>Vite, HTML5 Canvas, Web Audio, Vitest | [`articles/03/`](./articles/03/) |
-| **Vol. 4** | **Jevを活用したRAGの構築**<br>5-Stage System One ゲート、超低遅延・トークン70%削減・ゼロハルシネーション、A/Bベンチマーク | TypeScript / Python<br>Clean Architecture<br>Vite, In-Memory Hybrid Search, Vitest, pytest | [`articles/04/`](./articles/04/) |
-| **Vol. 5** | [**Jevで創るリアルタイム・エアホッケーAI**](./articles/05/README.md)<br>120fps物理空間におけるSystem One意思決定エージェント、10サブステップ連続衝突判定（CCD）、リアルタイム煽り心理戦 | TypeScript<br>Clean Architecture<br>Vite, HTML5 Canvas, Web Audio, Vitest | [`articles/05/`](./articles/05/) |
+| シリーズ   | テーマ                                                                                                                                                                                                 | 主な技術スタック                                                                           | サンプルコード                                                             |
+| :--------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :----------------------------------------------------------------------------------------- | :------------------------------------------------------------------------- |
+| **Vol. 1** | [**Jev詳解（実践ユースケース5選）**](https://qiita.com/yam_dev/items/e3c69dbb3aec67f092c4)<br>サポートトリアージ、セキュリティガードレール、モデルルーター、RAGリランク、エージェントスキル選択        | Python 3.12<br>`typesafe-sdk`<br>pytest, mypy, ruff                                        | [`articles/01/`](./articles/01/)                                           |
+| **Vol. 2** | [**Jevを活用したVSCode拡張機能の構築**](https://qiita.com/yam_dev/items/018959baefb3bee4a06a)<br>リアルタイム波線診断、インテントディスパッチャー、投機的LLMゲートキーパー                             | TypeScript<br>Clean Architecture<br>VSCode API, Vitest                                     | [`articles/02/vscode-jev-companion/`](./articles/02/vscode-jev-companion/) |
+| **Vol. 3** | [**Jevで創るリアルタイム・レトロダンジョンバトル**](https://qiita.com/yam_dev/items/4c0ff700a6b265f96c8a)<br>AIゲームディレクター、パレットスワップ、リアルタイム装備成長、レトロTCGカード生成＆シェア | TypeScript<br>Clean Architecture<br>Vite, HTML5 Canvas, Web Audio, Vitest                  | [`articles/03/`](./articles/03/)                                           |
+| **Vol. 4** | **Jevを活用したRAGの構築**<br>5-Stage System One ゲート、超低遅延・トークン70%削減・ゼロハルシネーション、A/Bベンチマーク                                                                              | TypeScript / Python<br>Clean Architecture<br>Vite, In-Memory Hybrid Search, Vitest, pytest | [`articles/04/`](./articles/04/)                                           |
+| **Vol. 5** | [**[Jev/Gemini/Claude] エアホッケー最強決定戦**](./articles/05/README.md)<br>120fps物理空間におけるSystem One意思決定エージェント、10サブステップ連続衝突判定（CCD）、リアルタイム煽り心理戦           | TypeScript<br>Clean Architecture<br>Vite, HTML5 Canvas, Web Audio, Vitest                  | [`articles/05/`](./articles/05/)                                           |
 
 ---
 
@@ -78,12 +78,15 @@ jev_blog/
 ## クイックスタート
 
 ### 共通前提
+
 TypeSafe AI の API キーを取得し、環境変数 `TYPESAFE_API_KEY` に設定してください（※未設定の場合でも内蔵シミュレーターにより即座にプレイ・動作確認が可能です）。
+
 ```bash
 export TYPESAFE_API_KEY="your-typesafe-api-key"
 ```
 
 ### 1. Python サンプルコードの実行 (Vol. 1)
+
 ```bash
 # 仮想環境の作成とアクティベート
 python3 -m venv .venv
@@ -97,6 +100,7 @@ pytest articles/01/test_usecases.py
 ```
 
 ### 2. VSCode拡張機能の導入 & 実行 (Vol. 2)
+
 ```bash
 cd articles/02/vscode-jev-companion
 
@@ -113,10 +117,12 @@ code --install-extension jev-companion-0.1.0.vsix
 ```
 
 #### 初期設定 (APIキー)
+
 VSCode 画面左下の歯車アイコン ⚙️ ->「設定」（または `Cmd+,`）から `jev` を検索し、**`Jev: Api Key`** に取得した API キーを入力（または環境変数 `TYPESAFE_API_KEY` を設定）すれば完了です。
 詳細は [拡張機能README](./articles/02/vscode-jev-companion/README.md) をご覧ください。
 
 ### 3. Jev レトロダンジョンRPGの起動 (Vol. 3)
+
 ```bash
 cd articles/03/jev-retro-dungeon
 
@@ -133,6 +139,7 @@ npm run dev
 詳細は [ゲームREADME](./articles/03/README.md) をご覧ください。
 
 ### 4. Jev Adaptive RAG Workbench の起動 (Vol. 4)
+
 ```bash
 cd articles/04/jev-rag-workbench
 
@@ -146,14 +153,17 @@ npm run dev
 
 ブラウザで `http://localhost:3000/` を開くと、5段階の Jev System One 意思決定ゲート（トリアージ、クエリ分解、高速リランク、十分性判定、引用事実検証）がリアルタイムにステップ可視化されるワークベンチが起動します。
 また、自社システムにそのまま組み込める Python 実装も即座に実行可能です：
+
 ```bash
 cd articles/04/python
 pytest test_rag_pipeline.py -v
 python rag_pipeline.py
 ```
+
 詳細は [RAG README](./articles/04/README.md) をご覧ください。
 
 ### 5. Jev Cyber Air Hockey の起動 (Vol. 5)
+
 ```bash
 cd articles/05/jev-air-hockey
 
