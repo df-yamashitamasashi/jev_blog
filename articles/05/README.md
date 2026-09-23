@@ -17,6 +17,10 @@ Every agent — cloud LLM or local simulator — is asked the exact same *struct
 - 🌐 **Gemini × Claude** — AI championship match
 - 🔷 **Gemini × Human**, 🔶 **Claude × Human** — AI vs. biological reflex
 
+### Tournament Results (Preview)
+
+A round-robin tournament (CPU / Jev / Gemini / Claude, 1 match per pairing) has already been run. Headline: **Gemini took the AI-division win on decision quality, while Jev was by far the fastest thinker** — averaging 299ms per decision vs. Claude's 1,246ms and Gemini's ~13,005ms, despite finishing last on the scoreboard. Full standings, per-agent stats, and the speed breakdown are in the write-up: **[05_jev_air_hockey_agent.md](./05_jev_air_hockey_agent.md)** (Japanese).
+
 ### Key Features
 
 1. **A Shared "Choice-Question" Protocol for Every Agent**
@@ -71,6 +75,10 @@ Open `http://localhost:5174/` in your browser.
 - 🧠 **Jev × Claude**（直感スピード vs 深い戦略推論）
 - 🌐 **Gemini × Claude**（AI頂上決戦）
 - 🔷 **Gemini × 人間**、🔶 **Claude × 人間**（AI vs 人間）
+
+### トーナメント結果（ダイジェスト）
+
+CPU・Jev・Gemini・Claudeによる総当たり戦（各カード1試合）をすでに実施済みです。結果は **判断の質ではGeminiがAI部門で優勝した一方、JEVは平均299ms／回という圧倒的な速さ** を記録（Claudeの1,246ms、Geminiの約13,005msに対し）——順位こそ最下位でしたが、レイテンシではAI勢の中でずば抜けていました。全順位表・エージェント別スタッツ・速度の考察は本編の記事をご覧ください：**[05_jev_air_hockey_agent.md](./05_jev_air_hockey_agent.md)**。
 
 ### 主な特徴
 

@@ -6,7 +6,6 @@ __pycache__/
 !**/README.md
 !CONTRIBUTING.md
 !.github/**/*.md
-!articles/**/*.md
 * copy.md
 docs/
 .flake8
@@ -17,7 +16,3 @@ dist/
 *.vsix
 .vscode-test/
 .claude/
-articles/01/01_jev_overview_usecases*.md
-articles/02/02_jev_vscode_extension*.md
-articles/03/03_jev_retro_dungeon_game*.md
-articles/04/04_jev_rag_architecture*.md
