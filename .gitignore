@@ -6,6 +6,8 @@ __pycache__/
 !**/README.md
 !CONTRIBUTING.md
 !.github/**/*.md
+!articles/**/*.md
+* copy.md
 docs/
 .flake8
 .mypy_cache/
