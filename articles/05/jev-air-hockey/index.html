@@ -27,6 +27,10 @@
       user-select: none;
     }
 
+    html, body {
+      height: 100%;
+    }
+
     body {
       background-color: var(--bg-main);
       color: var(--text-main);
@@ -35,7 +39,7 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      padding: 20px 16px;
+      padding: 14px 16px 10px;
       overflow-x: hidden;
     }
 
@@ -464,8 +468,8 @@
 
     .canvas-relative-container {
       position: relative;
-      width: 480px;
-      height: 720px;
+      width: min(480px, calc(100vw - 48px));
+      aspect-ratio: 2 / 3;
       border-radius: 12px;
       overflow: hidden;
       box-shadow: 0 0 20px rgba(0, 0, 0, 0.6);
@@ -564,12 +568,11 @@
       display: none;
     }
 
-    /* AIチャット吹出し */
+    /* AIチャット吹出し (TOP/BOTTOM それぞれの陣地の近くに独立して表示する) */
     .jev-chat-bubble {
       position: absolute;
-      top: 95px;
       left: 50%;
-      transform: translateX(-50%) translateY(-10px);
+      max-width: 88%;
       background: rgba(13, 19, 38, 0.92);
       border: 1px solid var(--neon-pink);
       box-shadow: 0 0 18px rgba(255, 0, 85, 0.35);
@@ -582,7 +585,19 @@
       opacity: 0;
       transition: all 0.3s ease;
       z-index: 15;
-      white-space: nowrap;
+      white-space: normal;
+      text-align: center;
+      overflow-wrap: break-word;
+    }
+
+    .jev-chat-bubble.chat-top {
+      top: 95px;
+      transform: translateX(-50%) translateY(-10px);
+    }
+
+    .jev-chat-bubble.chat-bottom {
+      bottom: 95px;
+      transform: translateX(-50%) translateY(10px);
     }
 
     .jev-chat-bubble.visible {
@@ -907,6 +922,58 @@
       gap: 10px;
       margin-top: 20px;
     }
+
+    /* デスクトップ: コートとHUDを画面内に収め、ブラウザのズームアウトやページスクロールを不要にする */
+    @media (min-width: 901px) and (min-height: 560px) {
+      body {
+        height: 100dvh;
+        overflow: hidden;
+      }
+
+      header,
+      .agent-engine-bar,
+      .matchup-selector-panel {
+        flex-shrink: 0;
+      }
+
+      .arena-container {
+        flex: 1 1 auto;
+        min-height: 0;
+        align-items: stretch;
+      }
+
+      .canvas-wrapper {
+        height: 100%;
+        justify-content: flex-start;
+      }
+
+      .canvas-relative-container {
+        flex: 1 1 auto;
+        min-height: 0;
+        width: auto;
+        max-width: 480px;
+        aspect-ratio: 2 / 3;
+      }
+
+      .hud-panel {
+        height: 100%;
+        overflow-y: auto;
+        padding-right: 4px;
+      }
+    }
+
+    /* モバイル/狭幅: 縦積みで自然にスクロールできるレイアウトに戻す */
+    @media (max-width: 900px) {
+      .arena-container {
+        flex-wrap: wrap;
+      }
+
+      .canvas-wrapper,
+      .hud-panel {
+        width: 100%;
+        max-width: 480px;
+      }
+    }
   </style>
 </head>
 <body>
@@ -1011,7 +1078,8 @@
 
       <div class="canvas-relative-container">
         <div id="game-banner" class="game-banner">PRESS SPACE TO PLAY</div>
-        <div id="jev-chat-bubble" class="jev-chat-bubble">System One準備完了。</div>
+        <div id="jev-chat-bubble-top" class="jev-chat-bubble chat-top"></div>
+        <div id="jev-chat-bubble-bottom" class="jev-chat-bubble chat-bottom"></div>
         <canvas id="air-hockey-canvas"></canvas>
       </div>
     </div>
@@ -1131,7 +1199,7 @@
           <label>Anthropic Claude API Key <span id="status-claude-key" class="mode-tag cpu">🖥️ CPUモード</span></label>
           <input id="input-claude-key" type="password" placeholder="sk-ant-..." />
           <div class="model-info-row">
-            <span>選択中モデル: <span id="model-claude-name" class="model-name-badge">claude-3-5-haiku-latest</span></span>
+            <span>選択中モデル: <span id="model-claude-name" class="model-name-badge">claude-opus-5</span></span>
             <button id="btn-refresh-claude-models" class="btn-mini" type="button">🔄 最新モデル自動更新</button>
           </div>
         </div>

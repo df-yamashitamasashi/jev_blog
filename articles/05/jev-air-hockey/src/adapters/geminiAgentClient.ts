@@ -1,20 +1,27 @@
 /**
  * Google Gemini Agent Client (Clean Architecture - Adapter Layer)
  *
- * responseSchema による構造化出力を使う。Claude 側と完全に同一のプロンプト・
- * 同一のスキーマを渡し、フォールバックは持たない。
+ * responseSchema による構造化出力を使う。Claude・Jev と同じ選択式の問いに答えさせ、
+ * フォールバックは持たない。
+ * 通信に失敗した局面は、作戦タイムに Gemini 自身が立てた作戦で打つ。
  */
 
 import { AgentType, AgentTelemetry } from "../domain/jevAgentTypes";
-import { IAgentClient, AirHockeyObservation } from "./agentClient";
+import { IAgentClient, AirHockeyObservation, PlaybookContext, PlaybookTelemetry } from "./agentClient";
 import {
-  SHOT_PLAN_SCHEMA,
-  buildShotPlanPrompt,
-  toTelemetry,
-  failureTelemetry,
+  PLAYBOOK_TIMEOUT_MS,
+  DECISION_TIMEOUT_MS,
+  StructuredCallResult,
   withTimeout,
   isDecisionTimeout,
 } from "./llmShotPlanner";
+import {
+  PLAYBOOK_CHOICE_SCHEMA,
+  buildShotCall,
+  buildPlaybookPrompt,
+  shotTelemetryFromChoices,
+  playbookTelemetryFromChoices,
+} from "./llmChoiceProtocol";
 import { ModelSettings } from "./modelSettings";
 
 export class GeminiAgentClient implements IAgentClient {
@@ -30,13 +37,25 @@ export class GeminiAgentClient implements IAgentClient {
   }
 
   async decideShot(obs: AirHockeyObservation): Promise<AgentTelemetry> {
+    // Jev と同じ選択式の問いに答えさせる ([[llmChoiceProtocol]])
+    const call = buildShotCall(obs);
+    return shotTelemetryFromChoices(await this.call(call.prompt, call.schema, DECISION_TIMEOUT_MS), call, obs);
+  }
+
+  async decidePlaybook(ctx: PlaybookContext): Promise<PlaybookTelemetry> {
+    return playbookTelemetryFromChoices(
+      await this.call(buildPlaybookPrompt(ctx), PLAYBOOK_CHOICE_SCHEMA, PLAYBOOK_TIMEOUT_MS),
+      ctx
+    );
+  }
+
+  private async call(prompt: string, schema: object, timeoutMs: number): Promise<StructuredCallResult> {
     if (!this.apiKey) {
-      return failureTelemetry("ERROR", "Gemini APIキーが未設定です", 0);
+      return { ok: false, status: "ERROR", reason: "Gemini APIキーが未設定です", latencyMs: 0 };
     }
 
     const started = performance.now();
     const model = ModelSettings.getGeminiModel();
-
     const controller = new AbortController();
 
     try {
@@ -48,15 +67,16 @@ export class GeminiAgentClient implements IAgentClient {
             headers: { "Content-Type": "application/json" },
             signal: controller.signal,
             body: JSON.stringify({
-              contents: [{ parts: [{ text: buildShotPlanPrompt(obs) }] }],
+              contents: [{ parts: [{ text: prompt }] }],
               generationConfig: {
                 temperature: 0.4,
                 responseMimeType: "application/json",
-                responseSchema: toGeminiSchema(SHOT_PLAN_SCHEMA),
+                responseSchema: toGeminiSchema(schema),
               },
             }),
           }
-        )
+        ),
+        timeoutMs
       );
 
       const latencyMs = performance.now() - started;
@@ -70,25 +90,25 @@ export class GeminiAgentClient implements IAgentClient {
           }
         } catch {}
         console.error("Gemini API Error:", errorDetail);
-        return failureTelemetry("ERROR", errorDetail, latencyMs);
+        return { ok: false, status: "ERROR", reason: errorDetail, latencyMs };
       }
 
       const data = await res.json();
       const text: string | undefined = data.candidates?.[0]?.content?.parts?.[0]?.text;
 
       if (!text) {
-        return failureTelemetry("INVALID", "応答にテキストが含まれていません", latencyMs);
+        return { ok: false, status: "INVALID", reason: "応答にテキストが含まれていません", latencyMs };
       }
 
-      return toTelemetry(safeParse(text), obs, latencyMs);
+      return { ok: true, raw: safeParse(text), latencyMs };
     } catch (e) {
       const latencyMs = performance.now() - started;
       if (isDecisionTimeout(e)) {
         controller.abort();
-        return failureTelemetry("TIMEOUT", e.message, latencyMs);
+        return { ok: false, status: "TIMEOUT", reason: e.message, latencyMs };
       }
       const message = e instanceof Error ? e.message : String(e);
-      return failureTelemetry("ERROR", message, latencyMs);
+      return { ok: false, status: "ERROR", reason: message, latencyMs };
     }
   }
 }

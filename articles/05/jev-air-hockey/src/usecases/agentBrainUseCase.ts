@@ -1,25 +1,51 @@
 /**
  * Agent Servo Controller (Clean Architecture - UseCases Layer)
  *
- * このクラスは戦術判断を一切行わない。エージェントが返した ShotPlan の「狙い」を、
- * 物理的な制約 (最大速度・最大加速度・自陣の範囲) の中で忠実に実現するための
- * サーボ機構である。どこを狙い、どれだけ強く打つかは完全にAI側の責任。
+ * このクラスは戦術判断を一切行わない。エージェントが返した ShotPlan を、
+ * 物理的な制約 (最大速度・最大加速度・自陣の範囲) の中でそのまま実行するための
+ * サーボ機構である。
  *
- * 旧実装との決定的な違い:
- *   - 一度決めた静止点へ走って止まるのではなく、毎ステップ再予測した軌道に対して
- *     迎撃解を解き直す (= 相手の打球が変わればその場で追従する)。
- *   - 狙いはスイング方向ではなく **接触法線** で実現する ([[interception]])。
- *     そのためにパックの裏側へ回り込む。
- *   - 接触の瞬間にマレットが動いているよう、事前に振りかぶって加速し切る。
- *   - 計画が無い/間に合わない局面でも棒立ちにならず、脅威の進路へ体を入れる。
+ * 判断のタイミング:
+ *   パックが中央線を越えて自陣へ入ってきた瞬間の **1回だけ** (CPU も LLM も同じ)。
+ *   そこでエージェントは軌道を予測し、「いつ・どこで・どの向きに・どれだけ強く打つか」
+ *   「直線か曲線か・どの速さで構え位置へ向かうか」「来た球を打つか跳ね返りを打つか」
+ *   をまとめて決める。
+ *
+ * 実行は開ループ:
+ *   サーボはパックを見て打点を補正しない。予告された時刻に予告された位置を振り抜く
+ *   だけなので、予測を外せばそのまま空振りになる。1回の判断の精度が勝敗を決める。
+ *
+ * 作戦 (試合前の作戦タイムにエージェント自身が決めたもの。[[playbook]]):
+ *   - 中央線での判断が通信失敗・時間切れ・応答不正で得られなければ、その局面の作戦で打つ
+ *   - パックが自陣に2秒以上留まれば (判断の機会が無い)、居座る球の作戦で打つ
+ *
+ * 作戦はあるが、その局面に当てはまる手が無い (欠けている・当てはめられない) とき:
+ *   CPU に任せる (CPU代行)。次に中央線を越えてくるまで、その局面は CPU の判断と反射で動く。
+ *   回数は記録し、HUD とトーナメント表に出す。
+ *
+ * 計画も作戦も無いとき:
+ *   クラウドAI — NO_PLAN。作戦で決めた待機位置で待つだけで、ローカル演算では一切プレーしない
+ *                (時間切れ・通信失敗の局面を CPU が肩代わりすると、AI対戦にならない)
+ *   CPU        — CPU 自身がローカル演算のエージェントなので、反射で動く
+ *     DEFEND  — 速い球の進路へ体を入れる
+ *     CLEANUP — 自陣でゴールに向かっていない球 (遅い球・壁沿いの往復) を必ず打ちに行く
+ *     HOME    — パックが相手陣にある
  */
 
 import { Vec2, CircleBody } from "../domain/physics";
 import { AgentTelemetry, AgentType, ShotPlan } from "../domain/jevAgentTypes";
 import { StadiumConfig } from "../domain/gameState";
 import { PlaySide } from "../domain/shotPlanValidator";
-import { IAgentClient, AirHockeyObservation } from "../adapters/agentClient";
+import { IAgentClient, AirHockeyObservation, PlaybookContext, PlaybookTelemetry } from "../adapters/agentClient";
+import {
+  Playbook,
+  LINGER_THRESHOLD_SEC,
+  classifyIncoming,
+  classifyLingering,
+  moveToPlan,
+} from "../domain/playbook";
 import { PuckTrajectory, predictPuckPath, sampleAt } from "../domain/puckPredictor";
+import { bezierLength, bezierPoint, curveControlPoint } from "../domain/approachPath";
 import {
   InterceptSolution,
   MalletLimits,
@@ -30,11 +56,25 @@ import {
 } from "../domain/interception";
 
 /**
- * 再判断の安全網。軌道が変わる意味のあるイベント (壁バウンド・相手の打球) が
- * 起きなくても、この間隔で一度は考え直す。短くするほど戦術の鮮度は上がるが、
- * 実APIのエージェントでは呼び出し回数がそのまま課金とレイテンシになる。
+ * 中央線を越えたと判定する幅 (px)。1ステップで進む距離 (最高速 2000px/s で約17px) より
+ * 広くとる。これより奥で初めて見つかったパック (サーブ直後など) は中央線での判断にしない。
  */
-const REDECIDE_SAFETY_NET_MS = 1100;
+const CENTER_LINE_BAND_PX = 40;
+
+/** 作戦タイムで作戦を作り直させる最大回数 (初回を含む) */
+const PLAYBOOK_MAX_ATTEMPTS = 3;
+
+/**
+ * CLEANUP で掻き出す対象にする速度の上限 (px/s)。
+ * これより速い球でも、自陣ゴールへ向かっていなければ (壁沿いの往復など) 掻き出しに行く。
+ */
+const CLEANUP_MAX_PUCK_SPEED = 450;
+
+/** 打点が立たない球を追いかけるとき、何秒先のパック位置へ向かうか */
+const CHASE_LEAD_SEC = 0.25;
+
+/** 経路をなぞるときの先読み距離 (px) */
+const PATH_LOOKAHEAD_PX = 36;
 
 /** 軌道予測を作り直す間隔 (物理ステップ数)。毎ステップ作っても結果はほぼ変わらない */
 const PREDICT_EVERY_STEPS = 3;
@@ -87,7 +127,17 @@ const ALIGN_SAFETY_FACTOR = 0.9;
 /** 相手の打球を検知する速度変化のしきい値 (px/s) */
 const OPPONENT_HIT_DELTA = 140;
 
-export type ServoMode = "SETUP" | "STRIKE" | "DEFEND" | "HOME";
+export type ServoMode = "SETUP" | "STRIKE" | "DEFEND" | "CLEANUP" | "HOME" | "NO_PLAN";
+
+/** HUD 描画用: いま実行中の計画の経路 */
+export interface PlannedPath {
+  start: Vec2;
+  control: Vec2;
+  windupPoint: Vec2;
+  contactPoint: Vec2;
+  /** 接触の瞬間にパックが居るはずの位置 (= エージェントの予測) */
+  expectedPuckPos: Vec2;
+}
 
 /**
  * 実行中の一撃。振り始めたら接触予定時刻を固定し、自前の時計で追い込む。
@@ -97,6 +147,10 @@ export type ServoMode = "SETUP" | "STRIKE" | "DEFEND" | "HOME";
  * 結果としてマレットは振りかぶり点の周りで固まり、パックに押し負ける。
  */
 interface StrikeCommitment {
+  /** AGENT = エージェントの計画・作戦 (開ループ) / LOCAL = CPU の CLEANUP の反射 */
+  source: "AGENT" | "LOCAL";
+  /** LIVE = 中央線での判断 / PLAYBOOK = 作戦タイムに決めた作戦 / CPU = CPU代行 */
+  origin: "LIVE" | "PLAYBOOK" | "CPU";
   contactPoint: Vec2;
   /** 振りかぶって待つ位置 */
   windupPoint: Vec2;
@@ -107,10 +161,19 @@ interface StrikeCommitment {
   /** 助走距離と、そこを走り切るのに必要な時間 */
   runUp: number;
   swingTime: number;
-  /** 固定した時点で予測していた接触地点のパック位置 (ズレ検知用) */
+  /** 接触の瞬間にパックが居るはずの位置 */
   expectedPuckPos: Vec2;
   /** すでに振り始めたか。振り始めるまではパックに触れない */
   launched: boolean;
+  /** 構え位置までの経路 (2次ベジェ。直線なら制御点は中点) */
+  pathStart: Vec2;
+  pathControl: Vec2;
+  pathLength: number;
+  /** 経路上の進み具合 (0..1) */
+  pathS: number;
+  moveSpeed: number;
+  /** 予測誤差をすでに記録したか */
+  predictionScored: boolean;
 }
 
 export class AgentBrainUseCase {
@@ -123,12 +186,30 @@ export class AgentBrainUseCase {
   private telemetry: AgentTelemetry | null = null;
   private plan: ShotPlan | null = null;
   private awaitingDecision = false;
-  private decisionArmed = true;
+  /** パックが相手陣に出たら立つ。中央線を越えて戻ってきた瞬間に判断して倒す */
+  private centerLineArmed = true;
   private lastEngaged = false;
   private touchedThisApproach = false;
-  private hasDecidedThisApproach = false;
   private apiCooldownUntil = 0;
+  /** 判断を要求してから経過したシミュレーション時間 (ms)。応答遅延ぶんを計画から差し引く */
   private msSinceDecision = Number.POSITIVE_INFINITY;
+  private predictionErrors: number[] = [];
+
+  /** 作戦タイムに決めた作戦。試合中は変わらない (reset でも消さない) */
+  private playbook: Playbook | null = null;
+  private playbookTelemetry: PlaybookTelemetry | null = null;
+  /** パックが自陣に居続けている時間 (秒)。中央線を越えると 0 に戻る */
+  private ownHalfSec = 0;
+  /** いま実行している作戦の局面 (HUD表示用) */
+  private activeSituation: string | null = null;
+  /** 作戦に当てはまる手が無かった局面を任せる CPU */
+  private takeoverClient: IAgentClient | null = null;
+  /** いま CPU代行 中か。次に中央線を越えてくるまで続く */
+  private cpuTakeover = false;
+  /** まだゲームループへ報告していない CPU代行の回数 */
+  private takeoverEvents = 0;
+  /** 作戦の狙い (相手マレットから遠い側など) を決めるための、相手マレットの位置 */
+  private opponentMalletPos: Vec2 = new Vec2(0, 0);
 
   private trajectory: PuckTrajectory | null = null;
   private stepsSincePredict = Number.POSITIVE_INFINITY;
@@ -155,7 +236,80 @@ export class AgentBrainUseCase {
   setClient(client: IAgentClient | null, type: AgentType): void {
     this.client = client;
     this.agentType = type;
+    // エージェントが替わったら、前のエージェントの作戦は使えない
+    this.playbook = null;
+    this.playbookTelemetry = null;
     this.reset();
+  }
+
+  /**
+   * 作戦タイム。エージェントに作戦を立てさせる。
+   *
+   * ガードレール: 抜け漏れ・不正のある作戦は受け付けず、どこが不合格だったかを
+   * 伝えて作り直させる (最大 PLAYBOOK_MAX_ATTEMPTS 回)。時間切れは作り直しても
+   * 同じ結果になりやすいので繰り返さない。最後まで揃わなければ作戦なし
+   * (呼び出し側は試合を始めない)。
+   */
+  async preparePlaybook(ctx: PlaybookContext): Promise<PlaybookTelemetry | null> {
+    this.playbook = null;
+    this.playbookTelemetry = null;
+    if (!this.client?.decidePlaybook) return null;
+
+    let telemetry: PlaybookTelemetry | null = null;
+    for (let attempt = 1; attempt <= PLAYBOOK_MAX_ATTEMPTS; attempt++) {
+      telemetry = await this.client.decidePlaybook(
+        attempt === 1 ? ctx : { ...ctx, previousIssues: telemetry?.issues ?? [] }
+      );
+      if (telemetry.playbook || telemetry.status === "TIMEOUT") break;
+    }
+
+    this.playbookTelemetry = telemetry;
+    this.playbook = telemetry?.playbook ?? null;
+    return telemetry;
+  }
+
+  /** 作戦に当てはまる手が無い局面を任せる CPU を設定する */
+  setTakeoverClient(client: IAgentClient | null): void {
+    this.takeoverClient = client;
+  }
+
+  /** CPU代行が始まった回数を取り出す。呼ぶと 0 に戻る */
+  takeTakeoverEvents(): number {
+    const n = this.takeoverEvents;
+    this.takeoverEvents = 0;
+    return n;
+  }
+
+  isCpuTakeover(): boolean {
+    return this.cpuTakeover;
+  }
+
+  /** HUD 用: いま何に従って動いているか (作戦 / CPU代行)。どちらでもなければ null */
+  getControlNote(): string | null {
+    if (this.cpuTakeover) {
+      const style = this.playbook ? ` [${this.playbook.cpuStyle}]` : "";
+      return `🖥️ CPU代行${style}${this.activeSituation ? ` (${this.activeSituation}: 作戦に該当なし)` : ""}`;
+    }
+    const situation = this.getActiveSituation();
+    return situation ? `📋 作戦「${situation}」` : null;
+  }
+
+  /** テスト・リプレイ用に作戦を直接与える */
+  setPlaybook(playbook: Playbook | null): void {
+    this.playbook = playbook;
+  }
+
+  getPlaybook(): Playbook | null {
+    return this.playbook;
+  }
+
+  getPlaybookTelemetry(): PlaybookTelemetry | null {
+    return this.playbookTelemetry;
+  }
+
+  /** いま作戦で動いているなら、その局面の名前 */
+  getActiveSituation(): string | null {
+    return this.commitment?.origin === "PLAYBOOK" ? this.activeSituation : null;
   }
 
   getAgentType(): AgentType {
@@ -212,11 +366,15 @@ export class AgentBrainUseCase {
     this.telemetry = null;
     this.plan = null;
     this.awaitingDecision = false;
-    this.decisionArmed = true;
+    this.centerLineArmed = true;
     this.lastEngaged = false;
     this.touchedThisApproach = false;
-    this.hasDecidedThisApproach = false;
     this.apiCooldownUntil = 0;
+    this.predictionErrors = [];
+    this.ownHalfSec = 0;
+    this.activeSituation = null;
+    this.cpuTakeover = false;
+    this.takeoverEvents = 0;
     this.msSinceDecision = Number.POSITIVE_INFINITY;
     this.trajectory = null;
     this.stepsSincePredict = Number.POSITIVE_INFINITY;
@@ -227,29 +385,44 @@ export class AgentBrainUseCase {
     this.contactCooldownSteps = 0;
   }
 
-  /** 物理エンジンの衝突コールバックから呼ぶ */
-  recordContact(): void {
+  /**
+   * 物理エンジンの衝突コールバックから呼ぶ。
+   * 接触が予告時刻より早くても遅くても、その瞬間のパック位置で予測誤差を記録する。
+   */
+  recordContact(puckPos?: Vec2): void {
     this.touchedThisApproach = true;
     this.contactCooldownSteps = CONTACT_COOLDOWN_STEPS;
+    if (puckPos) this.scorePrediction(puckPos);
     this.commitment = null;
-    // 打ち返した直後は状況が一変する。次の局面を考え直す
-    this.decisionArmed = true;
-    this.hasDecidedThisApproach = false;
     this.stepsSincePredict = Number.POSITIVE_INFINITY;
   }
 
   /**
-   * 軌道が変わった (壁バウンド・相手の打球) ことを伝える。
-   * 関与中であれば次の observe() で再判断を要求する。
+   * 壁バウンドを伝える。予測を作り直すだけで、実行中の計画には手を付けない —
+   * 跳ね返りを読めていたかどうかもエージェントの予測精度のうち。
    */
   notifyWallBounce(): void {
     this.stepsSincePredict = Number.POSITIVE_INFINITY;
-    // 軌道が変わったなら、振っている途中の一撃はもう狙いを実現しない
-    this.commitment = null;
-    // Live API では自陣内の壁バウンドごとの再判断を抑制（API上限保護のため。CPUのみ再判断）
-    if (this.lastEngaged && !this.usesLiveApi()) {
-      this.decisionArmed = true;
-    }
+  }
+
+  /** 計測された予測誤差 (px) を取り出す。呼ぶと空になる */
+  takePredictionErrors(): number[] {
+    const errors = this.predictionErrors;
+    this.predictionErrors = [];
+    return errors;
+  }
+
+  /** HUD 描画用: 実行中のエージェント計画の経路 */
+  getPlannedPath(): PlannedPath | null {
+    const c = this.commitment;
+    if (!c || c.source !== "AGENT") return null;
+    return {
+      start: c.pathStart,
+      control: c.pathControl,
+      windupPoint: c.windupPoint,
+      contactPoint: c.contactPoint,
+      expectedPuckPos: c.expectedPuckPos,
+    };
   }
 
   /** この局面でパックに触れられたか (空振り判定用) */
@@ -285,8 +458,6 @@ export class AgentBrainUseCase {
     // 相手が打ち返した瞬間は速度が跳ねる。予測を即座に作り直す
     if (puck.vel.sub(this.lastPuckVel).mag() > OPPONENT_HIT_DELTA) {
       force = true;
-      this.commitment = null;
-      if (this.lastEngaged && !this.usesLiveApi()) this.decisionArmed = true;
     }
     this.lastPuckVel = puck.vel.clone();
 
@@ -305,6 +476,9 @@ export class AgentBrainUseCase {
    * パックの状態を観測し、判断の要否と局面の終了を報告する。
    * 「自陣に関わった一連の流れ」を1局面として数え、その間に触れたかで
    * セーブと空振りを判定する。
+   *
+   * 判断を求めるのは、パックが中央線を越えて自陣へ入ってきた瞬間だけ。
+   * それ以外 (壁バウンド・自陣での減速・打ち損じ) では考え直さない。
    */
   observe(puck: CircleBody): { needsDecision: boolean; approachEnded: "SAVE" | "WHIFF" | null } {
     if (!this.client) return { needsDecision: false, approachEnded: null };
@@ -315,35 +489,52 @@ export class AgentBrainUseCase {
     let approachEnded: "SAVE" | "WHIFF" | null = null;
 
     if (engaged && !this.lastEngaged) {
-      this.decisionArmed = true;
       this.touchedThisApproach = false;
-      this.hasDecidedThisApproach = false;
     } else if (!engaged && this.lastEngaged) {
       approachEnded = this.touchedThisApproach ? "SAVE" : "WHIFF";
-      this.hasDecidedThisApproach = false;
     }
     this.lastEngaged = engaged;
 
-    const inCooldown = Date.now() < this.apiCooldownUntil;
-    const dueForRedecision = engaged && this.msSinceDecision >= REDECIDE_SAFETY_NET_MS;
+    const crossed = this.detectCenterLineCrossing(puck);
+    if (crossed) {
+      // 新しい局面。前の局面の計画も、CPU代行ももう使わない
+      this.plan = null;
+      this.commitment = null;
+      this.cpuTakeover = false;
+      this.activeSituation = null;
+    }
 
-    // Live API の場合は 1アプローチにつき最大 1 回の判断とし、レート制限クールダウン中もリクエストしない
-    // （CPUはローカル演算のため何度でも再考してよい）
-    const shouldDecide = this.usesLiveApi()
-      ? (this.decisionArmed && !this.hasDecidedThisApproach && !inCooldown)
-      : (this.decisionArmed || dueForRedecision);
+    // レート制限のクールダウン中は問い合わせない (その局面は計画なしで守る)
+    const inCooldown = Date.now() < this.apiCooldownUntil;
 
     return {
-      needsDecision: !this.awaitingDecision && engaged && shouldDecide,
+      needsDecision: crossed && !this.awaitingDecision && !inCooldown,
       approachEnded,
     };
+  }
+
+  /** パックが中央線を越えて自陣へ入ってきた瞬間か */
+  private detectCenterLineCrossing(puck: CircleBody): boolean {
+    const mid = this.config.height * 0.5;
+    const onMySide = this.side === "TOP" ? puck.pos.y <= mid : puck.pos.y >= mid;
+
+    if (!onMySide) {
+      this.centerLineArmed = true;
+      return false;
+    }
+    if (!this.centerLineArmed) return false;
+
+    // 自陣側に入った。向かってこない球・中央線から離れた位置で初めて見つかった球
+    // (サーブ直後など) は、中央線での判断の対象ではない
+    this.centerLineArmed = false;
+    const headingToMe = this.side === "TOP" ? puck.vel.y < 0 : puck.vel.y > 0;
+    return headingToMe && Math.abs(puck.pos.y - mid) <= CENTER_LINE_BAND_PX;
   }
 
   /** ゴールを許した時点で、その局面は空振りとして確定させる */
   finalizeApproach(): "SAVE" | "WHIFF" | null {
     if (!this.client || !this.lastEngaged) return null;
     this.lastEngaged = false;
-    this.hasDecidedThisApproach = false;
     return this.touchedThisApproach ? "SAVE" : "WHIFF";
   }
 
@@ -358,8 +549,7 @@ export class AgentBrainUseCase {
     if (!this.client) return null;
 
     this.awaitingDecision = true;
-    this.decisionArmed = false;
-    this.hasDecidedThisApproach = true;
+    this.msSinceDecision = 0;
 
     const observation: AirHockeyObservation = {
       side: this.side,
@@ -377,9 +567,21 @@ export class AgentBrainUseCase {
     try {
       const telemetry = await this.client.decideShot(observation);
       this.telemetry = telemetry;
-      // 無効な判断はローカルで救済しない。計画が無ければ攻撃はせず、守りに徹する
+      // 無効な判断はローカルで救済しない
       this.plan = telemetry.plan;
-      this.msSinceDecision = 0;
+      // 応答を待つ間もシミュレーションが進んでいた (ライブ対戦) なら、その分だけ
+      // 接触までの残り時間は減っている。遅い応答は、そのまま遅い一撃になる
+      this.commitment = telemetry.plan
+        ? this.buildAgentCommitment(telemetry.plan, myMallet.pos, this.msSinceDecision / 1000, "LIVE")
+        : null;
+
+      // 判断が届かなかった (通信失敗・時間切れ・応答不正)。
+      // 中央線を越えた瞬間の盤面に、エージェント自身が作戦タイムに決めた作戦を当てはめる
+      if (!telemetry.plan && telemetry.status !== "OK" && this.playbook) {
+        const situation = this.applyIncomingPlaybook(observation);
+        // 作戦はあるが、この局面に当てはまる手が無い。CPU に任せる
+        if (situation) await this.startCpuTakeover(situation, observation);
+      }
 
       // 429 エラー (Quota Exceeded) 時はスマートクールダウンを設定し、連打による悪循環を防ぐ
       if (telemetry.status === "ERROR") {
@@ -398,15 +600,101 @@ export class AgentBrainUseCase {
   }
 
   /**
+   * 中央線での判断が届かなかった局面を、作戦の「相手から来るパック」で打つ。
+   * 当てはまる手が無ければ、その局面名を返す (呼び出し側が CPU に任せる)。
+   */
+  private applyIncomingPlaybook(obs: AirHockeyObservation): string | null {
+    if (!this.playbook) return null;
+
+    const traj = predictPuckPath(obs.puckPos, obs.puckVel, this.config, { horizonSec: PREDICT_HORIZON_SEC });
+    const situation = classifyIncoming(traj, obs.puckVel, this.side, this.config);
+    const move = this.playbook.incoming[situation];
+    const plan = move
+      ? moveToPlan(move, traj, obs.myMalletPos, this.side, this.limits, this.config, obs.opponentMalletPos, situation)
+      : null;
+    if (!plan) return situation;
+
+    this.plan = plan;
+    this.activeSituation = situation;
+    this.commitment = this.buildAgentCommitment(plan, obs.myMalletPos, this.msSinceDecision / 1000, "PLAYBOOK");
+    return null;
+  }
+
+  /**
+   * パックが自陣に居座っている。作戦の「自陣に居座るパック」で打ちに行く。
+   * 当てはまる手が無ければ CPU に任せる。
+   */
+  private applyLingeringPlaybook(myMallet: CircleBody, puck: CircleBody, opponentMalletPos: Vec2): void {
+    if (!this.playbook || !this.trajectory) return;
+
+    const situation = classifyLingering(this.trajectory, puck.pos, puck.vel, this.side, this.config);
+    const move = this.playbook.lingering[situation];
+    const plan = move
+      ? moveToPlan(move, this.trajectory, myMallet.pos, this.side, this.limits, this.config, opponentMalletPos, situation)
+      : null;
+
+    if (!plan) {
+      // CPU 自身は元から CPU の反射で動くので、代行として数えない
+      if (this.usesLiveApi() && !this.cpuTakeover) {
+        void this.startCpuTakeover(situation, this.observe_(myMallet, puck, opponentMalletPos));
+      }
+      return;
+    }
+
+    this.cpuTakeover = false;
+    this.plan = plan;
+    this.activeSituation = situation;
+    this.commitment = this.buildAgentCommitment(plan, myMallet.pos, 0, "PLAYBOOK");
+  }
+
+  /** いまの盤面を、エージェントへ渡す観測の形にする (CPU代行用) */
+  private observe_(myMallet: CircleBody, puck: CircleBody, opponentMalletPos: Vec2): AirHockeyObservation {
+    return {
+      side: this.side,
+      puckPos: puck.pos.clone(),
+      puckVel: puck.vel.clone(),
+      myMalletPos: myMallet.pos.clone(),
+      myMalletVel: myMallet.vel.clone(),
+      opponentMalletPos: opponentMalletPos.clone(),
+      opponentMalletVel: new Vec2(0, 0),
+      myScore: 0,
+      opponentScore: 0,
+      config: this.config,
+    };
+  }
+
+  /**
+   * CPU代行を始める。次に中央線を越えてくるまで、CPU の判断と反射で動く。
+   * いまの盤面で、AI が選んだ動作パターンの CPU に1打を決めさせる。
+   */
+  private async startCpuTakeover(situation: string, obs?: AirHockeyObservation): Promise<void> {
+    this.cpuTakeover = true;
+    this.takeoverEvents++;
+    this.activeSituation = situation;
+
+    if (!obs || !this.takeoverClient) return;
+    const telemetry = await this.takeoverClient.decideShot(obs);
+    if (!this.cpuTakeover || !telemetry.plan) return;
+
+    this.plan = telemetry.plan;
+    this.commitment = this.buildAgentCommitment(telemetry.plan, obs.myMalletPos, this.msSinceDecision / 1000, "CPU");
+  }
+
+  /**
    * 1ステップ分マレットを動かす。戦術判断はここには一切存在しない。
    */
-  stepServo(dt: number, myMallet: CircleBody, puck: CircleBody): void {
+  stepServo(dt: number, myMallet: CircleBody, puck: CircleBody, opponentMalletPos?: Vec2): void {
     if (!this.client) return;
+
+    const mid = this.config.height * 0.5;
+    const inMyHalf = this.side === "TOP" ? puck.pos.y <= mid : puck.pos.y >= mid;
+    this.ownHalfSec = inMyHalf ? this.ownHalfSec + dt : 0;
+    this.opponentMalletPos = opponentMalletPos ?? this.opponentMalletPos;
 
     this.msSinceDecision += dt * 1000;
     if (this.contactCooldownSteps > 0) this.contactCooldownSteps--;
     this.refreshTrajectory(puck);
-    this.advanceCommitment(dt);
+    this.advanceCommitment(dt, puck);
 
     const desired = this.desiredVelocity(myMallet, puck);
     this.applyAcceleration(dt, myMallet, desired);
@@ -415,9 +703,11 @@ export class AgentBrainUseCase {
 
   /**
    * いま出すべき速度を決める。
-   *  STRIKE — 狙いを実現する接触点へ、振りかぶってから加速し切って入る
-   *  DEFEND — 打ち返せない球。脅威の進路へ体を入れて弾く
-   *  HOME   — パックが相手陣にある。守備隊形へ戻りながらパックのx方向へ寄せる
+   *  SETUP   — 計画された経路 (直線/曲線) を、計画された速度で構え位置へ向かう
+   *  STRIKE  — 予告時刻に予告位置を通るよう、振りかぶってから加速し切って振り抜く
+   *  DEFEND  — 計画が無い。脅威の進路へ体を入れて弾く
+   *  CLEANUP — 自陣に居座る遅い球を掻き出す
+   *  HOME    — パックが相手陣にある。守備隊形へ戻りながらパックのx方向へ寄せる
    */
   private desiredVelocity(myMallet: CircleBody, puck: CircleBody): Vec2 {
     const desired = this.planVelocity(myMallet, puck);
@@ -425,11 +715,14 @@ export class AgentBrainUseCase {
   }
 
   /** 固定した接触時刻の時計を進め、もう成立しない一撃は破棄する */
-  private advanceCommitment(dt: number): void {
+  private advanceCommitment(dt: number, puck: CircleBody): void {
     const commit = this.commitment;
     if (!commit) return;
 
     commit.timeLeft -= dt;
+
+    // 予告した接触時刻になった。その瞬間のパック位置で予測の答え合わせをする
+    if (commit.timeLeft <= 0) this.scorePrediction(puck.pos);
 
     // 振り抜き切っても当たらなかった
     if (commit.timeLeft < -COMMITMENT_GRACE_SEC) {
@@ -437,7 +730,10 @@ export class AgentBrainUseCase {
       return;
     }
 
-    // 予測がずれた (壁バウンドを拾いきれなかった等) なら解き直す
+    // エージェントの計画は開ループで実行する。予測が外れていても直さない
+    if (commit.source === "AGENT") return;
+
+    // CLEANUP の一撃は、予測がずれた (壁バウンドを拾いきれなかった等) なら解き直す
     const traj = this.trajectory;
     if (!traj) return;
     const expected = sampleAt(traj, Math.max(0, commit.timeLeft));
@@ -450,45 +746,50 @@ export class AgentBrainUseCase {
     const traj = this.trajectory;
     if (!traj) return new Vec2(0, 0);
 
-    // 一度振ると決めた一撃は、軌道が変わるまで打点を動かさない。
-    // 毎ステップ解き直すと、打点がパックを追って後退し続け、結果として
-    // 「最初だけ勢いがあって、あとはパックを追いかけるだけ」の動きになる
-    if (!this.commitment && this.plan) {
-      const solution = solveIntercept(
-        traj,
-        myMallet.pos,
-        myMallet.vel,
-        this.plan.aimPoint,
-        this.limits,
-        this.config,
-        {
-          swingSpeed: this.plan.swingSpeed,
-          maxLookaheadSec: STRIKE_HORIZON_SEC,
-          preferPoint: this.plan.interceptPoint,
-          // 到達と同時にパックが来る打点では振りかぶれない。助走に使いたい時間を伝える
-          setupSec: this.plan.swingSpeed / this.limits.maxAccel + SETUP_MARGIN_SEC,
-          windupPx: this.windupDistance(this.plan.swingSpeed),
-        }
-      );
+    // CPU は計画が無い (または外れた) まま自陣に居座る球を、自前の幾何解で打ちに行く。
+    // ゴールを塞ぐだけでは、ゴールに向かわない球 (壁沿いの往復など) に永久に触れない。
+    // クラウドAIには使わない — AIの応答が無い局面をローカル演算で肩代わりすると、
+    // 「AIを使わないモード」で試合をしていることになる
+    // CPU 自身か、CPU代行中なら、CPU の反射 (守備・掻き出し) を使う
+    const local = !this.usesLiveApi() || this.cpuTakeover;
 
-      if (
-        solution &&
-        (solution.feasible || solution.slackSec > DESPERATE_SLACK_SEC) &&
-        this.canAlignInTime(myMallet, solution)
-      ) {
-        this.solution = solution;
-        this.commitment = this.buildCommitment(solution);
-      }
+    // 自陣に2秒以上居座る球には、中央線での判断の機会が無い。作戦で打ちに行く
+    // (打ち終えてもまだ居座っていれば、次の一撃もすぐに作戦で出す)
+    if (!this.commitment && !this.awaitingDecision && this.ownHalfSec >= LINGER_THRESHOLD_SEC) {
+      this.applyLingeringPlaybook(myMallet, puck, this.opponentMalletPos);
+    }
+
+    if (local && !this.commitment && !this.awaitingDecision && this.needsCleanup(puck, traj)) {
+      this.tryLocalStrike(myMallet, traj);
     }
 
     if (this.commitment) {
-      this.mode = this.commitment.launched ? "STRIKE" : "SETUP";
+      this.mode =
+        this.commitment.source === "LOCAL" ? "CLEANUP" : this.commitment.launched ? "STRIKE" : "SETUP";
       return this.executeCommitment(myMallet, puck);
     }
 
     this.solution = null;
 
-    if (this.isEngaged(puck)) {
+    if (!local) {
+      // クラウドAIに実行中の計画が無い (判断待ち・時間切れ・通信失敗・一撃の後)。
+      // パックを読んで守ったり打ったりはせず、定位置で次の判断を待つ
+      this.mode = "NO_PLAN";
+      return this.arriveVelocity(myMallet.pos, this.waitingPosition(), this.limits.maxSpeed * 0.75);
+    }
+
+    // 打てる一撃がまだ立たなくても、ゴールへ向かわない球は追いかける。
+    // ゴール前で待っていても、壁沿いを往復する球は向こうから来てくれない
+    if (!this.awaitingDecision && this.needsCleanup(puck, traj)) {
+      this.mode = "CLEANUP";
+      const ahead = sampleAt(traj, CHASE_LEAD_SEC) ?? traj.samples[0];
+      const target = this.clampToOwnHalf(ahead.pos);
+      return this.arriveVelocity(myMallet.pos, this.routeAroundPuck(myMallet.pos, target, puck), this.limits.maxSpeed);
+    }
+
+    // 中央線を越えてくるまでは構えの位置で待つ。予測軌道が自陣に入るだけで
+    // ゴール前へ下がると、中央線で決めた打点へ前に出るのが間に合わなくなる
+    if (this.isEngaged(puck) && this.isInOwnHalf(puck.pos)) {
       this.mode = "DEFEND";
       const block = solveBlockPoint(traj, this.side, this.limits, this.config);
       return this.arriveVelocity(myMallet.pos, this.routeAroundPuck(myMallet.pos, block, puck), this.limits.maxSpeed);
@@ -497,6 +798,71 @@ export class AgentBrainUseCase {
     this.mode = "HOME";
     const home = this.routeAroundPuck(myMallet.pos, this.homePosition(puck), puck);
     return this.arriveVelocity(myMallet.pos, home, this.limits.maxSpeed * 0.75);
+  }
+
+  private needsCleanup(puck: CircleBody, traj: PuckTrajectory): boolean {
+    if (!this.isInOwnHalf(puck.pos)) return false;
+    // 自陣ゴールへ向かう速い球は、予測を外した結果。救済せず守備 (進路を塞ぐ) に任せる
+    return puck.vel.mag() < CLEANUP_MAX_PUCK_SPEED || traj.goalConcededBy !== this.side;
+  }
+
+  /**
+   * CLEANUP の一撃をローカルで解く。狙いは直前の計画の狙い (無ければ相手ゴール中央)。
+   * 戦術判断ではなく「止まりかけた球を相手陣へ返す」ための反射なので、
+   * 予測誤差の統計にも数えない。
+   */
+  private tryLocalStrike(myMallet: CircleBody, traj: PuckTrajectory): void {
+    const { width, height, puckRadius } = this.config;
+    const netY = this.side === "TOP" ? height + 30 : -30;
+    const goal = new Vec2(width * 0.5, netY);
+    const swingSpeed = this.limits.maxSpeed;
+
+    /**
+     * 狙いの候補。壁際の球は、壁の反対側から当てる向き (壁の向こうの鏡像を狙う
+     * バンク) でしか打点が自陣の内側に収まらないので、直接の狙いが立たなければ
+     * 左右のバンクを試す。
+     */
+    const aims = [
+      this.plan?.aimPoint ?? goal,
+      goal,
+      new Vec2(2 * puckRadius - goal.x, netY),
+      new Vec2(2 * (width - puckRadius) - goal.x, netY),
+    ];
+
+    let solution: InterceptSolution | null = null;
+    for (const aimPoint of aims) {
+      const candidate = solveIntercept(traj, myMallet.pos, myMallet.vel, aimPoint, this.limits, this.config, {
+        swingSpeed,
+        maxLookaheadSec: STRIKE_HORIZON_SEC,
+        // 到達と同時にパックが来る打点では振りかぶれない。助走に使いたい時間を伝える
+        setupSec: swingSpeed / this.limits.maxAccel + SETUP_MARGIN_SEC,
+        windupPx: this.windupDistance(swingSpeed),
+      });
+      if (!candidate) continue;
+      if (!solution || (candidate.feasible && !solution.feasible) || (!solution.feasible && candidate.slackSec > solution.slackSec)) {
+        solution = candidate;
+      }
+      if (solution.feasible) break;
+    }
+
+    if (
+      solution &&
+      (solution.feasible || solution.slackSec > DESPERATE_SLACK_SEC) &&
+      this.canAlignInTime(myMallet, solution)
+    ) {
+      this.solution = solution;
+      this.commitment = this.buildCommitment(
+        "LOCAL",
+        solution.contactPoint,
+        solution.swingDir,
+        solution.swingSpeed,
+        solution.contactTime,
+        myMallet.pos,
+        0,
+        this.limits.maxSpeed,
+        solution.puckPosAtContact
+      );
+    }
   }
 
   /**
@@ -528,26 +894,90 @@ export class AgentBrainUseCase {
     return Math.min(MAX_WINDUP_PX, (speed * speed) / (2 * this.limits.maxAccel));
   }
 
-  /** 迎撃解を「実行する一撃」として固定する */
-  private buildCommitment(sol: InterceptSolution): StrikeCommitment {
+  /**
+   * エージェントの計画を「実行する一撃」として固定する。
+   * elapsedSec は判断を求めてから応答が届くまでに進んだシミュレーション時間。
+   */
+  private buildAgentCommitment(
+    plan: ShotPlan,
+    malletPos: Vec2,
+    elapsedSec: number,
+    origin: "LIVE" | "PLAYBOOK" | "CPU"
+  ): StrikeCommitment {
+    const rad = (plan.swingDirDeg * Math.PI) / 180;
+    const swingDir = new Vec2(Math.cos(rad), Math.sin(rad));
+    const contactDist = this.config.puckRadius + this.config.malletRadius;
+
+    return this.buildCommitment(
+      "AGENT",
+      plan.interceptPoint,
+      swingDir,
+      plan.swingSpeed,
+      plan.contactTimeMs / 1000 - elapsedSec,
+      malletPos,
+      plan.movePath === "CURVE" ? plan.curveOffset : 0,
+      plan.moveSpeed,
+      // 振り抜く向きに接触するつもりなら、パックはその先にいるはず
+      plan.interceptPoint.add(swingDir.scale(contactDist)),
+      origin
+    );
+  }
+
+  /** 接触点・振り抜き・経路を「実行する一撃」として固定する */
+  private buildCommitment(
+    source: "AGENT" | "LOCAL",
+    contactPoint: Vec2,
+    swingDir: Vec2,
+    rawSwingSpeed: number,
+    contactTime: number,
+    malletPos: Vec2,
+    curveOffset: number,
+    moveSpeed: number,
+    expectedPuckPos: Vec2,
+    origin: "LIVE" | "PLAYBOOK" | "CPU" = "LIVE"
+  ): StrikeCommitment {
     const { maxAccel, maxSpeed } = this.limits;
-    const swingSpeed = Math.min(maxSpeed, Math.max(1, sol.swingSpeed));
+    const swingSpeed = Math.min(maxSpeed, Math.max(1, rawSwingSpeed));
 
     const windup = this.windupDistance(swingSpeed);
-    const windupPoint = this.clampToOwnHalf(sol.contactPoint.sub(sol.swingDir.scale(windup)));
-    const runUp = windupPoint.dist(sol.contactPoint);
+    const windupPoint = this.clampToOwnHalf(contactPoint.sub(swingDir.scale(windup)));
+    const runUp = windupPoint.dist(contactPoint);
+
+    const pathStart = malletPos.clone();
+    const pathControl = this.clampToOwnHalf(curveControlPoint(pathStart, windupPoint, curveOffset));
 
     return {
-      contactPoint: sol.contactPoint,
+      source,
+      origin,
+      contactPoint,
       windupPoint,
-      swingDir: sol.swingDir,
+      swingDir,
       swingSpeed,
-      timeLeft: Math.max(sol.contactTime, 0),
+      // サーボはマレットをステップ末の位置まで積分してから物理エンジンへ渡し、
+      // エンジンはそこからさらに1ステップ分マレットを掃引して衝突を解く。
+      // つまりパックの時計に対してマレットは常に1ステップ先行している。
+      // 補正しないと接触が1ステップ早まり、法線が予定から10〜15°回る
+      timeLeft: contactTime + this.config.fixedDt,
       runUp,
       swingTime: travelTime(runUp, 0, swingSpeed, maxAccel),
-      expectedPuckPos: sol.puckPosAtContact,
+      expectedPuckPos,
       launched: false,
+      pathStart,
+      pathControl,
+      pathLength: bezierLength(pathStart, pathControl, windupPoint),
+      pathS: 0,
+      moveSpeed: Math.min(maxSpeed, Math.max(1, moveSpeed)),
+      predictionScored: false,
     };
+  }
+
+  /** エージェントの計画について、予告位置と実際のパック位置の差を1回だけ記録する */
+  private scorePrediction(puckPos: Vec2): void {
+    const commit = this.commitment;
+    // 作戦から作った一撃は、ローカルの軌道予測を使って打点を当てはめているので数えない
+    if (!commit || commit.source !== "AGENT" || commit.origin !== "LIVE" || commit.predictionScored) return;
+    commit.predictionScored = true;
+    this.predictionErrors.push(puckPos.dist(commit.expectedPuckPos));
   }
 
   /**
@@ -568,10 +998,39 @@ export class AgentBrainUseCase {
 
     if (commit.launched) return this.followCommitment(myMallet);
 
-    // 準備局面: 振りかぶり点で速度を殺して構える。
-    // パックを突き飛ばしながら回り込むと自陣へ押し込むので、経路は必ず迂回する
-    const approach = this.routeAroundPuck(myMallet.pos, commit.windupPoint, puck);
-    return this.arriveVelocity(myMallet.pos, approach, this.limits.maxSpeed);
+    if (commit.source === "LOCAL") {
+      // 準備局面: 振りかぶり点で速度を殺して構える。
+      // パックを突き飛ばしながら回り込むと自陣へ押し込むので、経路は必ず迂回する
+      const approach = this.routeAroundPuck(myMallet.pos, commit.windupPoint, puck);
+      return this.arriveVelocity(myMallet.pos, approach, this.limits.maxSpeed);
+    }
+
+    return this.followPath(myMallet.pos, commit);
+  }
+
+  /**
+   * 計画された経路を、計画された速度上限でなぞる。
+   *
+   * 経路上で自分より少し先の点 (先読み点) へ向かい続けることで、曲線でも
+   * 角を作らずに進める。速度は「経路の残りで構え位置に止まれる速度」で頭打ちにする。
+   */
+  private followPath(pos: Vec2, commit: StrikeCommitment): Vec2 {
+    const { pathStart, pathControl, windupPoint } = commit;
+
+    while (commit.pathS < 1 && bezierPoint(pathStart, pathControl, windupPoint, commit.pathS).dist(pos) < PATH_LOOKAHEAD_PX) {
+      commit.pathS = Math.min(1, commit.pathS + 0.02);
+    }
+
+    if (commit.pathS >= 1) return this.arriveVelocity(pos, windupPoint, commit.moveSpeed);
+
+    const carrot = bezierPoint(pathStart, pathControl, windupPoint, commit.pathS);
+    const toCarrot = carrot.sub(pos);
+    const dist = toCarrot.mag();
+    if (dist < 1e-6) return new Vec2(0, 0);
+
+    const remaining = dist + (1 - commit.pathS) * commit.pathLength;
+    const stoppable = Math.sqrt(2 * this.limits.maxAccel * remaining * 0.9);
+    return toCarrot.scale(Math.min(commit.moveSpeed, stoppable) / dist);
   }
 
   /**
@@ -587,12 +1046,21 @@ export class AgentBrainUseCase {
 
     const tau = Math.max(0, commit.timeLeft);
 
-    // 接触時刻から逆算した理想位置。tau=0 でちょうど接触点に一致し、それより先へは出ない
-    const behind = Math.min(commit.runUp, 0.5 * maxAccel * tau * tau);
+    /**
+     * 接触時刻から逆算した理想位置と速度。振りかぶり点から等加速度で加速し、
+     * tau=0 でちょうど最終速度 vEnd に達して接触点を通過する。
+     *
+     * 以前は「接触点の手前 ½aτ²」を理想位置にしていたが、これは接触点へ向かって
+     * **減速していく** 軌道で、フィードフォワードの速度と食い違う。結果として
+     * マレットは予定より1〜2ステップ早く接触点に着いて待ち、横から来たパックに
+     * 予定と違う角度で当たっていた (跳ね返りを打つ一撃で平均27°の狙い誤差)。
+     */
+    const vEnd = Math.min(commit.swingSpeed, Math.sqrt(2 * maxAccel * commit.runUp));
+    const accelSec = vEnd / maxAccel;
+    const behind =
+      tau >= accelSec ? commit.runUp : Math.min(commit.runUp, vEnd * tau - 0.5 * maxAccel * tau * tau);
     const idealPos = commit.contactPoint.sub(commit.swingDir.scale(behind));
-
-    const elapsed = Math.max(0, commit.swingTime - tau);
-    const idealSpeed = Math.min(commit.swingSpeed, maxAccel * elapsed);
+    const idealSpeed = tau >= accelSec ? 0 : vEnd - maxAccel * tau;
 
     const toIdeal = idealPos.sub(myMallet.pos);
 
@@ -717,6 +1185,16 @@ export class AgentBrainUseCase {
     // v = sqrt(2 * a * d) で止まれる。余裕を見て 0.9 を掛ける
     const stoppable = Math.sqrt(2 * this.limits.maxAccel * dist * 0.9);
     return toTarget.scale(Math.min(maxSpeed, stoppable) / dist);
+  }
+
+  /**
+   * クラウドAIが計画を持たないときの定位置。作戦で決めた待機位置、無ければゴール前の中央。
+   * パックの位置には追従しない
+   */
+  private waitingPosition(): Vec2 {
+    if (this.playbook) return this.clampToOwnHalf(this.playbook.readyPosition);
+    const { width, height } = this.config;
+    return this.clampToOwnHalf(new Vec2(width * 0.5, this.side === "TOP" ? height * 0.18 : height * 0.82));
   }
 
   /**

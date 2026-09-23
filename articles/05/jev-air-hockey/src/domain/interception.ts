@@ -154,6 +154,11 @@ export interface SolveOptions {
   setupSec?: number;
   /** 予測を切り出す最大時間 */
   maxLookaheadSec?: number;
+  /**
+   * これより早い打点は選ばない (秒)。
+   * 「壁で跳ね返ったあとを打つ」と決めたとき、最初のバウンドより前を除外するのに使う。
+   */
+  minLookaheadSec?: number;
   /** 接触点のサンプリング間隔 (秒)。細かすぎても解は変わらない */
   sampleStepSec?: number;
   /**
@@ -175,6 +180,12 @@ export interface SolveOptions {
    */
   windupPx?: number;
 }
+
+/**
+ * 接触の瞬間に、マレットがパックへ法線方向に詰め寄る速度の下限 (px/s)。
+ * これが小さいと、打点に数十px届かなかっただけで追いつけずに素通りする。
+ */
+const MIN_CLOSING_SPEED = 450;
 
 /** 条件を満たす解が見つかってから、この秒数ぶんだけ候補を探し続ける */
 const CANDIDATE_WINDOW_SEC = 0.45;
@@ -200,6 +211,7 @@ export function solveIntercept(
 ): InterceptSolution | null {
   const minSlack = options.minSlackSec ?? 0.05;
   const maxLook = options.maxLookaheadSec ?? Number.POSITIVE_INFINITY;
+  const minLook = options.minLookaheadSec ?? 0;
   const stride = Math.max(1, Math.round((options.sampleStepSec ?? 1 / 120) / traj.dt));
   const contactDist = config.puckRadius + config.malletRadius;
 
@@ -230,6 +242,7 @@ export function solveIntercept(
   for (let i = 0; i < traj.samples.length; i += stride) {
     const sample = traj.samples[i];
     if (sample.t > maxLook) break;
+    if (sample.t < minLook) continue;
     // 条件を満たす解より十分あとの打点は、もう戦術的な選択肢ではない
     if (sample.t > firstQualifiedAt + CANDIDATE_WINDOW_SEC) break;
 
@@ -243,6 +256,16 @@ export function solveIntercept(
       config,
       iterations
     );
+
+    /**
+     * 振り抜くマレットがパックに追いつけるか。
+     *
+     * 奥壁で跳ね返って離れていく球を同じ向きに打とうとすると、パックの方が速く
+     * 衝突が起きない (法線方向の相対速度が離れる向き)。出射速度の予測は「入射速度の
+     * まま」になるので狙い誤差の検査もすり抜けてしまい、構えも位置も完璧なのに
+     * 素通りする計画ができていた。
+     */
+    if (sample.vel.dot(normal) > options.swingSpeed - MIN_CLOSING_SPEED) continue;
 
     const idealContact = sample.pos.sub(normal.scale(contactDist));
     const contact = clampPoint(idealContact, limits);
@@ -259,6 +282,8 @@ export function solveIntercept(
      * 構えて待つ位置についても同じ検査が必要。
      */
     if (pathPassesThrough(traj, contact, i, contactDist - 2, windupStride)) continue;
+
+    if (sweptSwingTouchesEarly(traj, contact, normal, options.swingSpeed, i, contactDist)) continue;
 
     if (windupPx > 0) {
       const windupPoint = clampPoint(contact.sub(normal.scale(windupPx)), limits);
@@ -331,6 +356,34 @@ export function solveIntercept(
   }
 
   return best;
+}
+
+/** 振り抜きの最後の区間を、この秒数ぶん遡って検査する */
+const SWEPT_CHECK_SEC = 0.06;
+
+/**
+ * 振り抜いてくるマレットが、予定の接触時刻より前にパックへ触れてしまうか。
+ *
+ * パックがスイングを横切るように動いている (側壁で跳ね返った球など) と、
+ * 接触点で距離がちょうど contactDist になるよう置いても、その手前の時刻で
+ * 既に円同士が重なる。実際の接触は予定より1〜2ステップ早く、法線が数十度
+ * 回った位置で起きる (計測で平均27°の狙い誤差)。予定どおりに当たる打点だけを残す。
+ */
+function sweptSwingTouchesEarly(
+  traj: PuckTrajectory,
+  contact: Vec2,
+  normal: Vec2,
+  swingSpeed: number,
+  contactIndex: number,
+  contactDist: number
+): boolean {
+  const steps = Math.min(contactIndex, Math.round(SWEPT_CHECK_SEC / traj.dt));
+  const limitSq = (contactDist - 1) * (contactDist - 1);
+  for (let k = 1; k <= steps; k++) {
+    const malletPos = contact.sub(normal.scale(swingSpeed * k * traj.dt));
+    if (traj.samples[contactIndex - k].pos.distSq(malletPos) < limitSq) return true;
+  }
+  return false;
 }
 
 /** 軌道の [0, untilIndex) の区間が、指定した点の半径 radius 内を通るか */

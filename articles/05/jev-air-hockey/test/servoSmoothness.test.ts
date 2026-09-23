@@ -57,6 +57,7 @@ describe("Servo motion smoothness", () => {
     let worstAccel = 0;
     let moved = 0;
     let samples = 0;
+    let contactedBefore = false;
 
     const limits = {
       minX: CFG.malletRadius,
@@ -80,7 +81,9 @@ describe("Servo motion smoothness", () => {
         mallet.pos.y <= limits.minY + 1 ||
         mallet.pos.y >= limits.maxY - 1;
 
-      if (!contacted && !scored && !atBoundary) {
+      // 衝突直後のステップも除く。インパルスでマレットが最高速を超えて弾かれ、
+      // サーボがそれを制限速度へ戻す変化は制御によるものではない
+      if (!contacted && !contactedBefore && !scored && !atBoundary) {
         worstAccel = Math.max(worstAccel, vel.sub(prevVel).mag() / CFG.fixedDt);
         // 走っている最中に1ステップで進行方向が逆転したらカクつきとして数える
         if (vel.mag() > 60 && prevVel.mag() > 60 && vel.dot(prevVel) < 0) reversals++;
@@ -88,6 +91,7 @@ describe("Servo motion smoothness", () => {
       }
 
       prevVel = vel;
+      contactedBefore = contacted;
     }
 
     expect(samples).toBeGreaterThan(1500);

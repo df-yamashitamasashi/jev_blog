@@ -23,6 +23,8 @@ export interface TournamentProgress {
   currentBottom: AgentType | null;
   standings: AgentStats[];
   totalApiCalls: number;
+  /** 中断した理由 (作戦タイムの失敗など)。中断していなければ null */
+  lastError: string | null;
 }
 
 interface ScheduledMatch {
@@ -37,6 +39,7 @@ export class TournamentUseCase {
   private schedule: ScheduledMatch[] = [];
   private cursor = 0;
   private running = false;
+  private lastError: string | null = null;
   private matchStarted = false;
   private totals = new Map<AgentType, AgentStats>();
   private config: TournamentConfig | null = null;
@@ -78,6 +81,7 @@ export class TournamentUseCase {
 
   start(config: TournamentConfig): void {
     this.config = config;
+    this.lastError = null;
     this.schedule = TournamentUseCase.buildSchedule(config);
     this.cursor = 0;
     this.running = this.schedule.length > 0;
@@ -114,9 +118,15 @@ export class TournamentUseCase {
 
     if (!this.matchStarted) {
       this.gameLoop.setMatchup(match.top, match.bottom);
-      this.gameLoop.startMatch(this.config.targetScore, match.seed, this.config.maxRallies);
       this.matchStarted = true;
       this.emitProgress();
+      // 作戦タイム → カウントダウン。作戦が揃うまで待つ (カウントダウンは advance で進む)
+      const started = await this.gameLoop.prepareMatch(this.config.targetScore, match.seed, this.config.maxRallies);
+      if (!started) {
+        // 作戦を立てられないAIがいる。その先の試合も同じ結果になるので、トーナメントを止める
+        this.lastError = `作戦タイムに失敗したため中断しました — ${this.gameLoop.getMatchState().strategyError ?? ""}`;
+        this.abort();
+      }
       return;
     }
 
@@ -141,6 +151,7 @@ export class TournamentUseCase {
       currentBottom: match?.bottom ?? null,
       standings: this.rankedStandings(),
       totalApiCalls: [...this.totals.values()].reduce((sum, s) => sum + s.apiCalls, 0),
+      lastError: this.lastError,
     };
   }
 
@@ -169,6 +180,9 @@ export class TournamentUseCase {
     total.timeouts += source.timeouts;
     total.aimErrorSumDeg += source.aimErrorSumDeg;
     total.aimErrorSamples += source.aimErrorSamples;
+    total.predictionErrorSumPx += source.predictionErrorSumPx;
+    total.predictionSamples += source.predictionSamples;
+    total.cpuTakeovers += source.cpuTakeovers;
     total.latencySumMs += source.latencySumMs;
     total.latencySamples += source.latencySamples;
     total.apiCalls += source.apiCalls;
@@ -200,6 +214,10 @@ export function failureRate(stats: AgentStats): number {
 
 export function meanAimErrorDeg(stats: AgentStats): number | null {
   return stats.aimErrorSamples === 0 ? null : stats.aimErrorSumDeg / stats.aimErrorSamples;
+}
+
+export function meanPredictionErrorPx(stats: AgentStats): number | null {
+  return stats.predictionSamples === 0 ? null : stats.predictionErrorSumPx / stats.predictionSamples;
 }
 
 export function meanLatencyMs(stats: AgentStats): number | null {

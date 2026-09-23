@@ -20,6 +20,7 @@ import {
   saveRate,
   failureRate,
   meanAimErrorDeg,
+  meanPredictionErrorPx,
   meanLatencyMs,
 } from "../usecases/tournamentUseCase";
 
@@ -171,7 +172,9 @@ export class TournamentPanel {
   private renderProgress(p: TournamentProgress): void {
     this.toggleRunningUi(p.running);
 
-    if (p.running && p.currentTop && p.currentBottom) {
+    if (p.lastError) {
+      this.setStatus(`⚠️ ${p.lastError}`);
+    } else if (p.running && p.currentTop && p.currentBottom) {
       this.setStatus(
         `${p.completedMatches + 1} / ${p.totalMatches} 試合目 — ` +
           `${AGENT_PROFILES[p.currentTop].displayName} vs ${AGENT_PROFILES[p.currentBottom].displayName}` +
@@ -206,6 +209,7 @@ function renderStandings(standings: AgentStats[]): string {
   const rows = standings
     .map((s) => {
       const aim = meanAimErrorDeg(s);
+      const prediction = meanPredictionErrorPx(s);
       const latency = meanLatencyMs(s);
       return `
         <tr>
@@ -214,6 +218,8 @@ function renderStandings(standings: AgentStats[]): string {
           <td>${s.goalsFor}/${s.goalsAgainst}</td>
           <td>${pct(saveRate(s))}</td>
           <td>${pct(failureRate(s))}</td>
+          <td>${prediction === null ? "—" : `${Math.round(prediction)}px`}</td>
+          <td>${s.cpuTakeovers}</td>
           <td>${aim === null ? "—" : `${aim.toFixed(1)}°`}</td>
           <td>${latency === null ? "—" : `${Math.round(latency)}ms`}</td>
         </tr>`;
@@ -229,6 +235,8 @@ function renderStandings(standings: AgentStats[]): string {
           <th title="得点/失点">得失点</th>
           <th title="届く位置に来たパックを返せた割合">セーブ率</th>
           <th title="応答不正・通信エラー・時間切れの割合">失敗率</th>
+          <th title="中央線で予告した接触時刻・位置と、実際のパック位置の差">予測誤差</th>
+          <th title="作戦に当てはまる手が無く、CPU に任せた回数">CPU代行</th>
           <th title="宣言した狙いと実際の飛翔方向の差">狙い誤差</th>
           <th title="実測の往復時間。勝敗には影響しない">遅延</th>
         </tr>

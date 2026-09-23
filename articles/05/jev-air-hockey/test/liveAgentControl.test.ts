@@ -20,6 +20,8 @@ import { DEFAULT_STADIUM_CONFIG as CFG } from "../src/domain/gameState";
 import { ISoundSynthesizer } from "../src/adapters/soundSynthesizer";
 import { Vec2 } from "../src/domain/physics";
 import { validateShotPlan } from "../src/domain/shotPlanValidator";
+import { predictPuckPath } from "../src/domain/puckPredictor";
+import { limitsFor, solveIntercept } from "../src/domain/interception";
 
 class SilentSound implements ISoundSynthesizer {
   playHitPuck = () => {};
@@ -34,6 +36,7 @@ class SilentSound implements ISoundSynthesizer {
 /**
  * クラウドAPIのエージェントを模したクライアント。
  * 応答に実時間の遅延があり、狙いは呼び出し側が指定した固定値を返す。
+ * 軌道は正しく読むが、lateralErrorPx を与えると打点の予測を横にその分だけ外す。
  */
 class FakeLiveAgent implements IAgentClient {
   readonly type = AgentType.CLAUDE;
@@ -43,7 +46,8 @@ class FakeLiveAgent implements IAgentClient {
   constructor(
     private readonly aim: Vec2,
     private readonly delayMs: number,
-    private readonly failing = false
+    private readonly failing = false,
+    private readonly lateralErrorPx = 0
   ) {}
 
   async decideShot(obs: AirHockeyObservation): Promise<AgentTelemetry> {
@@ -61,13 +65,31 @@ class FakeLiveAgent implements IAgentClient {
       };
     }
 
-    // 接触法線の幾何は指定した狙いから決まる。ここでは狙いだけを宣言する
+    const { config } = obs;
+    const limits = limitsFor(obs.side, config);
+    const swingSpeed = config.maxMalletSpeed;
+    const sol = solveIntercept(
+      predictPuckPath(obs.puckPos, obs.puckVel, config),
+      obs.myMalletPos,
+      obs.myMalletVel,
+      this.aim,
+      limits,
+      config,
+      {
+        swingSpeed,
+        maxLookaheadSec: 1.4,
+        setupSec: swingSpeed / limits.maxAccel + 0.04,
+        windupPx: Math.min(150, (swingSpeed * swingSpeed) / (2 * limits.maxAccel)),
+      }
+    )!;
+
     const result = validateShotPlan(
       {
-        interceptPoint: { x: obs.myMalletPos.x, y: obs.myMalletPos.y },
+        interceptPoint: { x: sol.contactPoint.x + this.lateralErrorPx, y: sol.contactPoint.y },
+        contactTimeMs: sol.contactTime * 1000,
         aimPoint: { x: this.aim.x, y: this.aim.y },
-        swingDirDeg: 90,
-        swingSpeed: obs.config.maxMalletSpeed,
+        swingDirDeg: (Math.atan2(sol.swingDir.y, sol.swingDir.x) * 180) / Math.PI,
+        swingSpeed,
       },
       obs.side,
       obs.config
@@ -151,6 +173,65 @@ describe("Live API agent in a 1v1 match", () => {
     expect(results[1].puckVx).toBeGreaterThan(0);
   }, 60000);
 
+  it("should ask only once, when the puck crosses the center line", async () => {
+    const agent = new FakeLiveAgent(new Vec2(300, CFG.height + 30), 10);
+    const { physics, loop } = buildLoop(agent, null);
+    loop.startMatch(7, 5);
+
+    const puck = physics.getPuck();
+    puck.pos.set(300, 700);
+    puck.vel.set(60, -700);
+    physics.getPlayerMallet().pos.set(CFG.malletRadius, CFG.height - CFG.malletRadius);
+
+    // 中央線より手前では一度も問い合わせない
+    for (let i = 0; i < 20 && puck.pos.y > CFG.height * 0.5 + 10; i++) await loop.advance(1);
+    expect(agent.calls).toBe(0);
+
+    // 越えた瞬間に1回。その後は壁で跳ねても打ち返しても考え直さない
+    let touched = false;
+    for (let i = 0; i < 80 && !touched; i++) {
+      await loop.advance(1);
+      if (puck.vel.y > 0) touched = true;
+    }
+    expect(touched).toBe(true);
+    expect(agent.calls).toBe(1);
+  }, 30000);
+
+  it("should miss when the agent mispredicts where the puck will be", async () => {
+    // 同じ盤面で、打点だけを横に読み違えたエージェントと比べる
+    // (時刻の読み違いは、パックの進路に沿って振り抜く限り振り抜きの途中で拾えることがある)
+    const outcomes: boolean[] = [];
+
+    for (const lateralErrorPx of [0, -90, 90]) {
+      const agent = new FakeLiveAgent(new Vec2(300, CFG.height + 30), 10, false, lateralErrorPx);
+      const { physics, loop } = buildLoop(agent, null);
+      loop.startMatch(7, 5);
+
+      const puck = physics.getPuck();
+      puck.pos.set(180, 520);
+      puck.vel.set(420, -900);
+      physics.getPlayerMallet().pos.set(CFG.malletRadius, CFG.height - CFG.malletRadius);
+
+      let firstContact: boolean | null = null;
+      loop.setCallbacks(
+        () => {},
+        (event) => {
+          // 最初の接触が、エージェントが予告した一撃によるものか
+          // (外した後のローカルの掻き出しや、偶発的なブロックは含めない)
+          if (event.type !== "PUCK_MALLET_JEV" || firstContact !== null) return;
+          const brain = loop.getTopBrain();
+          firstContact = brain.isExecutingStrike() && brain.getPlannedPath() !== null;
+        }
+      );
+
+      for (let i = 0; i < 120 && firstContact === null && !loop.isFinished(); i++) await loop.advance(1);
+      outcomes.push(firstContact === true);
+    }
+
+    // 正しく読めば当たり、読み違えればサーボは補正しないので空振りする
+    expect(outcomes).toEqual([true, false, false]);
+  }, 30000);
+
   it("should not substitute local tactics when the API fails", async () => {
     const failing = new FakeLiveAgent(new Vec2(300, CFG.height + 30), 10, true);
     const { physics, loop } = buildLoop(failing, null);
@@ -160,14 +241,23 @@ describe("Live API agent in a 1v1 match", () => {
     puck.pos.set(300, 520);
     puck.vel.set(0, -700);
 
-    for (let i = 0; i < 60; i++) await loop.advance(4);
+    // 応答が失敗して返ってくるまで進める。パックはまだ自陣ゴールへ向かっている
+    for (let i = 0; i < 60 && loop.getTopBrain().getTelemetry() === null; i++) await loop.advance(1);
+    await loop.advance(2);
+    expect(puck.vel.y).toBeLessThan(0);
 
     expect(failing.calls).toBeGreaterThan(0);
     // 計画は一切与えられない。ローカルの戦術で代替しないこと
     expect(loop.getTopBrain().getPlan()).toBeNull();
     expect(loop.getTopBrain().getTelemetry()?.status).toBe("ERROR");
-    // それでも守備位置へは動く (棒立ちにはならない)
-    expect(loop.getTopBrain().getMode()).toBe("DEFEND");
+    // パックを読んで守ったり打ったりもしない (= CPU モードにならない)。定位置で待つだけ
+    expect(loop.getTopBrain().getMode()).toBe("NO_PLAN");
+
+    // 定位置はパックの位置によらない。自陣ゴールへ向かう球でも追いかけない
+    for (let i = 0; i < 40; i++) await loop.advance(1);
+    const mallet = physics.getJevMallet();
+    expect(mallet.pos.x).toBeCloseTo(CFG.width * 0.5, 0);
+    expect(mallet.pos.y).toBeCloseTo(CFG.height * 0.18, 0);
     expect(loop.getStats().top.errors).toBeGreaterThan(0);
   }, 60000);
 });

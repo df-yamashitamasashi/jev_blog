@@ -12,6 +12,7 @@ import { GameLoopUseCase } from "../usecases/gameLoopUseCase";
 import { CanvasRenderer } from "./canvasRenderer";
 import { TelemetryHud } from "./telemetryHud";
 import { AgentFactory } from "../adapters/agentFactory";
+import { sanitizeApiKey, verifyClaudeKey } from "../adapters/apiKeyCheck";
 import { ModelSettings, listGeminiModels } from "../adapters/modelSettings";
 import { TournamentUseCase } from "../usecases/tournamentUseCase";
 import { TournamentPanel } from "./tournamentPanel";
@@ -125,7 +126,11 @@ window.addEventListener("DOMContentLoaded", () => {
     // ライブ対戦はサーブの乱数シードを毎回変える。固定のままだと、同じ対戦カードで
     // 毎回まったく同じ展開・同じ位置で1点目が入る (トーナメントは再現性が要るので
     // TournamentUseCase 側が明示的にシードを指定する)
-    gameLoop.startMatch(7, (Date.now() ^ (Math.random() * 0xffffffff)) >>> 0);
+    if (gameLoop.isStarting()) return;
+    // 作戦タイム → カウントダウン → サーブ。作戦タイムは最低でも少し見せる
+    void gameLoop.prepareMatch(7, (Date.now() ^ (Math.random() * 0xffffffff)) >>> 0, Number.POSITIVE_INFINITY, {
+      minStrategyMs: 1500,
+    });
   };
 
   startBtn?.addEventListener("click", handleStartMatch);
@@ -241,10 +246,28 @@ window.addEventListener("DOMContentLoaded", () => {
     if (modal) modal.style.display = "none";
   });
 
-  saveKeysBtn?.addEventListener("click", () => {
-    const jKey = jevKeyInput?.value.trim() || "";
-    const gKey = geminiKeyInput?.value.trim() || "";
-    const cKey = claudeKeyInput?.value.trim() || "";
+  saveKeysBtn?.addEventListener("click", async () => {
+    // 貼り付けで紛れ込む改行・ゼロ幅スペースなどを除く (trim() では消えない)
+    const jKey = sanitizeApiKey(jevKeyInput?.value || "");
+    const gKey = sanitizeApiKey(geminiKeyInput?.value || "");
+    const cKey = sanitizeApiKey(claudeKeyInput?.value || "");
+
+    // Claude のキーは保存前に実際に使えるかを確かめる (トークンは消費しない)。
+    // 使えないキーを保存すると、作戦タイムで失敗して試合が始められない
+    const previousClaudeKey = localStorage.getItem("claude_api_key") || "";
+    if (cKey && cKey !== previousClaudeKey) {
+      const statusClaude = document.getElementById("status-claude-key");
+      if (statusClaude) statusClaude.textContent = "⏳ 確認中...";
+      const check = await verifyClaudeKey(cKey);
+      if (!check.ok) {
+        if (statusClaude) {
+          statusClaude.className = "mode-tag cpu";
+          statusClaude.textContent = "❌ 使えないキー";
+        }
+        alert(`Claude の API キーを保存できませんでした。\n\n${check.message}`);
+        return;
+      }
+    }
 
     if (jevKeyInput) localStorage.setItem("jev_api_key", jKey);
     if (geminiKeyInput) localStorage.setItem("gemini_api_key", gKey);
@@ -373,7 +396,7 @@ window.addEventListener("DOMContentLoaded", () => {
     if (now2 - lastHudSync > HUD_SYNC_INTERVAL_MS) {
       lastHudSync = now2;
       const brain = gameLoop.getTopBrain();
-      hud.updateServoState(brain.getMode(), brain.isAwaitingDecision());
+      hud.updateServoState(brain.getMode(), brain.isAwaitingDecision(), brain.getActiveSituation());
     }
 
     setTimeout(simTick, 8);
@@ -405,7 +428,9 @@ window.addEventListener("DOMContentLoaded", () => {
       matchState.topAgent,
       matchState.bottomAgent,
       topBrain.isAwaitingDecision(),
-      bottomBrain?.isAwaitingDecision() ?? false
+      bottomBrain?.isAwaitingDecision() ?? false,
+      topBrain.getPlannedPath(),
+      bottomBrain?.getPlannedPath() ?? null
     );
 
     hud.updateTelemetry(topTelemetry, bottomTelemetry);

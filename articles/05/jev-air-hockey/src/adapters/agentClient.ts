@@ -7,8 +7,9 @@
 
 import { Vec2 } from "../domain/physics";
 import { StadiumConfig } from "../domain/gameState";
-import { AgentTelemetry, AgentType } from "../domain/jevAgentTypes";
+import { AgentTelemetry, AgentType, DecisionStatus } from "../domain/jevAgentTypes";
 import { PlaySide } from "../domain/shotPlanValidator";
+import { Playbook } from "../domain/playbook";
 
 /** エージェントに渡す完全な盤面情報 */
 export interface AirHockeyObservation {
@@ -24,11 +25,37 @@ export interface AirHockeyObservation {
   config: StadiumConfig;
 }
 
+/** 作戦タイムに渡す情報 */
+export interface PlaybookContext {
+  side: PlaySide;
+  config: StadiumConfig;
+  targetScore: number;
+  /** 作り直しのとき、前回の作戦の抜け漏れ・不正な項目 */
+  previousIssues?: string[];
+}
+
+/** 作戦タイムの結果 */
+export interface PlaybookTelemetry {
+  playbook: Playbook | null;
+  status: DecisionStatus;
+  rawLatencyMs: number;
+  /** 抜け漏れ・不正な項目 (1件でもあれば不合格) と、失敗の理由 */
+  issues: string[];
+  /** 丸めた項目など、不合格ではない記録 */
+  notes: string[];
+  isLiveApi: boolean;
+}
+
 export interface IAgentClient {
   readonly type: AgentType;
   /** 実際にクラウドAPIへ問い合わせるか (CPUのみ false) */
   readonly usesLiveApi: boolean;
   decideShot(obs: AirHockeyObservation): Promise<AgentTelemetry>;
+  /**
+   * 作戦タイム: 試合前に、通信失敗時・自陣に居座る球への打ち方を決める。
+   * 実装しないクライアント (テスト用の模擬など) は作戦なしで試合に臨む。
+   */
+  decidePlaybook?(ctx: PlaybookContext): Promise<PlaybookTelemetry>;
 }
 
 /** 自陣ゴールの中心 (守るべき場所) */

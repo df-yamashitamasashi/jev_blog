@@ -8,6 +8,7 @@ import { JevAgentClient } from "./jevAgentClient";
 import { GeminiAgentClient } from "./geminiAgentClient";
 import { ClaudeAgentClient } from "./claudeAgentClient";
 import { CpuAgentClient } from "./cpuAgentClient";
+import { CpuStyle } from "../domain/playbook";
 
 const API_KEY_STORAGE: Partial<Record<AgentType, string>> = {
   [AgentType.JEV]: "jev_api_key",
@@ -30,6 +31,11 @@ export class AgentFactory {
       default:
         return null;
     }
+  }
+
+  /** CPU代行用の CPU。AI が作戦タイムに選んだ動作パターンで判断する */
+  static createCpuTakeover(style: CpuStyle): IAgentClient {
+    return new CpuAgentClient(style);
   }
 
   static hasApiKey(type: AgentType): boolean {

@@ -5,17 +5,31 @@
 
 import { Vec2 } from "./physics";
 
+/** 飛んでくるパックをそのまま打つか、壁で跳ね返ったあとを打つか */
+export type StrikeTiming = "DIRECT" | "REBOUND";
+
+/** 打点 (の手前の構え位置) までの移動経路 */
+export type MovePath = "STRAIGHT" | "CURVE";
+
 /**
  * エージェントが返す打ち返し計画。
  *
+ * 判断はパックが中央線を越えて自陣へ入ってくる瞬間の **1回だけ**。
+ * サーボはこの計画を開ループで実行し、パックを見て打点を補正することはしない。
+ * したがって軌道予測 (いつ・どこにパックが来るか) を外せば、そのまま空振りになる。
+ *
  * 重要: パックの出射速度・角度はここで指定しない。接触時のマレット速度から
- * 物理エンジンが導出する。エージェントが決めるのは「どこで待ち受け、どちらへ、
- * どれだけの速さでマレットを振り抜くか」だけ。
+ * 物理エンジンが導出する。
  */
 export interface ShotPlan {
-  interceptPoint: Vec2;  // パックを迎え撃つ座標 (自陣内)
+  interceptPoint: Vec2;  // 接触の瞬間にマレット中心を置く座標 (自陣内)
+  contactTimeMs: number; // 判断時点から接触までの時間 (ms)。予測の核心
+  strikeTiming: StrikeTiming;
   swingDirDeg: number;   // 接触時にマレットを振り抜く方向 (0-360, 画面座標系で右が0°, 下が90°)
   swingSpeed: number;    // 接触時のマレット速度 (px/s)
+  movePath: MovePath;
+  curveOffset: number;   // CURVE のふくらみ (px)。移動方向に対して右が正
+  moveSpeed: number;     // 構え位置までの移動速度の上限 (px/s)
   aimPoint: Vec2;        // 「パックをここへ飛ばしたい」という意図の宣言
   comment?: string;      // HUD表示用の短いコメント
 }
@@ -67,6 +81,9 @@ export interface AgentStats {
   timeouts: number;
   aimErrorSumDeg: number; // 狙い誤差の合計 (度)
   aimErrorSamples: number;
+  predictionErrorSumPx: number; // 予告した接触時刻に、パックが予告した位置からどれだけずれていたか
+  predictionSamples: number;
+  cpuTakeovers: number;   // 作戦に当てはまる手が無く、CPU に任せた回数
   latencySumMs: number;
   latencySamples: number;
   apiCalls: number;
@@ -90,6 +107,9 @@ export function createEmptyStats(agent: AgentType): AgentStats {
     timeouts: 0,
     aimErrorSumDeg: 0,
     aimErrorSamples: 0,
+    predictionErrorSumPx: 0,
+    predictionSamples: 0,
+    cpuTakeovers: 0,
     latencySumMs: 0,
     latencySamples: 0,
     apiCalls: 0,

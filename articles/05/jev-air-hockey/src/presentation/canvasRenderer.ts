@@ -6,6 +6,8 @@
 import { Vec2, CircleBody } from "../domain/physics";
 import { StadiumConfig } from "../domain/gameState";
 import { AgentTelemetry, AgentType, AGENT_PROFILES } from "../domain/jevAgentTypes";
+import { bezierPoint } from "../domain/approachPath";
+import type { PlannedPath } from "../usecases/agentBrainUseCase";
 
 interface SparkParticle {
   pos: Vec2;
@@ -64,7 +66,9 @@ export class CanvasRenderer {
     topAgent: AgentType = AgentType.JEV,
     bottomAgent: AgentType = AgentType.HUMAN,
     isTopThinking: boolean = false,
-    isBottomThinking: boolean = false
+    isBottomThinking: boolean = false,
+    topPath: PlannedPath | null = null,
+    bottomPath: PlannedPath | null = null
   ): void {
     const { width, height } = this.config;
     const ctx = this.ctx;
@@ -84,6 +88,15 @@ export class CanvasRenderer {
 
     // 1. 背景クリア & サイバーグリッド & 稼働モードウォーターマーク
     this.renderCourtBackground(width, height, topAgent, bottomAgent, isTopLiveAi, isBotLiveAi, isBotHuman);
+
+    // 判断は中央線上でだけ行われる。考えている間は中央線を光らせる
+    if (isTopThinking || isBottomThinking) {
+      this.renderDecisionLine(width, height);
+    }
+
+    // 1.5 実行中の計画の経路 (構え位置までの直線/曲線と、予告した接触)
+    if (topPath) this.renderPlannedPath(topPath, AGENT_PROFILES[topAgent].primaryColor);
+    if (bottomPath) this.renderPlannedPath(bottomPath, AGENT_PROFILES[bottomAgent].primaryColor);
 
     // 2. 各AIが「宣言した意図」を描画する (ローカル予測ではなくAI自身の判断)
     if (topTelemetry) {
@@ -479,6 +492,53 @@ export class CanvasRenderer {
     }
     ctx.globalAlpha = 1.0;
     ctx.shadowBlur = 0;
+  }
+
+  private renderDecisionLine(width: number, height: number): void {
+    const ctx = this.ctx;
+    const pulse = (Math.sin(performance.now() * 0.008) + 1) * 0.5;
+
+    ctx.save();
+    ctx.strokeStyle = `rgba(52, 211, 153, ${0.55 + pulse * 0.45})`;
+    ctx.lineWidth = 3;
+    ctx.shadowColor = "#34d399";
+    ctx.shadowBlur = 14 + pulse * 10;
+    ctx.beginPath();
+    ctx.moveTo(0, height * 0.5);
+    ctx.lineTo(width, height * 0.5);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  /**
+   * 中央線で決めた計画を描く。サーボはこの経路を開ループでなぞるので、
+   * 予告した接触位置 (◯) と実際のパックのずれが、そのままAIの予測誤差になる。
+   */
+  private renderPlannedPath(path: PlannedPath, color: string): void {
+    const ctx = this.ctx;
+
+    ctx.save();
+    ctx.strokeStyle = color;
+    ctx.globalAlpha = 0.45;
+    ctx.lineWidth = 2;
+    ctx.setLineDash([3, 5]);
+    ctx.beginPath();
+    for (let i = 0; i <= 20; i++) {
+      const p = bezierPoint(path.start, path.control, path.windupPoint, i / 20);
+      if (i === 0) ctx.moveTo(p.x, p.y);
+      else ctx.lineTo(p.x, p.y);
+    }
+    ctx.lineTo(path.contactPoint.x, path.contactPoint.y);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // 予告した接触の瞬間にパックが居るはずの位置
+    ctx.globalAlpha = 0.8;
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.arc(path.expectedPuckPos.x, path.expectedPuckPos.y, this.config.puckRadius, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
   }
 
   private renderThinkingBanner(width: number, height: number, aiName: string): void {

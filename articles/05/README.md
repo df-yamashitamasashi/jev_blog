@@ -7,30 +7,44 @@ English | [日本語](#日本語)
 ## English
 
 ### Overview
-**Cyber Air Hockey Arena** is a real-time, physics-driven arcade arena featuring multi-agent AI battles across **Jev (TypeSafe System One)**, **Google Gemini (Multimodal Flash)**, **Anthropic Claude (Strategic Reasoner)**, and **Human Players**.
+**Cyber Air Hockey Arena** is a real-time, physics-driven arcade arena featuring multi-agent AI battles across **Jev (TypeSafe System One)**, **Google Gemini**, **Anthropic Claude**, and **Human Players**.
 
-Experience millisecond reflexes, spatial court awareness, and deep strategic defense with seamless switching across all 6 matchup configurations:
-- ⚡ **Jev × Human** (Sub-50ms Reactive Agent vs Biological Reflex)
-- 🤖 **Jev × Gemini** (Intuitive Flash vs Multimodal Spatial Geometry)
-- 🧠 **Jev × Claude** (Intuitive Flash vs Deep Strategic Defense)
-- 🌐 **Gemini × Claude** (Spatial Wide Attack vs Geometric Precision)
-- 🔷 **Gemini × Human** (Multimodal AI vs Biological Reflex)
-- 🔶 **Claude × Human** (Strategic Defense vs Biological Reflex)
+Every agent — cloud LLM or local simulator — is asked the exact same *structured-output questions* through a shared protocol, so match results reflect prediction and tactical quality rather than API plumbing differences. The arena supports live 1‑on‑1 matches (real-time, non-blocking AI thinking) as well as a full **round-robin Tournament Mode** with fairness-normalized decision timing and a per-agent stats leaderboard.
+
+- ⚡ **Jev × Human** — Sub-30ms reactive agent vs. biological reflex
+- 🤖 **Jev × Gemini** — Reactive speed vs. spatial court geometry
+- 🧠 **Jev × Claude** — Reactive speed vs. deep strategic reasoning
+- 🌐 **Gemini × Claude** — AI championship match
+- 🔷 **Gemini × Human**, 🔶 **Claude × Human** — AI vs. biological reflex
 
 ### Key Features
-1. **Multi-Agent Architecture & Personalities**:
-   - **Jev (System One)**: 15–30ms latency. Pure instinctive shot-making, rapid trick banks, and lightning smash attacks.
-   - **Gemini (Flash)**: 40–70ms latency. Spatial court geometry, wide-angle drives, and panoramic court control.
-   - **Claude (Strategic)**: 50–80ms latency. Impenetrable defensive positioning, calculated geometric precision, and counter-attacks.
-   - **Human**: Direct mouse/touch physics manipulation with swing-velocity acceleration.
-2. **Unified API Key Manager**:
-   - Configure TypeSafe Jev, Google Gemini, and Anthropic Claude API keys via the in-game modal.
-   - Zero configuration required out of the box: runs high-speed local simulators mimicking each model's latency and personality when API keys are not provided.
-3. **Spectator Mode (AI vs AI)**:
-   - When pitting two AI agents against each other, both mallets operate autonomously with live dual-telemetry HUD and in-game banter.
-4. **High-Precision 2D Physics Engine**:
-   - **10-Substep CCD (Continuous Collision Detection)**: Solves algebraic sweep equations to eliminate puck tunneling even at >2400 px/s.
-   - Full 2D rigid-body collision impulse with restitution, Coulomb friction, and rotational spin.
+
+1. **A Shared "Choice-Question" Protocol for Every Agent**
+   Instead of free-form prompting, every agent answers the *same* set of structured questions per shot — *when/where to make contact* (sampled along the predicted puck path), *where to aim*, *which approach path to take*, *how fast to move*, and *how hard to swing*. Answers are plain string enums (not open-ended numbers), which keeps structured-output schemas reliable across Claude, Gemini, and Jev. A shared guardrail (`shotPlanValidator`) rejects or clamps out-of-range answers and records every correction — nothing is silently "fixed and forgotten."
+
+2. **Pre-Match Strategy Time (Playbook)**
+   Before a match starts, each agent — including the CPU — is asked to pre-commit a full playbook covering 20 puck situations (10 "incoming" + 10 "lingering") plus a chosen tactical personality (`BALANCED`, `ATTACK_FIRST`, `BANK_SHOOTER`, `SAFE_CLEAR`, …). This playbook is the fallback whenever a live decision can't be made in time, so the game never freezes or plays a "blank" move — and a match won't start at all unless every participant can produce a complete, valid playbook.
+
+3. **Tactics Engineered Against Stalemates**
+   Shot candidates (7 direct angles + 6 bank-shot mirrors + a defensive clear) are scored by literally re-simulating the resulting trajectory, rewarding shots that are hard to save, force the opponent's mallet to travel further, and keep the puck pinned in the opponent's half — not just raw shot speed. This directly fixes a measured failure mode where two identical agents fell into 400+ second stalemates trading maximum-power straight shots.
+
+4. **Fairness-First Decision Budget**
+   In Tournament Mode, the simulation clock pauses while a cloud agent is thinking and always resumes by advancing exactly one fixed "decision budget" of simulated time — regardless of whether the real API call took 5ms or 8s. This makes tournament outcomes a measure of *decision quality*, not network latency. In live 1-on-1 play, the clock keeps running in real time instead, so watching a match never looks like it's warping.
+
+5. **Servo-Controlled Mallet Execution**
+   Tactical decisions and physical mallet movement are fully separated: once a shot plan is committed, a dedicated servo controller drives the mallet with feed-forward + proportional tracking, arrival-style deceleration, and hard anti-oscillation rules (no instantaneous velocity flips, no drifting back toward a puck it already passed). This keeps every AI's movement visually smooth and readable, even under LLM latency.
+
+6. **Puck Prediction & Interception Solver**
+   A forward physics simulator predicts the puck's path (bounces, friction, goal detection) using the exact same math as the live physics engine, and an iterative contact-normal solver figures out the mallet position and swing that will actually send the puck toward the declared aim point — because outgoing direction is driven by contact geometry, not just swing direction.
+
+7. **Tournament Mode**
+   Full round-robin scheduling across any combination of agents, side-swapped every other match for fairness, with a live leaderboard tracking win/loss/draw record, goal difference, save rate, prediction error, aim error, CPU-takeover count, and mean latency per agent.
+
+8. **Unified API Key Manager**
+   Configure Jev, Gemini, and Claude API keys via the in-game modal, with live key verification and actionable error messages. No key configured for an agent simply disables it in the UI — there's no silent fallback to a simulator mid-match.
+
+9. **High-Precision 2D Physics Engine**
+   10-substep continuous collision detection (CCD) solving the exact sweep equation between moving circles, eliminating puck tunneling even above 2400 px/s, plus full rigid-body impulse resolution with restitution, friction, and swing-velocity transfer.
 
 ### Quick Start
 
@@ -48,36 +62,50 @@ Open `http://localhost:5174/` in your browser.
 ## 日本語
 
 ### 概要
-**Cyber Air Hockey Arena** は、TypeSafe AIの超高速意思決定モデル **Jev（System One）**、Googleの **Gemini（Multimodal Flash）**、Anthropicの **Claude（Strategic Reasoner）**、そして **人間プレイヤー** が物理空間で激突する、リアルタイム・マルチエージェント対戦エアホッケーです。
+**Cyber Air Hockey Arena** は、TypeSafe AIの直感型意思決定モデル **Jev（System One）**、Googleの **Gemini**、Anthropicの **Claude**、そして **人間プレイヤー** が物理空間で激突する、リアルタイム・マルチエージェント対戦エアホッケーです。
 
-以下の全6通りの対戦カードをワンクリックで自由に切り替えて対戦・観戦できます：
-- ⚡ **Jev × 人間**（Sub-50msの直感推論 vs 人間の生体反射）
-- 🤖 **Jev × Gemini**（直感スピード vs マルチモーダル空間認識）
-- 🧠 **Jev × Claude**（直感スピード vs 幾何学的精密防御）
-- 🌐 **Gemini × Claude**（広角アタック vs 鉄壁の論理防御・AI頂上決戦）
-- 🔷 **Gemini × 人間**（空間把握AI vs 人間）
-- 🔶 **Claude × 人間**（論理戦略AI vs 人間）
+クラウドLLMかローカルシミュレータかを問わず、すべてのエージェントは **同一の構造化質問プロトコル** に答える形で意思決定します。これにより、対戦結果がAPIの実装差ではなく「予測精度」と「戦術の質」の差として現れるように設計されています。人間とのリアルタイム対戦に加え、レイテンシの影響を排除した **総当たりトーナメントモード** と、エージェントごとの詳細な成績表も備えています。
+
+- ⚡ **Jev × 人間**（Sub-30msの直感反射 vs 人間の生体反射）
+- 🤖 **Jev × Gemini**（直感スピード vs 空間認識）
+- 🧠 **Jev × Claude**（直感スピード vs 深い戦略推論）
+- 🌐 **Gemini × Claude**（AI頂上決戦）
+- 🔷 **Gemini × 人間**、🔶 **Claude × 人間**（AI vs 人間）
 
 ### 主な特徴
-1. **マルチエージェント設計 & 思考特性**:
-   - **Jev (System One)**: レイテンシ 15〜30ms。直感的なミリ秒判断、鋭角トリックバンク、急加速スマッシュ。
-   - **Gemini (Flash)**: レイテンシ 40〜70ms。コート全体を俯瞰した空間認識、広角サイドアタック。
-   - **Claude (Strategic)**: レイテンシ 50〜80ms。隙のない鉄壁ディフェンス、幾何学的な精密ピンポイントショット。
-   - **人間 (Human)**: マウス/タッチ操作による直感操作とスイング速度加算。
-2. **統合APIキーマネージャー**:
-   - 画面上部の「🔑 API Keys」から、3社（Jev, Gemini, Claude）のAPIキーをいつでも設定可能。
-   - APIキー未設定の場合でも、各モデルの思考・反射・心理戦セリフ特性を忠実に再現した高速シミュレーターが即座に動作。
-3. **AI対AI 観戦モード (Spectator Mode)**:
-   - AI同士の対戦を選択すると、双方が自律的に超高速ラリーを展開。画面上部・下部の双方でリアルタイムな思考テレメトリと煽り合いチャットが激突します。
-4. **高精度物理演算エンジン (10サブステップCCD)**:
-   - 2次方程式Sweep衝突判定により、時速2400px超のスマッシュでも壁やマレットを突き抜けない完全トンネリング防止。
-   - 剛体反発インパルス、クーロン摩擦、回転スピン（マグヌス効果風微小カーブ）。
+
+1. **全エージェント共通の「選択式質問」プロトコル**
+   自由記述のプロンプトではなく、どのエージェントも1打ごとに同じ質問セットに答えます——予測されたパック軌道上の「いつ・どこで当てるか」、「どこへ狙うか」、「どの経路で構えに入るか」、「移動速度」、「振り抜きの強さ」。回答はすべて文字列の列挙型（enum）にすることで、Claude・Gemini・Jevいずれの構造化出力でも安定して機能します。共通のガードレール（`shotPlanValidator`）が範囲外の回答を却下またはクランプし、すべての補正を記録として残します——「こっそり直して忘れる」ことはありません。
+
+2. **試合前の「作戦タイム」（プレイブック）**
+   試合開始前に、CPUを含む全エージェントが20通りのパック状況（「向かってくる」10種＋「留まっている」10種）と、戦術的な性格（`BALANCED`、`ATTACK_FIRST`、`BANK_SHOOTER`、`SAFE_CLEAR` など）を含む完全なプレイブックを事前に宣言させられます。これはライブ判断が間に合わない場合のフォールバックとして機能し、ゲームが固まったり「何もしない」手を打ったりすることを防ぎます。全参加者が有効なプレイブックを完成できない限り、試合そのものが開始されません。
+
+3. **膠着状態を防ぐための戦術設計**
+   候補ショット（直接7方向＋バンクショット6方向＋守備的クリア）は、実際に着弾後の軌道を再シミュレーションしてスコアリングされます。単なる速度ではなく、「セーブされにくいか」「相手マレットをどれだけ動かすか」「パックを相手コートに留められるか」を評価します。これは、同一エージェント同士が最大出力の直線ショットを打ち合い続け、400秒を超える膠着状態に陥った実測の不具合を直接修正するための設計です。
+
+4. **公平性を最優先した思考バジェット**
+   トーナメントモードでは、クラウドエージェントが思考している間シミュレーション時計を一時停止し、実際のAPI応答が5msでも8秒でも、常に同じ固定「思考バジェット」分だけ時間を進めます。これにより対戦結果は通信速度ではなく「判断の質」を反映します。人間との1対1対戦では逆に時計を止めず実時間で進行するため、観戦していて時間が歪むような違和感がありません。
+
+5. **サーボ制御によるマレット駆動**
+   戦術判断と物理的なマレット駆動を完全に分離しています。ショット計画が確定すると、専用のサーボコントローラがフィードフォワード＋比例制御・到達型減速・急な反転を禁止する強い反発振動対策でマレットを駆動します。これにより、LLMのレイテンシがあってもAIの動きは常に滑らかで見やすいものになります。
+
+6. **パック予測 & 迎撃ソルバー**
+   実際の物理エンジンと全く同じ計算式でパックの軌道（反射・摩擦・ゴール判定）を先読みし、反復的な接触法線ソルバーが「宣言した狙い通りにパックを送り出すための」マレット位置と振り抜き方向を算出します。パックの飛び出す方向は振り抜きそのものではなく接触の幾何学で決まるためです。
+
+7. **トーナメントモード**
+   任意の組み合わせによる総当たり戦を自動編成し、公平性のため対戦ごとに上下のコートを入れ替えます。勝敗・得失点差・セーブ率・予測誤差・照準誤差・CPU代打回数・平均レイテンシをエージェントごとにリアルタイム集計するリーダーボードを備えます。
+
+8. **統合APIキーマネージャー**
+   画面上部の「🔑 API Keys」から、Jev・Gemini・Claudeの3社のAPIキーをいつでも設定可能。設定前にライブ検証を行い、具体的なエラー原因を提示します。キー未設定のエージェントはUI上で単純に選択不可になるだけで、試合中にシミュレータへこっそり切り替わることはありません。
+
+9. **高精度物理演算エンジン（10サブステップCCD）**
+   移動する円同士の厳密なスイープ方程式を解く連続衝突判定（CCD）により、時速2400px超のスマッシュでも壁やマレットを突き抜けない完全トンネリング防止を実現。剛体反発インパルス、クーロン摩擦、スイング速度の伝達を含むフル物理演算。
 
 ### クイックスタート
 
 ```bash
 cd articles/05/jev-air-hockey
 npm install
-npm test       # 18テスト全パス
+npm test       # Vitestによるテストスイートを実行
 npm run dev    # 開発サーバー起動 (http://localhost:5174/)
 ```

@@ -7,7 +7,7 @@
 
 import { Vec2 } from "./physics";
 import { StadiumConfig } from "./gameState";
-import { ShotPlan, DecisionStatus } from "./jevAgentTypes";
+import { ShotPlan, DecisionStatus, MovePath, StrikeTiming } from "./jevAgentTypes";
 
 export interface ValidationResult {
   plan: ShotPlan | null;
@@ -16,6 +16,15 @@ export interface ValidationResult {
 }
 
 export type PlaySide = "TOP" | "BOTTOM";
+
+/** 予告できる接触時刻の上限 (ms)。これより先は中央線からの読みとして意味を持たない */
+export const MAX_CONTACT_TIME_MS = 3000;
+
+/** 移動速度の下限 (px/s)。0 を許すと「動かない」計画が素通りする */
+export const MIN_MOVE_SPEED = 150;
+
+/** CURVE のふくらみの上限 (px) */
+export const MAX_CURVE_OFFSET = 260;
 
 /** そのエージェントがマレットを置ける Y 範囲 */
 export function malletYRange(side: PlaySide, config: StadiumConfig): [number, number] {
@@ -68,14 +77,22 @@ export function validateShotPlan(
   const aim = readPoint(source.aimPoint);
   const swingDirDeg = source.swingDirDeg;
   const swingSpeed = source.swingSpeed;
+  const contactTimeMs = source.contactTimeMs;
 
   const missing: string[] = [];
   if (!intercept) missing.push("interceptPoint");
   if (!aim) missing.push("aimPoint");
   if (!isFiniteNumber(swingDirDeg)) missing.push("swingDirDeg");
   if (!isFiniteNumber(swingSpeed)) missing.push("swingSpeed");
+  if (!isFiniteNumber(contactTimeMs)) missing.push("contactTimeMs");
 
-  if (!intercept || !aim || !isFiniteNumber(swingDirDeg) || !isFiniteNumber(swingSpeed)) {
+  if (
+    !intercept ||
+    !aim ||
+    !isFiniteNumber(swingDirDeg) ||
+    !isFiniteNumber(swingSpeed) ||
+    !isFiniteNumber(contactTimeMs)
+  ) {
     return {
       plan: null,
       status: "INVALID",
@@ -99,6 +116,18 @@ export function validateShotPlan(
   );
 
   const speed = clampWithNote(swingSpeed, 0, config.maxMalletSpeed, "swingSpeed", notes);
+  const contactTime = clampWithNote(contactTimeMs, 0, MAX_CONTACT_TIME_MS, "contactTimeMs", notes);
+
+  // 移動の指定は省略可。省略時は「最高速で直線」とみなす (丸めではないので記録しない)
+  const moveSpeed = isFiniteNumber(source.moveSpeed)
+    ? clampWithNote(source.moveSpeed, MIN_MOVE_SPEED, config.maxMalletSpeed, "moveSpeed", notes)
+    : config.maxMalletSpeed;
+  const movePath: MovePath = source.movePath === "CURVE" ? "CURVE" : "STRAIGHT";
+  const curveOffset =
+    movePath === "CURVE" && isFiniteNumber(source.curveOffset)
+      ? clampWithNote(source.curveOffset, -MAX_CURVE_OFFSET, MAX_CURVE_OFFSET, "curveOffset", notes)
+      : 0;
+  const strikeTiming: StrikeTiming = source.strikeTiming === "REBOUND" ? "REBOUND" : "DIRECT";
 
   // 角度は丸めではなく正規化なので clamp 扱いにしない
   const normalizedDir = ((swingDirDeg % 360) + 360) % 360;
@@ -109,7 +138,18 @@ export function validateShotPlan(
       : undefined;
 
   return {
-    plan: { interceptPoint, swingDirDeg: normalizedDir, swingSpeed: speed, aimPoint, comment },
+    plan: {
+      interceptPoint,
+      contactTimeMs: contactTime,
+      strikeTiming,
+      swingDirDeg: normalizedDir,
+      swingSpeed: speed,
+      movePath,
+      curveOffset,
+      moveSpeed,
+      aimPoint,
+      comment,
+    },
     status: notes.length > 0 ? "CLAMPED" : "OK",
     clampNotes: notes,
   };

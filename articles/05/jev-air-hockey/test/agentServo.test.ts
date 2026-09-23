@@ -155,6 +155,27 @@ describe("Agent servo — situations that used to be broken", () => {
     expect(r.goal).not.toBe("GOAL_PLAYER");
   });
 
+  it("should go after a puck running along the side wall, even though it will not score", async () => {
+    // ゴールに入らない壁沿いの球。旧実装は「守る必要がない」と判断して一切手を出さず、
+    // 左端・右端を往復させ続けていた
+    for (const start of [
+      { x: 22, y: 470, vx: 0, vy: -700 },
+      { x: 578, y: 470, vx: 0, vy: -500 },
+      { x: 30, y: 470, vx: -40, vy: -1200 },
+    ]) {
+      const r = await runTopAgent(start, 300);
+      expect(r.touched).toBe(true);
+      expect(r.goal).not.toBe("GOAL_PLAYER");
+    }
+  });
+
+  it("should chase a wall-running puck that never crossed the center line", async () => {
+    // 中央線での判断の機会が無い球 (自陣で奥壁に跳ね返って往復する) にも打ちに行く
+    const r = await runTopAgent({ x: 24, y: 200, vx: 0, vy: -800 }, 300);
+    expect(r.touched).toBe(true);
+    expect(r.goal).not.toBe("GOAL_PLAYER");
+  });
+
   it("should never concede an own goal while circling a slow puck near its net", async () => {
     // 打点がゴール寄りになる最悪の配置をいくつか試す
     for (const start of [

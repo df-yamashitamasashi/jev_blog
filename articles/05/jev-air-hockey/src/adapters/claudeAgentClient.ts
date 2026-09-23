@@ -3,31 +3,42 @@
  *
  * 公式SDKを dangerouslyAllowBrowser で使う。ローカルヒューリスティックによる
  * フォールバックは持たない — 失敗はそのまま計測対象の失敗として記録する。
+ * 通信に失敗した局面は、作戦タイムに Claude 自身が立てた作戦で打つ。
  */
 
 import Anthropic from "@anthropic-ai/sdk";
 import { AgentType, AgentTelemetry } from "../domain/jevAgentTypes";
-import { IAgentClient, AirHockeyObservation } from "./agentClient";
+import { IAgentClient, AirHockeyObservation, PlaybookContext, PlaybookTelemetry } from "./agentClient";
 import {
-  SHOT_PLAN_SCHEMA,
-  buildShotPlanPrompt,
-  toTelemetry,
-  failureTelemetry,
+  PLAYBOOK_TIMEOUT_MS,
+  DECISION_TIMEOUT_MS,
+  StructuredCallResult,
   withTimeout,
   isDecisionTimeout,
 } from "./llmShotPlanner";
-import { ModelSettings } from "./modelSettings";
+import {
+  PLAYBOOK_CHOICE_SCHEMA,
+  buildShotCall,
+  buildPlaybookPrompt,
+  shotTelemetryFromChoices,
+  playbookTelemetryFromChoices,
+} from "./llmChoiceProtocol";
+import { ModelSettings, supportsEffort } from "./modelSettings";
+import { describeClaudeError, sanitizeApiKey } from "./apiKeyCheck";
 
 export class ClaudeAgentClient implements IAgentClient {
   readonly type = AgentType.CLAUDE;
   readonly usesLiveApi = true;
 
   private readonly client: Anthropic | null;
+  private readonly apiKey: string;
 
   constructor(options: { apiKey?: string } = {}) {
-    const apiKey =
+    const apiKey = sanitizeApiKey(
       options.apiKey ??
-      (typeof window !== "undefined" ? localStorage.getItem("claude_api_key") ?? "" : "");
+        (typeof window !== "undefined" ? localStorage.getItem("claude_api_key") ?? "" : "")
+    );
+    this.apiKey = apiKey;
 
     this.client = apiKey
       ? new Anthropic({ apiKey, dangerouslyAllowBrowser: true })
@@ -35,32 +46,48 @@ export class ClaudeAgentClient implements IAgentClient {
   }
 
   async decideShot(obs: AirHockeyObservation): Promise<AgentTelemetry> {
+    // Jev と同じ選択式の問いに答えさせる ([[llmChoiceProtocol]])
+    const call = buildShotCall(obs);
+    return shotTelemetryFromChoices(await this.call(call.prompt, call.schema, DECISION_TIMEOUT_MS), call, obs);
+  }
+
+  async decidePlaybook(ctx: PlaybookContext): Promise<PlaybookTelemetry> {
+    return playbookTelemetryFromChoices(
+      await this.call(buildPlaybookPrompt(ctx), PLAYBOOK_CHOICE_SCHEMA, PLAYBOOK_TIMEOUT_MS),
+      ctx
+    );
+  }
+
+  private async call(prompt: string, schema: object, timeoutMs: number): Promise<StructuredCallResult> {
     if (!this.client) {
-      return failureTelemetry("ERROR", "Claude APIキーが未設定です", 0);
+      return { ok: false, status: "ERROR", reason: "Claude APIキーが未設定です", latencyMs: 0 };
     }
 
     const started = performance.now();
 
     try {
+      const model = ModelSettings.getClaudeModel();
       const response = await withTimeout(
         this.client.messages.create({
-          model: ModelSettings.getClaudeModel(),
+          model,
           max_tokens: 16000,
           output_config: {
-            effort: ModelSettings.getEffort(),
-            format: { type: "json_schema", schema: SHOT_PLAN_SCHEMA },
+            // effort を受け付けないモデル (Haiku 4.5) に送ると 400 になる
+            ...(supportsEffort(model) ? { effort: ModelSettings.getEffort() } : {}),
+            format: { type: "json_schema", schema: schema as Record<string, unknown> },
           },
-          messages: [{ role: "user", content: buildShotPlanPrompt(obs) }],
-        })
+          messages: [{ role: "user", content: prompt }],
+        }),
+        timeoutMs
       );
 
       const latencyMs = performance.now() - started;
 
       if (response.stop_reason === "refusal") {
-        return failureTelemetry("INVALID", "モデルが応答を拒否しました", latencyMs);
+        return { ok: false, status: "INVALID", reason: "モデルが応答を拒否しました", latencyMs };
       }
       if (response.stop_reason === "max_tokens") {
-        return failureTelemetry("INVALID", "応答が max_tokens で打ち切られました", latencyMs);
+        return { ok: false, status: "INVALID", reason: "応答が max_tokens で打ち切られました", latencyMs };
       }
 
       const text = response.content.find(
@@ -68,16 +95,16 @@ export class ClaudeAgentClient implements IAgentClient {
       )?.text;
 
       if (!text) {
-        return failureTelemetry("INVALID", "テキストブロックが含まれていません", latencyMs);
+        return { ok: false, status: "INVALID", reason: "テキストブロックが含まれていません", latencyMs };
       }
 
-      return toTelemetry(safeParse(text), obs, latencyMs);
+      return { ok: true, raw: safeParse(text), latencyMs };
     } catch (e) {
       const latencyMs = performance.now() - started;
       if (isDecisionTimeout(e)) {
-        return failureTelemetry("TIMEOUT", e.message, latencyMs);
+        return { ok: false, status: "TIMEOUT", reason: e.message, latencyMs };
       }
-      return failureTelemetry("ERROR", describeError(e), latencyMs);
+      return { ok: false, status: "ERROR", reason: describeClaudeError(e, this.apiKey), latencyMs };
     }
   }
 }
@@ -90,9 +117,3 @@ function safeParse(text: string): unknown {
   }
 }
 
-function describeError(e: unknown): string {
-  if (e instanceof Anthropic.RateLimitError) return "レート制限に達しました";
-  if (e instanceof Anthropic.AuthenticationError) return "APIキーが無効です";
-  if (e instanceof Anthropic.APIError) return `APIエラー ${e.status}: ${e.message}`;
-  return e instanceof Error ? e.message : String(e);
-}

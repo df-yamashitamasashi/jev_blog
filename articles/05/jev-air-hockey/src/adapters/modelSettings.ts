@@ -13,12 +13,22 @@ export interface ModelChoice {
   note: string;
 }
 
-/** 既定候補。ユーザーのキーで使えるモデルは refresh 系で上書きできる */
+/**
+ * 既定候補。Claude 3 系 (claude-3-5-sonnet-20241022 など) は提供終了しており、
+ * 選ぶと毎回APIエラーになる (作戦タイムも判断もすべて失敗する)。
+ */
 export const CLAUDE_MODELS: ModelChoice[] = [
-  { id: "claude-3-5-sonnet-20241022", label: "Claude 3.5 Sonnet", note: "最新・最高精度 (推奨)" },
-  { id: "claude-3-5-haiku-20241022", label: "Claude 3.5 Haiku", note: "高速・低遅延" },
-  { id: "claude-3-haiku-20240307", label: "Claude 3 Haiku", note: "標準軽量モデル" },
+  { id: "claude-opus-5", label: "Claude Opus 5", note: "最高精度 (推奨)" },
+  { id: "claude-sonnet-5", label: "Claude Sonnet 5", note: "高速" },
+  { id: "claude-haiku-4-5", label: "Claude Haiku 4.5", note: "最速 (思考の深さ設定なし)" },
 ];
+
+/** 思考の深さ (effort) を受け付けないモデル。送ると 400 になる */
+const MODELS_WITHOUT_EFFORT = new Set(["claude-haiku-4-5"]);
+
+export function supportsEffort(modelId: string): boolean {
+  return !MODELS_WITHOUT_EFFORT.has(modelId);
+}
 
 export const GEMINI_MODELS: ModelChoice[] = [
   { id: "gemini-3.6-flash", label: "Gemini 3.6 Flash", note: "最新・最高速 (API公式推奨)" },
@@ -52,7 +62,15 @@ function write(key: string, value: string): void {
 }
 
 export const ModelSettings = {
-  getClaudeModel: (): string => read(KEY_CLAUDE_MODEL) || CLAUDE_MODELS[0].id,
+  getClaudeModel: (): string => {
+    const stored = read(KEY_CLAUDE_MODEL);
+    // 提供終了した Claude 3 系が保存されていれば、現行の既定モデルへ移行する
+    if (!stored || stored.startsWith("claude-3")) {
+      write(KEY_CLAUDE_MODEL, CLAUDE_MODELS[0].id);
+      return CLAUDE_MODELS[0].id;
+    }
+    return stored;
+  },
   setClaudeModel: (id: string): void => write(KEY_CLAUDE_MODEL, id),
 
   getGeminiModel: (): string => {

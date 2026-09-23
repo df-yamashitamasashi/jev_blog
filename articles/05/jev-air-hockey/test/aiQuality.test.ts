@@ -7,6 +7,12 @@
  * 作り直し前の同じ計測値 (参考):
  *   得点 0.78/分 / セーブ率 85.6% / 狙い誤差 37〜52° / 最大打球 1117 px/s
  *   → 400ラリー・154秒かけて2点しか入らない膠着状態だった。
+ *
+ * 判断を「中央線で1回だけ」にしてからの計測値:
+ *   得点 16.7/分 / セーブ率 99.2% / 狙い誤差 8.6°
+ * 間に合う手が1つでもあれば必ず打ちに行く (壁沿いの球にはバンクで当てる)。
+ * 以前は間に合わない直接シュートを最良と判断して計画ごと捨て、壁沿いを往復する
+ * 球に一切手を出さなかったため、得点は 2.4/分 まで落ちていた。
  */
 
 import { describe, it, expect } from "vitest";
@@ -36,7 +42,8 @@ async function selfPlay(seed: number) {
   const loop = new GameLoopUseCase(physics, topBrain, new SilentSound(), CFG, AgentType.CPU, AgentType.CPU);
 
   loop.setFairTiming(true);
-  loop.startMatch(7, seed, RALLY_CAP);
+  // 実際の試合と同じく、作戦タイム → カウントダウン → サーブ の順で始める
+  await loop.prepareMatch(7, seed, RALLY_CAP);
 
   for (let i = 0; i < 9000 && !loop.isFinished(); i++) {
     await loop.advance(60);
@@ -96,8 +103,9 @@ describe("CPU self-play quality", () => {
     expect(goalsPerMin).toBeGreaterThan(6);
     // 守れていること (作り直し前は 85.6%)
     expect(saveRate).toBeGreaterThan(0.95);
-    // 宣言した狙いどおりに飛んでいること (作り直し前は 37〜52°)
-    expect(aimErrorDeg).toBeLessThan(20);
+    // 宣言した狙いどおりに飛んでいること (作り直し前は 37〜52°)。
+    // 中央線で決めた計画を開ループで実行しても、予測が正しければ狙いは外れない
+    expect(aimErrorDeg).toBeLessThan(12);
     // 止まったマレットに当てるだけの弱い打球で終わっていないこと
     expect(peakPuckSpeed).toBeGreaterThan(1700);
 

@@ -6,6 +6,10 @@ import { AgentType } from "./jevAgentTypes";
 
 export enum GameStatus {
   READY = "READY",
+  /** 試合前の作戦タイム。各エージェントが作戦を立てている */
+  STRATEGY = "STRATEGY",
+  /** 作戦が揃った。カウントダウン後にサーブ */
+  COUNTDOWN = "COUNTDOWN",
   PLAYING = "PLAYING",
   GOAL_SCORED = "GOAL_SCORED",
   GAME_OVER = "GAME_OVER",
@@ -62,6 +66,9 @@ export interface MatchScore {
   targetScore: number;
 }
 
+/** 作戦タイムでの各陣営の状態。NONE は人間 (作戦を立てない) */
+export type StrategyState = "NONE" | "PENDING" | "READY" | "FAILED";
+
 export interface GameMatchState {
   status: GameStatus;
   score: MatchScore;
@@ -71,4 +78,9 @@ export interface GameMatchState {
   bottomAgent: AgentType;
   lastScorer: "TOP" | "BOTTOM" | null;
   matchDurationSec: number;
+  strategy: { top: StrategyState; bottom: StrategyState };
+  /** 作戦タイムに失敗して試合を始められなかった理由 (失敗していなければ null) */
+  strategyError: string | null;
+  /** カウントダウンの残り (ms)。COUNTDOWN 中のみ意味を持つ */
+  countdownMs: number;
 }

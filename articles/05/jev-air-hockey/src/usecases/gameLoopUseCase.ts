@@ -3,18 +3,25 @@
  *
  * 固定タイムステップで駆動する。
  *
- * 判断待ちの扱いには2つのモードがある。
+ * エージェントが判断するのは、パックが中央線を越えて自陣へ入ってくる瞬間だけ
+ * (CPU も クラウドAPI も同じ)。それ以外の場面ではゲームは止まらない。
  *
- * waitForDecisions=true (クラウドAPIのエージェントが参加している対戦・トーナメント):
- *   判断待ちの間シミュレーション時間を止め、解決後に全エージェント共通の
+ * CPU (ローカル演算):
+ *   通信しないので、中央線上で同じステップのうちに判断を終え、時間は止めない。
+ *
+ * クラウドAPI (waitForDecisions=true — APIのエージェントが参加している対戦・トーナメント):
+ *   中央線で判断待ちの間だけシミュレーション時間を止め、解決後に全エージェント共通の
  *   decisionBudgetMs だけ一律に進める。応答に数秒かかるエージェントでも、その判断が
- *   実際に次の一打を決められるようにするため。止めないと、ラリーが終わってから
- *   判断が返ってくることになり、AIを差し替えても展開が変わらない — 実際に
- *   「Gemini対Claudeでも毎回まったく同じ形で1点目が入る」状態になっていた。
- *   回線速度の差が勝敗に出ないのもこのモードの効果。
+ *   実際に次の一打を決められるようにするため。回線速度の差が勝敗に出ないのもこの効果。
  *
- * waitForDecisions=false (ローカルCPU同士・人間のみ):
- *   判断が即座に返るので止める必要がない。物理を実時間で進め続ける。
+ * クラウドAPI (waitForDecisions=false):
+ *   投げっぱなしにして物理を実時間で進め続ける。応答が遅いほど計画の残り時間が減る。
+ *
+ * 試合の始まり方 (prepareMatch):
+ *   作戦タイム (STRATEGY) — AI も CPU も、通信失敗時・自陣に居座る球への打ち方を決める
+ *   → 全員の準備ができたらカウントダウン (COUNTDOWN) → サーブ (PLAYING)
+ *   1人でも作戦を立てられなければ試合を始めない (READY に戻り、理由を表示する)。
+ *   作戦なしで始めると、通信失敗の局面でそのAIは何もできず、AI対戦として成立しないため。
  */
 
 import {
@@ -22,6 +29,7 @@ import {
   GameStatus,
   DEFAULT_STADIUM_CONFIG,
   StadiumConfig,
+  StrategyState,
 } from "../domain/gameState";
 import {
   AgentType,
@@ -38,6 +46,9 @@ import { AgentFactory } from "../adapters/agentFactory";
 
 /** ゴール後の待機時間 (ゲーム内時間) */
 const GOAL_PAUSE_MS = 1200;
+
+/** 作戦が揃ってからサーブまでのカウントダウン (ゲーム内時間) */
+const COUNTDOWN_MS = 3000;
 /**
  * 膠着 (デッドボール) 判定のしきい値。
  * ゴールポケットの隅などで物理的に本当に動けなくなった場合の最終救済であり、
@@ -79,6 +90,8 @@ export class GameLoopUseCase {
 
   /** 自動判定 (§waitForDecisions) を、トーナメントが明示的に上書きするためのフラグ */
   private fairTimingOverride: boolean | null = null;
+  /** 作戦タイムの世代。作戦タイム中に別の試合が始まったら、古い結果は捨てる */
+  private strategyGeneration = 0;
 
   private onStateChange?: (state: GameMatchState) => void;
   private onCollisionEffect?: (event: CollisionEvent) => void;
@@ -106,6 +119,9 @@ export class GameLoopUseCase {
       bottomAgent: initialBottomAgent,
       lastScorer: null,
       matchDurationSec: 0,
+      strategy: { top: "NONE", bottom: "NONE" },
+      strategyError: null,
+      countdownMs: 0,
     };
 
     this.topStats = createEmptyStats(initialTopAgent);
@@ -119,6 +135,8 @@ export class GameLoopUseCase {
     this.matchState.bottomAgent = bottomAgent;
 
     this.topBrain.setClient(AgentFactory.createClient(topAgent), topAgent);
+    // 作戦に当てはまる手が無い局面を任せる CPU
+    this.topBrain.setTakeoverClient(AgentFactory.createCpuTakeover("BALANCED"));
 
     if (bottomAgent === AgentType.HUMAN) {
       this.bottomBrain = null;
@@ -129,6 +147,7 @@ export class GameLoopUseCase {
         "BOTTOM",
         bottomAgent
       );
+      this.bottomBrain.setTakeoverClient(AgentFactory.createCpuTakeover("BALANCED"));
     }
 
     this.topStats = createEmptyStats(topAgent);
@@ -162,7 +181,79 @@ export class GameLoopUseCase {
     return { top: this.topStats, bottom: this.bottomStats };
   }
 
-  startMatch(targetScore = 7, seed = 1, maxRallies = Number.POSITIVE_INFINITY): void {
+  /**
+   * 作戦タイムを経て試合を始める。
+   * 各エージェントに作戦を立てさせ、全員の準備ができたらカウントダウンに入る。
+   * minStrategyMs は画面で作戦タイムを見せるための最低時間 (実時間)。
+   */
+  async prepareMatch(
+    targetScore = 7,
+    seed = 1,
+    maxRallies = Number.POSITIVE_INFINITY,
+    options: { minStrategyMs?: number } = {}
+  ): Promise<boolean> {
+    const generation = ++this.strategyGeneration;
+    const started = Date.now();
+
+    this.matchState.status = GameStatus.STRATEGY;
+    this.matchState.score = { player: 0, jev: 0, targetScore };
+    this.matchState.lastScorer = null;
+    this.matchState.strategy = {
+      top: "PENDING",
+      bottom: this.bottomBrain ? "PENDING" : "NONE",
+    };
+    this.matchState.strategyError = null;
+    const failures: string[] = [];
+    this.physics.resetPositions("PLAYER");
+    this.physics.getPuck().vel.set(0, 0);
+    this.notifyState();
+
+    const prepare = async (brain: AgentBrainUseCase | null, side: "TOP" | "BOTTOM") => {
+      if (!brain) return;
+      const telemetry = await brain.preparePlaybook({ side, config: this.config, targetScore });
+      if (generation !== this.strategyGeneration) return;
+      const state: StrategyState = telemetry?.playbook ? "READY" : "FAILED";
+      // 作戦に当てはまる手が無い局面は、AI 自身が選んだ動作パターンの CPU に任せる
+      if (telemetry?.playbook) brain.setTakeoverClient(AgentFactory.createCpuTakeover(telemetry.playbook.cpuStyle));
+      if (state === "FAILED") {
+        const issues = telemetry?.issues ?? [];
+        const reason =
+          issues.length === 0
+            ? "作戦を返せないエージェントです"
+            : issues.length === 1
+            ? issues[0]
+            : `${issues[0]} ほか ${issues.length - 1} 件`;
+        failures.push(`${side === "TOP" ? this.matchState.topAgent : this.matchState.bottomAgent}: ${reason}`);
+      }
+      if (side === "TOP") this.matchState.strategy.top = state;
+      else this.matchState.strategy.bottom = state;
+      this.notifyState();
+    };
+
+    await Promise.all([prepare(this.topBrain, "TOP"), prepare(this.bottomBrain, "BOTTOM")]);
+
+    const remaining = (options.minStrategyMs ?? 0) - (Date.now() - started);
+    if (remaining > 0) await new Promise((resolve) => setTimeout(resolve, remaining));
+    if (generation !== this.strategyGeneration) return false;
+
+    if (failures.length > 0) {
+      // 作戦の無いAIを出場させない。READY に戻して理由を出す
+      this.matchState.status = GameStatus.READY;
+      this.matchState.strategyError = failures.join(" / ");
+      this.notifyState();
+      return false;
+    }
+
+    this.startMatch(targetScore, seed, maxRallies, { countdownMs: COUNTDOWN_MS });
+    return true;
+  }
+
+  startMatch(
+    targetScore = 7,
+    seed = 1,
+    maxRallies = Number.POSITIVE_INFINITY,
+    options: { countdownMs?: number } = {}
+  ): void {
     this.maxRallies = maxRallies;
     this.matchState.status = GameStatus.PLAYING;
     this.matchState.score = { player: 0, jev: 0, targetScore };
@@ -180,10 +271,40 @@ export class GameLoopUseCase {
 
     this.topBrain.reset();
     this.bottomBrain?.reset();
-    this.serve("PLAYER");
+
+    const countdownMs = options.countdownMs ?? 0;
+    if (countdownMs > 0) {
+      // パックは中央に置いたまま、カウントダウンが終わってからサーブする
+      this.matchState.status = GameStatus.COUNTDOWN;
+      this.matchState.countdownMs = countdownMs;
+      this.physics.resetPositions("PLAYER");
+      this.physics.getPuck().vel.set(0, 0);
+    } else {
+      this.serve("PLAYER");
+    }
 
     this.sound.playCountDown();
     this.notifyState();
+  }
+
+  /** カウントダウンを1ステップ進める。0 になったらサーブして試合開始 */
+  private advanceCountdown(): void {
+    const before = Math.ceil(this.matchState.countdownMs / 1000);
+    this.matchState.countdownMs -= this.config.fixedDt * 1000;
+    const after = Math.ceil(this.matchState.countdownMs / 1000);
+
+    if (this.matchState.countdownMs <= 0) {
+      this.matchState.countdownMs = 0;
+      this.matchState.status = GameStatus.PLAYING;
+      this.serve("PLAYER");
+      this.sound.playCountDown();
+      this.notifyState();
+      return;
+    }
+    if (after !== before) {
+      this.sound.playCountDown();
+      this.notifyState();
+    }
   }
 
   pauseMatch(): void {
@@ -194,6 +315,11 @@ export class GameLoopUseCase {
       this.matchState.status = GameStatus.PLAYING;
       this.notifyState();
     }
+  }
+
+  /** 作戦タイム・カウントダウン中か (開始操作を重ねて受け付けないため) */
+  isStarting(): boolean {
+    return this.matchState.status === GameStatus.STRATEGY || this.matchState.status === GameStatus.COUNTDOWN;
   }
 
   isFinished(): boolean {
@@ -240,6 +366,11 @@ export class GameLoopUseCase {
           continue;
         }
 
+        if (this.matchState.status === GameStatus.COUNTDOWN) {
+          this.advanceCountdown();
+          continue;
+        }
+
         if (this.matchState.status !== GameStatus.PLAYING) return;
 
         const decided = await this.resolveDecisions();
@@ -254,9 +385,10 @@ export class GameLoopUseCase {
 
   /**
    * 判断が必要なエージェントがいれば問い合わせる。
-   * waitForDecisions=true の場合のみ、解決を待って共通の思考予算ぶん時間を進める
-   * (戻り値 true = このティックは思考予算の消費で使い切った)。
-   * false の場合は投げっぱなしにし、物理は同じティックで進み続ける。
+   *   CPU        — その場で解決を待つ。時間は止めず、同じティックで物理を進める
+   *   クラウドAPI — waitForDecisions=true なら解決を待って共通の思考予算ぶん時間を進める
+   *                (戻り値 true = このティックは思考予算の消費で使い切った)。
+   *                false なら投げっぱなしにし、物理は同じティックで進み続ける。
    */
   private async resolveDecisions(): Promise<boolean> {
     const puck = this.physics.getPuck();
@@ -271,11 +403,13 @@ export class GameLoopUseCase {
 
     if (!top.needsDecision && !bottom?.needsDecision) return false;
 
-    const requests: Array<Promise<void>> = [];
+    const localRequests: Array<Promise<void>> = [];
+    const liveRequests: Array<Promise<void>> = [];
+    const queueFor = (brain: AgentBrainUseCase) => (brain.usesLiveApi() ? liveRequests : localRequests);
 
     if (top.needsDecision) {
       this.topStats.decisions++;
-      requests.push(
+      queueFor(this.topBrain).push(
         this.topBrain
           .requestDecision(
             puck,
@@ -291,7 +425,7 @@ export class GameLoopUseCase {
     if (bottom?.needsDecision && this.bottomBrain) {
       const brain = this.bottomBrain;
       this.bottomStats.decisions++;
-      requests.push(
+      queueFor(brain).push(
         brain
           .requestDecision(
             puck,
@@ -304,15 +438,20 @@ export class GameLoopUseCase {
       );
     }
 
+    // CPU は通信しないので即座に返る。中央線上で判断を確定させ、時間は止めない
+    await Promise.all(localRequests);
+
+    if (liveRequests.length === 0) return false;
+
     if (!this.isWaitingForDecisions()) {
       // 裏で進行させるだけ。呼び出し元は待たずに同じティックで物理を進める。
       // requestDecision() は最初の await 前に awaitingDecision を同期的に立てる
       // ため、次の observe() で二重に発火することはない。
-      void Promise.all(requests);
+      void Promise.all(liveRequests);
       return false;
     }
 
-    await Promise.all(requests);
+    await Promise.all(liveRequests);
 
     // 実測レイテンシに関わらず、消費するゲーム内時間は常に同じ
     this.consumeThinkingBudget();
@@ -335,10 +474,15 @@ export class GameLoopUseCase {
 
     this.matchState.matchDurationSec += dt;
 
-    this.topBrain.stepServo(dt, this.physics.getJevMallet(), puck);
-    this.bottomBrain?.stepServo(dt, this.physics.getPlayerMallet(), puck);
+    this.topBrain.stepServo(dt, this.physics.getJevMallet(), puck, this.physics.getPlayerMallet().pos);
+    this.bottomBrain?.stepServo(dt, this.physics.getPlayerMallet(), puck, this.physics.getJevMallet().pos);
 
     const goal = this.physics.step(dt, (event) => this.handleCollision(event));
+
+    this.collectPredictionErrors(this.topStats, this.topBrain);
+    if (this.bottomBrain) this.collectPredictionErrors(this.bottomStats, this.bottomBrain);
+    this.topStats.cpuTakeovers += this.topBrain.takeTakeoverEvents();
+    if (this.bottomBrain) this.bottomStats.cpuTakeovers += this.bottomBrain.takeTakeoverEvents();
 
     const speed = puck.vel.mag();
     if (speed > this.matchState.maxSpeedReached) {
@@ -367,6 +511,14 @@ export class GameLoopUseCase {
     // ラリー数の上限に達したら打ち切る (API課金の上限として機能する)
     if (this.matchState.rallyCount >= this.maxRallies) {
       this.finishMatch();
+    }
+  }
+
+  /** 中央線で予告した接触位置と、実際のパック位置との差 (予測精度の指標) */
+  private collectPredictionErrors(stats: AgentStats, brain: AgentBrainUseCase): void {
+    for (const errorPx of brain.takePredictionErrors()) {
+      stats.predictionErrorSumPx += errorPx;
+      stats.predictionSamples++;
     }
   }
 
@@ -421,7 +573,7 @@ export class GameLoopUseCase {
     // 狙いの評価は recordContact より先に行う。recordContact は実行中の一撃を
     // 破棄するので、順序を逆にすると「振り抜いた接触」が1件も記録されなくなる
     this.recordAimError(isTop ? this.topStats : this.bottomStats, brain, event.pos);
-    brain.recordContact();
+    brain.recordContact(this.physics.getPuck().pos);
   }
 
   /**

@@ -14,9 +14,11 @@ import { ModelSettings } from "../adapters/modelSettings";
  * 動かしているのか」が画面から判別できない。
  */
 const SERVO_LABEL: Record<ServoMode, string> = {
-  SETUP: "🎯 打点で構え中",
+  SETUP: "🎯 計画した経路で構え位置へ",
   STRIKE: "💥 振り抜き中",
   DEFEND: "🛡️ 進路を塞ぐ (計画なし)",
+  CLEANUP: "🧹 居座る球を掻き出す (反射)",
+  NO_PLAN: "⏸️ AIの計画なし: 定位置で待機",
   HOME: "↩️ 守備隊形へ復帰",
 };
 
@@ -29,17 +31,21 @@ const STATUS_LABEL: Record<DecisionStatus, string> = {
 };
 
 export class TelemetryHud {
-  private chatBubbleEl: HTMLElement | null = null;
-  private currentChatTimeout: number | null = null;
+  private chatBubbleTopEl: HTMLElement | null = null;
+  private chatBubbleBottomEl: HTMLElement | null = null;
+  private chatTimeoutTop: number | null = null;
+  private chatTimeoutBottom: number | null = null;
 
   constructor(_container: HTMLElement) {}
 
   /** サーボの実行状態と、AIの応答待ちかどうかを表示する */
-  updateServoState(mode: ServoMode, awaitingDecision: boolean): void {
+  updateServoState(mode: ServoMode, awaitingDecision: boolean, playbookSituation: string | null = null): void {
     const el = document.getElementById("hud-servo-mode");
     if (!el) return;
 
-    el.textContent = awaitingDecision ? `⏳ AI判断待ち / ${SERVO_LABEL[mode]}` : SERVO_LABEL[mode];
+    // 作戦タイムに決めた作戦で動いているなら、どの局面の作戦かを出す
+    const label = playbookSituation ? `📋 作戦「${playbookSituation}」/ ${SERVO_LABEL[mode]}` : SERVO_LABEL[mode];
+    el.textContent = awaitingDecision ? `⏳ AI判断待ち / ${label}` : label;
     el.setAttribute("data-stance", awaitingDecision ? "THINKING" : mode);
   }
 
@@ -269,7 +275,18 @@ export class TelemetryHud {
     const bannerEl = document.getElementById("game-banner");
     if (bannerEl) {
       if (state.status === GameStatus.READY) {
-        bannerEl.textContent = "PRESS START TO PLAY";
+        // 作戦タイムに失敗したAIがいれば、試合を始めずに理由を出す
+        bannerEl.textContent = state.strategyError
+          ? `⚠️ 作戦を立てられなかったため開始できません — ${state.strategyError} (STARTで再挑戦)`
+          : "PRESS START TO PLAY";
+        bannerEl.style.display = "block";
+      } else if (state.status === GameStatus.STRATEGY) {
+        const label = (st: string) =>
+          st === "READY" ? "準備完了" : st === "FAILED" ? "作戦なし (失敗)" : st === "PENDING" ? "作戦を考え中…" : "—";
+        bannerEl.textContent = `🧠 作戦タイム — ${topProf.displayName}: ${label(state.strategy.top)} / ${botProf.displayName}: ${label(state.strategy.bottom)}`;
+        bannerEl.style.display = "block";
+      } else if (state.status === GameStatus.COUNTDOWN) {
+        bannerEl.textContent = `${Math.max(1, Math.ceil(state.countdownMs / 1000))}`;
         bannerEl.style.display = "block";
       } else if (state.status === GameStatus.GOAL_SCORED) {
         bannerEl.textContent = state.lastScorer === "BOTTOM"
@@ -295,38 +312,49 @@ export class TelemetryHud {
     category: string,
     isLiveApi: boolean
   ): void {
-    if (!this.chatBubbleEl) {
-      this.chatBubbleEl = document.getElementById("jev-chat-bubble");
+    if (sender === "TOP" && !this.chatBubbleTopEl) {
+      this.chatBubbleTopEl = document.getElementById("jev-chat-bubble-top");
     }
-    if (!this.chatBubbleEl) return;
+    if (sender === "BOTTOM" && !this.chatBubbleBottomEl) {
+      this.chatBubbleBottomEl = document.getElementById("jev-chat-bubble-bottom");
+    }
+    const el = sender === "TOP" ? this.chatBubbleTopEl : this.chatBubbleBottomEl;
+    if (!el) return;
 
-    this.chatBubbleEl.textContent = `${isLiveApi ? "[🟢 Cloud AI]" : "[🖥️ CPU]"} ${text}`;
-    this.chatBubbleEl.setAttribute("data-category", category);
-    this.chatBubbleEl.setAttribute("data-sender", sender);
-    this.chatBubbleEl.classList.add("visible");
+    el.textContent = text;
+    el.setAttribute("data-category", category);
+    el.classList.add("visible");
 
-    this.chatBubbleEl.style.borderColor = isLiveApi
+    el.style.borderColor = isLiveApi
       ? "rgba(16, 185, 129, 0.8)"
       : "rgba(217, 119, 6, 0.8)";
-    this.chatBubbleEl.style.boxShadow = isLiveApi
+    el.style.boxShadow = isLiveApi
       ? "0 0 18px rgba(16, 185, 129, 0.5)"
       : "0 0 18px rgba(217, 119, 6, 0.4)";
 
-    if (this.currentChatTimeout) clearTimeout(this.currentChatTimeout);
-    this.currentChatTimeout = window.setTimeout(() => {
-      this.chatBubbleEl?.classList.remove("visible");
-    }, 4500);
+    if (sender === "TOP") {
+      if (this.chatTimeoutTop) clearTimeout(this.chatTimeoutTop);
+      this.chatTimeoutTop = window.setTimeout(() => el.classList.remove("visible"), 4500);
+    } else {
+      if (this.chatTimeoutBottom) clearTimeout(this.chatTimeoutBottom);
+      this.chatTimeoutBottom = window.setTimeout(() => el.classList.remove("visible"), 4500);
+    }
   }
 }
 
 function describePlan(telemetry: AgentTelemetry): string {
   const { plan, status } = telemetry;
   if (!plan) {
-    if (status === "TIMEOUT") return "⏱️ タイムアウト: 緊急守備ブロックで迎撃";
-    return "🛡️ 計画なし: 緊急守備ブロックで迎撃";
+    // クラウドAIの判断が届かなかった局面は、ローカル演算で肩代わりせず、
+    // そのAI自身が作戦タイムに決めた作戦で打つ (作戦が無ければ待機位置で待つ)
+    if (status === "TIMEOUT") return "⏱️ 時間内に応答なし: 作戦タイムの作戦で打つ";
+    if (status === "OK") return "🛡️ 計画なし: ゴール前を守る";
+    return "❌ 応答が使えない: 作戦タイムの作戦で打つ";
   }
 
-  return `迎撃 (${Math.round(plan.interceptPoint.x)}, ${Math.round(plan.interceptPoint.y)}) / 振り抜き ${Math.round(plan.swingDirDeg)}° / ${Math.round(plan.swingSpeed)} px/s`;
+  const timing = plan.strikeTiming === "REBOUND" ? "跳ね返り" : "直接";
+  const path = plan.movePath === "CURVE" ? "曲線" : "直線";
+  return `${Math.round(plan.contactTimeMs)}ms後に${timing}で迎撃 (${Math.round(plan.interceptPoint.x)}, ${Math.round(plan.interceptPoint.y)}) / ${path} ${Math.round(plan.moveSpeed)} px/s で構え / 振り抜き ${Math.round(plan.swingDirDeg)}° ${Math.round(plan.swingSpeed)} px/s`;
 }
 
 function renderPlanDetail(telemetry: AgentTelemetry): string {

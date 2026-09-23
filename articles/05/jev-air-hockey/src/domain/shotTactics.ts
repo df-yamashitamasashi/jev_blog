@@ -155,6 +155,8 @@ export interface EvaluateContext {
   swingSpeed: number;
   /** 宣言したい迎撃点の好み (無ければ最速の打点) */
   preferPoint?: Vec2;
+  /** 打点を探す時間帯の下限 (秒)。跳ね返りを打つ場合に使う */
+  minContactSec?: number;
 }
 
 /**
@@ -266,6 +268,7 @@ export function evaluateShot(
     {
       swingSpeed: ctx.swingSpeed,
       maxLookaheadSec,
+      minLookaheadSec: ctx.minContactSec,
       preferPoint: ctx.preferPoint,
       // サーボ側と同じ基準で「振りかぶれる打点」を選ぶ
       setupSec: ctx.swingSpeed / ctx.limits.maxAccel + 0.04,

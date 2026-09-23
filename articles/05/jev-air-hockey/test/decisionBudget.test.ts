@@ -29,16 +29,17 @@ class SilentSound implements ISoundSynthesizer {
   isBgmActive = () => false;
 }
 
-/** 実際の通信遅延を模したラッパー。判断内容そのものは一切変えない */
+/**
+ * クラウドAPIの通信遅延を模したラッパー。判断内容そのものは一切変えない
+ * (中身は CPU の幾何解なので、同じ盤面なら同じ判断になる)。
+ */
 class DelayedClient implements IAgentClient {
+  readonly usesLiveApi = true;
+
   constructor(private readonly inner: IAgentClient, private readonly delayMs: number) {}
 
   get type(): AgentType {
     return this.inner.type;
-  }
-
-  get usesLiveApi(): boolean {
-    return this.inner.usesLiveApi;
   }
 
   async decideShot(obs: AirHockeyObservation): Promise<AgentTelemetry> {
@@ -86,7 +87,7 @@ async function playMatch(delayMs: number) {
 describe("Latency fairness", () => {
   it("should produce an identical match regardless of API latency", async () => {
     const fast = await playMatch(0);
-    const slow = await playMatch(25);
+    const slow = await playMatch(80);
 
     expect(fast.finished).toBe(true);
     expect(slow.finished).toBe(true);
@@ -100,15 +101,16 @@ describe("Latency fairness", () => {
     expect(slow.simSeconds).toBeCloseTo(fast.simSeconds, 6);
   }, 30000);
 
-  it("should consume exactly the decision budget of simulation time per decision", async () => {
+  it("should consume exactly the decision budget of simulation time per cloud decision", async () => {
     const physics = new PhysicsEngine(CFG);
     const brain = new AgentBrainUseCase(new CpuAgentClient(), CFG, "TOP", AgentType.CPU);
     const loop = new GameLoopUseCase(physics, brain, new SilentSound(), CFG, AgentType.CPU, AgentType.CPU);
+    loop.getTopBrain().setClient(new DelayedClient(new CpuAgentClient(), 5), AgentType.CLAUDE);
 
     loop.setFairTiming(true);
     loop.startMatch(9, 5, 400);
 
-    // パックが上へ向かっている状態から1判断ぶんだけ進める
+    // パックが中央線を越えて上へ向かっている状態から1判断ぶんだけ進める
     const puck = physics.getPuck();
     puck.pos.set(CFG.width * 0.5, CFG.height * 0.5);
     puck.vel.set(0, -600);
@@ -120,6 +122,30 @@ describe("Latency fairness", () => {
     expect(loop.getMatchState().status).toBe(GameStatus.PLAYING);
     // 判断が走ったフレームでは、思考予算ぶんの時間だけが進む
     expect(elapsedMs).toBeCloseTo(CFG.decisionBudgetMs, 3);
+  });
+
+  it("should let the CPU decide on the center line without stopping the clock", async () => {
+    const physics = new PhysicsEngine(CFG);
+    const brain = new AgentBrainUseCase(new CpuAgentClient(), CFG, "TOP", AgentType.CPU);
+    const loop = new GameLoopUseCase(physics, brain, new SilentSound(), CFG, AgentType.CPU, AgentType.CPU);
+
+    // トーナメント同様に公平タイミングを有効にしても、CPU は通信しないので止まらない
+    loop.setFairTiming(true);
+    loop.startMatch(9, 5, 400);
+
+    const puck = physics.getPuck();
+    puck.pos.set(CFG.width * 0.5, CFG.height * 0.5);
+    puck.vel.set(0, -600);
+
+    const before = loop.getMatchState().matchDurationSec;
+    await loop.advance(1);
+    const elapsedMs = (loop.getMatchState().matchDurationSec - before) * 1000;
+
+    // 判断はこのステップで確定している
+    expect(loop.getTopBrain().getPlan()).not.toBeNull();
+    expect(loop.getStats().top.decisions).toBe(1);
+    // それでも進んだのは物理1ステップぶんだけ
+    expect(elapsedMs).toBeCloseTo(CFG.fixedDt * 1000, 3);
   });
 });
 
@@ -141,6 +167,7 @@ describe("Live match timing (fairTiming disabled, the default)", () => {
     loop.getTopBrain().setClient(new DelayedClient(new CpuAgentClient(), SLOW_MS), AgentType.CPU);
     loop.getBottomBrain()!.setClient(new DelayedClient(new CpuAgentClient(), SLOW_MS), AgentType.CPU);
 
+    loop.setFairTiming(false);
     loop.startMatch(9, 1, 2000);
 
     const puck = physics.getPuck();

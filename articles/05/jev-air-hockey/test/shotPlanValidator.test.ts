@@ -9,6 +9,7 @@ import { Vec2 } from "../src/domain/physics";
 
 const validPlan = {
   interceptPoint: { x: 300, y: 150 },
+  contactTimeMs: 320,
   swingDirDeg: 90,
   swingSpeed: 600,
   aimPoint: { x: 300, y: 900 },
@@ -31,6 +32,7 @@ describe("validateShotPlan", () => {
     ["Infinity角度", { ...validPlan, swingDirDeg: Infinity }],
     ["座標欠落", { ...validPlan, interceptPoint: { x: 300 } }],
     ["狙い点なし", { ...validPlan, aimPoint: undefined }],
+    ["接触時刻なし", { ...validPlan, contactTimeMs: undefined }],
   ])("should reject %s as INVALID", (_label, raw) => {
     const result = validateShotPlan(raw, "TOP", CFG);
     expect(result.status).toBe("INVALID");
@@ -67,6 +69,33 @@ describe("validateShotPlan", () => {
     const wrapped = validateShotPlan({ ...validPlan, swingDirDeg: 450 }, "TOP", CFG);
     expect(wrapped.status).toBe("OK");
     expect(wrapped.plan!.swingDirDeg).toBe(90);
+  });
+
+  it("should default the movement to a straight line at full speed", () => {
+    const plan = validateShotPlan(validPlan, "TOP", CFG).plan!;
+    expect(plan.movePath).toBe("STRAIGHT");
+    expect(plan.curveOffset).toBe(0);
+    expect(plan.moveSpeed).toBe(CFG.maxMalletSpeed);
+    expect(plan.strikeTiming).toBe("DIRECT");
+    expect(plan.contactTimeMs).toBe(320);
+  });
+
+  it("should cap the movement speed at the shared mallet limit", () => {
+    const result = validateShotPlan({ ...validPlan, moveSpeed: 5000 }, "TOP", CFG);
+    expect(result.status).toBe("CLAMPED");
+    expect(result.plan!.moveSpeed).toBe(CFG.maxMalletSpeed);
+    expect(result.clampNotes.join()).toContain("moveSpeed");
+  });
+
+  it("should keep a declared curve and rebound strike", () => {
+    const plan = validateShotPlan(
+      { ...validPlan, movePath: "CURVE", curveOffset: -80, strikeTiming: "REBOUND" },
+      "TOP",
+      CFG
+    ).plan!;
+    expect(plan.movePath).toBe("CURVE");
+    expect(plan.curveOffset).toBe(-80);
+    expect(plan.strikeTiming).toBe("REBOUND");
   });
 
   it("should keep the mallet inside the side walls", () => {
