@@ -7,6 +7,8 @@
 <a name="japanese"></a>
 ## 日本語
 
+📝 記事: [Jevで作る検証用RAG（Qiita）](https://qiita.com/yam_dev/items/a7aafeab9854dedfc294)
+
 ### 概要
 「判断は Jev、文章は LLM」という設計を確かめるための **検証用 RAG** です。社内文書に答える RAG で、「答えるべきか」「どの文書が使えるか」「根拠は足りるか」「回答は文書どおりか」を **Jev（TypeSafe AI の意思決定モデル）** が判断し、LLM（Gemini）は回答文を書くだけにしています。
 
@@ -47,6 +49,8 @@ npm test                           # articles/04/jev-rag-workbench
 
 <a name="english"></a>
 ## English
+
+📝 Article (Japanese): [Qiita](https://qiita.com/yam_dev/items/a7aafeab9854dedfc294)
 
 ### Overview
 A **RAG for verifying one design idea**: *Jev decides, the LLM writes.* Jev (TypeSafe AI's decision model) decides whether to answer, which passages are usable, whether the evidence is sufficient, and whether each generated sentence is supported. The LLM (Gemini) only writes the answer.
