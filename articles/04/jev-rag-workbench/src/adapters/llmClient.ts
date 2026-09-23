@@ -1,12 +1,18 @@
 /**
  * LLM Client Adapter (System Two: Reflective Generator)
- * Connects to OpenAI/Anthropic/Gemini or uses built-in high fidelity synthesis simulator.
+ * Calls the OpenAI Chat Completions API, or falls back to a built-in generation simulator.
+ *
+ * シミュレータの挙動:
+ *  - コンテキスト中に質問と重なる文があれば、その文を抜き出して回答する（抽出型）
+ *  - 見つからない場合は「何か答えなければ」というLLMの典型的な失敗を再現し、もっともらしい捏造回答を返す
+ *    （Naive RAG でハルシネーションが起きる状況の再現。Jev RAG では Gate 4 がこの手前で止める）
  */
+
+import { contentTokens, coverage, estimateTokens, splitSentences, splitTopics } from '../domain/textSimilarity';
 
 export interface LLMGenerateOptions {
   query: string;
   context: string;
-  simulateHallucination?: boolean;
 }
 
 export interface LLMResponse {
@@ -14,10 +20,17 @@ export interface LLMResponse {
   claims: string[];
   latencyMs: number;
   tokensUsed: number;
+  isSimulated: boolean;
 }
+
+export const DEFAULT_LLM_MODEL = 'gpt-4o-mini';
+
+const SYSTEM_PROMPT =
+  'あなたは社内アシスタントです。提供されたコンテキストのみに基づいて正確に回答してください。推測やコンテキストにない情報を捏造してはいけません。';
 
 export class LLMClient {
   private apiKey: string | null = null;
+  onFallback?: (detail: string) => void;
 
   constructor(apiKey?: string) {
     const envKey = typeof globalThis !== 'undefined' ? (globalThis as any).process?.env?.OPENAI_API_KEY : null;
@@ -35,7 +48,6 @@ export class LLMClient {
   async generate(options: LLMGenerateOptions): Promise<LLMResponse> {
     const startTime = performance.now();
 
-    // If API key is present, could call real OpenAI API
     if (this.apiKey) {
       try {
         const res = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -45,116 +57,96 @@ export class LLMClient {
             Authorization: `Bearer ${this.apiKey}`,
           },
           body: JSON.stringify({
-            model: 'gpt-4o-mini',
+            model: DEFAULT_LLM_MODEL,
             messages: [
-              {
-                role: 'system',
-                content:
-                  'あなたは社内アシスタントです。提供されたコンテキストのみに基づいて正確に回答してください。推測やコンテキストにない情報を捏造してはいけません。',
-              },
-              {
-                role: 'user',
-                content: `【コンテキスト】\n${options.context}\n\n【質問】\n${options.query}`,
-              },
+              { role: 'system', content: SYSTEM_PROMPT },
+              { role: 'user', content: `【コンテキスト】\n${options.context}\n\n【質問】\n${options.query}` },
             ],
             temperature: 0.2,
           }),
         });
 
-        if (res.ok) {
-          const json = await res.json();
-          const content = json.choices[0]?.message?.content || '';
-          const latencyMs = Math.round(performance.now() - startTime);
-          const claims = this.splitIntoClaims(content);
-          return {
-            content,
-            claims,
-            latencyMs,
-            tokensUsed: json.usage?.total_tokens || 450,
-          };
+        if (!res.ok) {
+          throw new Error(`OpenAI API HTTP error: ${res.status}`);
         }
-      } catch {
-        // Fallback to simulator
+
+        const json = await res.json();
+        const content: string = json.choices[0]?.message?.content || '';
+        return {
+          content,
+          claims: splitSentences(content),
+          latencyMs: Math.round(performance.now() - startTime),
+          tokensUsed:
+            json.usage?.total_tokens ?? estimateTokens(SYSTEM_PROMPT + options.context + options.query + content),
+          isSimulated: false,
+        };
+      } catch (err) {
+        const detail = err instanceof Error ? err.message : String(err);
+        console.warn('[LLMClient] Falling back to generation simulator:', detail);
+        this.onFallback?.(detail);
       }
     }
 
-    // High fidelity synthesis simulator
-    await new Promise((resolve) => setTimeout(resolve, Math.floor(Math.random() * 200) + 300));
-    const latencyMs = Math.round(performance.now() - startTime);
+    const { content, claims } = this.simulateGeneration(options.query, options.context);
+    const inputTokens = estimateTokens(SYSTEM_PROMPT + options.context + options.query);
+    const outputTokens = estimateTokens(content);
 
-    const { content, claims, tokensUsed } = this.simulateGeneration(
-      options.query,
-      options.context,
-      options.simulateHallucination
-    );
+    // Simulated latency: fixed overhead + prompt processing + token-by-token decoding
+    const simulatedMs = 250 + inputTokens * 0.3 + outputTokens * 6 + Math.random() * 100;
+    await new Promise((resolve) => setTimeout(resolve, simulatedMs));
 
     return {
       content,
       claims,
-      latencyMs,
-      tokensUsed,
+      latencyMs: Math.round(performance.now() - startTime),
+      tokensUsed: inputTokens + outputTokens,
+      isSimulated: true,
     };
   }
 
-  private simulateGeneration(
-    query: string,
-    context: string,
-    simulateHallucination: boolean = false
-  ): { content: string; claims: string[]; tokensUsed: number } {
-    let content = '';
-    const claims: string[] = [];
-
-    if (query.includes('有給') || query.includes('繰り越し') || query.includes('繰越')) {
-      const c1 = '当社の規定に基づき、未使用の有給休暇は翌年度に限り繰り越しが可能です。';
-      const c2 = '繰り越し可能な日数は最大20日を限度として定められています。';
-      claims.push(c1, c2);
-
-      if (simulateHallucination) {
-        // Naive RAG hallucination scenario
-        const c3 = 'また、特例として申請により最大100日まで無制限に有休をプールすることができます。';
-        claims.push(c3);
-        content = `${c1}\n${c2}\n${c3}`;
-      } else {
-        content = `${c1}\n${c2}`;
-      }
-    } else if (query.includes('リモート') || query.includes('在宅')) {
-      const c1 = 'リモートワーク勤務規程により、月額上限5,000円の通信・光熱費手当が支給されます。';
-      const c2 = '適用対象は週3日以上リモートワークを行う正社員および契約社員です。';
-      claims.push(c1, c2);
-      content = `${c1}\n${c2}`;
-    } else if (query.includes('トークン') || query.includes('api') || query.includes('認証')) {
-      const c1 = 'APIトークンの有効期限は発行から24時間（86,400秒）に設定されています。';
-      const c2 = '有効期限が切れた場合は、リフレッシュトークンエンドポイントより再発行が必要です。';
-      claims.push(c1, c2);
-      content = `${c1}\n${c2}`;
-    } else if (query.includes('解約') || query.includes('返金')) {
-      const c1 = 'サービス解約時は契約更新日の7日前までに管理画面より申請が必要です。';
-      const c2 = '年払いプランの場合、残月数に応じた日割り計算での返金は原則として受け付けておりません。';
-      claims.push(c1, c2);
-
-      if (simulateHallucination) {
-        const c3 = 'ただしVIPカスタマーの場合は例外として即時返金100%全額補償が適用されます。';
-        claims.push(c3);
-        content = `${c1}\n${c2}\n${c3}`;
-      } else {
-        content = `${c1}\n${c2}`;
-      }
-    } else {
-      const c1 = '提供されたドキュメントに基づき、該当する要件および規定事項を確認しました。';
-      const c2 = '詳細な運用手順については社内ガイドラインをご参照ください。';
-      claims.push(c1, c2);
-      content = `${c1}\n${c2}`;
+  private simulateGeneration(query: string, context: string): { content: string; claims: string[] } {
+    // 挨拶など内容語を含まない入力には会話として応答する（事実の主張を含まない）
+    if (contentTokens(query, { stripQuestion: true }).length === 0) {
+      return { content: 'こんにちは！社内規程や仕様について、ご質問があればお気軽にどうぞ。', claims: [] };
     }
 
-    const tokensUsed = Math.round(context.length / 3 + content.length / 2 + 120);
-    return { content, claims, tokensUsed };
-  }
+    // 見出し行（「第13条（…）」など句点で終わらない行）は回答文として使わない
+    const sentences = splitSentences(context).filter((s) => /[。！？]$/.test(s));
+    // 複合質問（「AとB」）では、まず各トピックに最もよく答える文を1つずつ選び、残りを全体の一致率順で埋める
+    const topics = splitTopics(query);
+    const queries = [query, ...topics];
+    const scoreOf = (s: string, q: string) => coverage(q, s, { stripQuestion: true });
 
-  private splitIntoClaims(text: string): string[] {
-    return text
-      .split(/[。\n]+/)
-      .map((s) => s.trim())
-      .filter((s) => s.length > 5)
-      .map((s) => (s.endsWith('。') ? s : s + '。'));
+    const selected: string[] = [];
+    if (topics.length > 1) {
+      for (const topic of topics) {
+        const best = sentences
+          .filter((s) => !selected.includes(s))
+          .map((s) => ({ s, ratio: scoreOf(s, topic) }))
+          .sort((a, b) => b.ratio - a.ratio)[0];
+        if (best && best.ratio >= 0.3) selected.push(best.s);
+      }
+    }
+    const ranked = sentences
+      .filter((s) => !selected.includes(s))
+      .map((s) => ({ s, ratio: Math.max(...queries.map((q) => scoreOf(s, q))) }))
+      .filter((x) => x.ratio >= 0.3)
+      .sort((a, b) => b.ratio - a.ratio);
+    for (const x of ranked) {
+      if (selected.length >= 3) break;
+      selected.push(x.s);
+    }
+
+    if (selected.length > 0) {
+      return { content: selected.join('\n'), claims: selected };
+    }
+
+    // No grounding found: reproduce a typical "must answer something" hallucination
+    const topic = query.replace(/[?？!！。]/g, '').replace(/(について|を?教えてください|の申請方法は|は何日ですか|はいくらですか|は)$/, '');
+    const claims = [
+      `${topic}は、所定の申請フォームから所属長の承認を得ることで利用できます。`,
+      '支給額は1回あたり最大30,000円で、申請から10営業日以内に処理されます。',
+    ];
+    return { content: claims.join('\n'), claims };
   }
 }

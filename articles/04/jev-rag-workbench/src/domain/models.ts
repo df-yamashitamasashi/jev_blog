@@ -27,6 +27,7 @@ export interface QueryTriageResult {
   intent: TriageIntent;
   targetCategory?: string;
   answer: ChoiceAnswer;
+  routeAnswer?: ChoiceAnswer;
   needsDecomposition: boolean;
   decompositionNoul?: NoulAnswer;
   subQueries: string[];
@@ -36,7 +37,7 @@ export interface QueryTriageResult {
 export interface SearchResult {
   chunk: DocumentChunk;
   bm25Score: number;
-  denseScore: number;
+  denseScore: number; // pseudo-dense similarity in this demo (see InMemoryRetriever)
   hybridScore: number;
 }
 
@@ -81,9 +82,10 @@ export interface RagResult {
   isClarificationNeeded: boolean;
   isFallback: boolean;
   fallbackReason?: string;
-  attributionScore: number; // Percentage of verified claims [0, 100]
+  attributionScore: number | null; // Percentage of verified claims [0, 100]; null when no LLM answer was generated
   totalLatencyMs: number;
-  totalTokensSavedPercent: number;
+  contextReductionPercent: number | null; // Context chars removed by Gate 3; null when retrieval was skipped
+  llmTokensUsed: number; // 0 when the LLM was never called
   stages: PipelineStageRecord[];
   rerankedPassages: RerankedPassage[];
   verifiedClaims: ClaimVerification[];
@@ -104,8 +106,9 @@ export interface BenchmarkComparison {
     tokensUsed: number;
     hallucinationDetected: boolean;
     unsupportedClaimCount: number;
-    attributionScore: number;
-    tokensSavedPercent: number;
-    timeSavedPercent: number;
+    attributionScore: number | null;
+    isFallback: boolean;
+    tokensSavedPercent: number; // LLM tokens saved vs Naive RAG
+    latencyChangePercent: number; // negative = faster than Naive RAG
   };
 }

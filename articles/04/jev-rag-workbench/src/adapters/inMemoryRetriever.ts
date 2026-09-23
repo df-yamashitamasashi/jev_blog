@@ -1,8 +1,12 @@
 /**
- * In-Memory Hybrid Retriever (BM25 + Cosine Vector Similarity)
+ * In-Memory Hybrid Retriever (BM25 + pseudo-dense similarity)
+ *
+ * - BM25: 日本語は形態素解析の代わりに漢字・カタカナの文字バイグラムでトークン化
+ * - Dense: デモ用の疑似Dense（文字集合の重なり）。本番では Embedding + ベクトルDB に置き換える
  */
 
 import { DocumentChunk, KnowledgeDocument, SearchResult } from '../domain/models';
+import { contentTokens } from '../domain/textSimilarity';
 
 export class InMemoryRetriever {
   private documents: Map<string, KnowledgeDocument> = new Map();
@@ -28,21 +32,25 @@ export class InMemoryRetriever {
   }
 
   search(query: string, topK: number = 5, targetCategory?: string): SearchResult[] {
-    const queryTokens = this.tokenize(query);
+    const queryTokens = contentTokens(query, { stripQuestion: true });
     if (queryTokens.length === 0 || this.chunks.length === 0) return [];
 
+    // ユーザーが追加した custom ドキュメントはルーティング先に関わらず常に検索対象に含める
     const filteredChunks = targetCategory
-      ? this.chunks.filter((c) => c.category === targetCategory)
+      ? this.chunks.filter((c) => c.category === targetCategory || c.category === 'custom')
       : this.chunks;
-
     const candidates = filteredChunks.length > 0 ? filteredChunks : this.chunks;
 
-    const results: SearchResult[] = candidates.map((chunk) => {
-      const bm25 = this.scoreBM25(queryTokens, chunk.text);
-      const dense = this.scoreDenseSimilarity(query, chunk.text);
-      // Hybrid combination (0.5 BM25 normalized + 0.5 Dense)
-      const hybridScore = 0.5 * Math.min(1.0, bm25 / 5.0) + 0.5 * dense;
+    const raw = candidates.map((chunk) => ({
+      chunk,
+      bm25: this.scoreBM25(queryTokens, chunk.text),
+      dense: this.scoreDenseSimilarity(query, chunk.text),
+    }));
+    const maxBm25 = Math.max(...raw.map((r) => r.bm25), 1e-9);
 
+    const results: SearchResult[] = raw.map(({ chunk, bm25, dense }) => {
+      // Hybrid combination (0.5 * max-normalized BM25 + 0.5 * dense)
+      const hybridScore = 0.5 * (bm25 / maxBm25) + 0.5 * dense;
       return {
         chunk,
         bm25Score: Math.round(bm25 * 100) / 100,
@@ -55,22 +63,36 @@ export class InMemoryRetriever {
     return results.slice(0, topK);
   }
 
+  /**
+   * Search several sub-queries (Gate 2 decomposition) and merge by best hybrid score per chunk.
+   */
+  searchMany(queries: string[], topK: number = 5, targetCategory?: string): SearchResult[] {
+    const best = new Map<string, SearchResult>();
+    for (const q of queries) {
+      for (const r of this.search(q, topK, targetCategory)) {
+        const prev = best.get(r.chunk.id);
+        if (!prev || r.hybridScore > prev.hybridScore) best.set(r.chunk.id, r);
+      }
+    }
+    return Array.from(best.values())
+      .sort((a, b) => b.hybridScore - a.hybridScore)
+      .slice(0, topK);
+  }
+
   private rebuildIndex(): void {
     this.chunks = [];
     for (const doc of this.documents.values()) {
-      const docChunks = this.chunkText(doc.content, doc.id, doc.title, doc.category);
-      this.chunks.push(...docChunks);
+      this.chunks.push(...this.chunkText(doc.content, doc.id, doc.title, doc.category));
     }
 
-    // Compute IDF
     const totalDocs = this.chunks.length;
     let totalLength = 0;
     const docFreq = new Map<string, number>();
 
     for (const chunk of this.chunks) {
-      const tokens = new Set(this.tokenize(chunk.text));
-      totalLength += chunk.text.length;
-      for (const token of tokens) {
+      const tokens = contentTokens(chunk.text);
+      totalLength += tokens.length;
+      for (const token of new Set(tokens)) {
         docFreq.set(token, (docFreq.get(token) || 0) + 1);
       }
     }
@@ -99,19 +121,11 @@ export class InMemoryRetriever {
     }));
   }
 
-  private tokenize(text: string): string[] {
-    return text
-      .toLowerCase()
-      .replace(/[?？!！、。・「」『』（）()[\]]/g, ' ')
-      .split(/\s+/)
-      .filter((w) => w.length >= 2);
-  }
-
   private scoreBM25(queryTokens: string[], docText: string): number {
     const k1 = 1.2;
     const b = 0.75;
-    const docTokens = this.tokenize(docText);
-    const docLen = docText.length;
+    const docTokens = contentTokens(docText);
+    const docLen = docTokens.length;
 
     const termFreq = new Map<string, number>();
     for (const t of docTokens) {
@@ -119,7 +133,7 @@ export class InMemoryRetriever {
     }
 
     let score = 0;
-    for (const token of queryTokens) {
+    for (const token of new Set(queryTokens)) {
       const tf = termFreq.get(token) || 0;
       if (tf === 0) continue;
       const idf = this.idfMap.get(token) || 0.5;
@@ -131,7 +145,7 @@ export class InMemoryRetriever {
   }
 
   private scoreDenseSimilarity(query: string, docText: string): number {
-    // Word set Jaccard + Character N-Gram overlap as high quality deterministic pseudo-dense representation
+    // Pseudo-dense: character set overlap (deterministic stand-in for embedding cosine similarity)
     const qChars = new Set(query.toLowerCase());
     const dChars = new Set(docText.toLowerCase());
 

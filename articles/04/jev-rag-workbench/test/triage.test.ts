@@ -27,5 +27,12 @@ describe('TriageUseCase (Gate 1 & Gate 2)', () => {
     const result = await triage.execute('有給休暇と特別休暇の繰り越しの違いについて教えてください');
     expect(result.intent).toBe('knowledge_search');
     expect(result.needsDecomposition).toBe(true);
+    expect(result.subQueries.length).toBeGreaterThan(1);
+  });
+
+  it('should route via the Jev route question rather than hard-coded rules', async () => {
+    const result = await triage.execute('APIのレート制限は1分あたり何回ですか？');
+    expect(result.routeAnswer?.choice).toBe('api');
+    expect(result.targetCategory).toBe('api');
   });
 });

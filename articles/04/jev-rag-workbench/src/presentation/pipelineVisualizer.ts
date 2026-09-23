@@ -57,22 +57,38 @@ export class PipelineVisualizer {
       `;
     }
 
+    const hasUnsupported = result.verifiedClaims.some((c) => !c.isSupported);
+    const badge = result.isFallback
+      ? '🛡️ 安全フォールバック（生成スキップ）'
+      : result.isDirectAnswer
+      ? '💬 即時応答（検索・生成なし）'
+      : result.isClarificationNeeded
+      ? '❓ 聞き返し'
+      : hasUnsupported
+      ? '⚠️ 裏付けのない文を含む回答'
+      : '✨ 検証済み回答';
+
     // Add Answer Card at bottom
     const answerCard = document.createElement('div');
-    answerCard.className = `final-answer-card ${result.isFallback ? 'is-fallback' : ''}`;
+    answerCard.className = `final-answer-card ${result.isFallback || hasUnsupported ? 'is-fallback' : ''}`;
     answerCard.innerHTML = `
       <div class="answer-header">
         <div class="answer-title">
-          <span class="badge">${result.isFallback ? '🛡️ 安全フォールバック' : '✨ 検証済み回答'}</span>
-          <span class="attribution">引用忠実性: <strong>${result.attributionScore}%</strong></span>
-          <span class="tokens-badge">トークン削減: <strong>${result.totalTokensSavedPercent}%</strong></span>
+          <span class="badge">${badge}</span>
+          <span class="attribution">引用忠実性: <strong>${result.attributionScore === null ? '—' : `${result.attributionScore}%`}</strong></span>
+          <span class="tokens-badge">LLMトークン: <strong>${result.llmTokensUsed}</strong></span>
+          ${
+            result.contextReductionPercent === null
+              ? ''
+              : `<span class="tokens-badge">コンテキスト削減: <strong>${result.contextReductionPercent}%</strong></span>`
+          }
         </div>
         <div class="latency-pill">${result.totalLatencyMs} ms</div>
       </div>
       <div class="answer-body">
         <p class="answer-text">${this.formatAnswer(result.finalAnswer)}</p>
       </div>
-      ${this.renderVerificationSection(result.verifiedClaims, result.rerankedPassages)}
+      ${this.renderVerificationSection(result.verifiedClaims)}
     `;
 
     this.container.appendChild(answerCard);
@@ -80,8 +96,8 @@ export class PipelineVisualizer {
 
   private renderPlaceholderStages(): string {
     const stages = [
-      { id: 'triage', name: 'Gate 1: Intent & Route Guard', desc: 'Jev Choice による即時トリアージ' },
-      { id: 'retrieval', name: 'Stage 2: Hybrid Retrieval', desc: 'BM25 + 密ベクトルハイブリッド検索' },
+      { id: 'triage', name: 'Gate 1 & 2: Intent Route Guard / Query Decomposition', desc: 'Jev Choice + Noul によるトリアージ・ルーティング・分解判定（1回の呼び出し）' },
+      { id: 'retrieval', name: 'Retrieval: Hybrid Search', desc: 'BM25 + 疑似Dense のハイブリッド検索（サブクエリは統合）' },
       { id: 'rerank', name: 'Gate 3: Fast Reranking & Noise Filter', desc: 'Jev Score による高速ノイズ圧縮' },
       { id: 'sufficiency', name: 'Gate 4: Context Sufficiency Gate', desc: 'Jev Noul による回答十分性・ハルシネーション遮断' },
       { id: 'generation', name: 'System Two: LLM Generation', desc: '精選コンテキストによるグラウンデッド生成' },
@@ -110,15 +126,26 @@ export class PipelineVisualizer {
     if (record.stageId === 'triage' && record.details.triage) {
       const t = record.details.triage;
       const probs = Object.entries(t.answer.probabilities || {})
-        .map(([k, v]: [string, any]) => `<span class="prob-tag">${k}: <strong>${Math.round(v * 100)}%</strong></span>`)
+        .map(
+          ([k, v]: [string, any]) =>
+            `<span class="prob-tag">${this.escapeHtml(k)}: <strong>${Math.round(Number(v) * 100)}%</strong></span>`
+        )
         .join(' ');
+      const subQueries =
+        t.subQueries.length > 1
+          ? `<div class="prob-distribution">${t.subQueries
+              .slice(1)
+              .map((q: string) => `<span class="prob-tag">サブクエリ: ${this.escapeHtml(q)}</span>`)
+              .join(' ')}</div>`
+          : '';
       detailsHtml = `
         <div class="stage-metrics">
-          <span class="metric-pill">Intent: <strong>${t.intent}</strong></span>
-          <span class="metric-pill">Target: <strong>${t.targetCategory || '全カテゴリ'}</strong></span>
-          <span class="metric-pill">Decompose: <strong>${t.needsDecomposition ? 'YES' : 'NO'}</strong></span>
+          <span class="metric-pill">Intent: <strong>${this.escapeHtml(t.intent)}</strong></span>
+          <span class="metric-pill">Route: <strong>${this.escapeHtml(t.targetCategory || '全カテゴリ')}</strong></span>
+          <span class="metric-pill">Decompose: <strong>${t.needsDecomposition ? 'YES' : 'NO'}</strong> (${Math.round((t.decompositionNoul?.noul ?? 0) * 100)}%)</span>
         </div>
         <div class="prob-distribution">${probs}</div>
+        ${subQueries}
       `;
     } else if (record.stageId === 'rerank' && record.details.rerank) {
       const r = record.details.rerank;
@@ -126,7 +153,7 @@ export class PipelineVisualizer {
         <div class="stage-metrics">
           <span class="metric-pill accepted">採択: <strong>${r.acceptedPassages.length} 件</strong></span>
           <span class="metric-pill rejected">除外: <strong>${r.rejectedCount} 件</strong></span>
-          <span class="metric-pill highlight">トークン削減: <strong>${r.tokensSavedPercent}%</strong></span>
+          <span class="metric-pill highlight">コンテキスト削減: <strong>${r.tokensSavedPercent}%</strong></span>
         </div>
         <div class="passages-mini-list">
           ${r.passages
@@ -150,7 +177,7 @@ export class PipelineVisualizer {
           <span class="metric-pill ${s.isSufficient ? 'accepted' : 'rejected'}">
             十分性: <strong>${Math.round(s.sufficiencyScore * 100)}%</strong>
           </span>
-          <span class="metric-desc">${s.isSufficient ? '客観的回答可能（LLMへ進む）' : '根拠不足（ハルシネーション防止のため早期終了）'}</span>
+          <span class="metric-desc">${s.isSufficient ? '客観的回答可能（LLMへ進む）' : '根拠不足（LLMを呼ばずに早期終了）'}</span>
         </div>
       `;
     } else if (record.stageId === 'verification' && record.details.verification) {
@@ -160,7 +187,7 @@ export class PipelineVisualizer {
           <span class="metric-pill ${v.allPassed ? 'accepted' : 'warning'}">
             Attribution Score: <strong>${v.attributionScore}%</strong>
           </span>
-          <span class="metric-desc">${v.allPassed ? '全主張が原文に100%裏付け' : '一部に裏付けのない文を検知'}</span>
+          <span class="metric-desc">${v.allPassed ? 'すべての文に根拠あり' : '一部に裏付けのない文を検知'}</span>
         </div>
       `;
     }
@@ -168,8 +195,8 @@ export class PipelineVisualizer {
     return `
       <div class="stage-header-row">
         <div class="stage-title-wrap">
-          <span class="stage-name">${record.stageName}</span>
-          <span class="stage-summary">${record.summary}</span>
+          <span class="stage-name">${this.escapeHtml(record.stageName)}</span>
+          <span class="stage-summary">${this.escapeHtml(record.summary)}</span>
         </div>
         <div class="stage-latency-tag">${record.latencyMs} ms</div>
       </div>
@@ -177,8 +204,8 @@ export class PipelineVisualizer {
     `;
   }
 
-  private renderVerificationSection(claims: ClaimVerification[], passages: RerankedPassage[]): string {
-    if (claims.length === 0 && passages.length === 0) return '';
+  private renderVerificationSection(claims: ClaimVerification[]): string {
+    if (claims.length === 0) return '';
 
     const claimsHtml = claims
       .map(
@@ -207,7 +234,8 @@ export class PipelineVisualizer {
   }
 
   private formatAnswer(text: string): string {
-    return text.replace(/\n/g, '<br/>');
+    // LLM output is untrusted: escape before inserting as HTML
+    return this.escapeHtml(text).replace(/\n/g, '<br/>');
   }
 
   private escapeHtml(str: string): string {
@@ -215,6 +243,7 @@ export class PipelineVisualizer {
       .replace(/&/g, '&amp;')
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;');
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
   }
 }

@@ -19,7 +19,7 @@ export class BenchmarkComparator {
     this.container.innerHTML = `
       <div class="benchmark-header">
         <h3>⚖️ A/B ベンチマーク比較実行中...</h3>
-        <p>Naive RAG（全パッセージ詰め込み）と Jev Adaptive RAG（5-Stage 意思決定ゲート）を並列検証しています</p>
+        <p>Naive RAG（Top-5 をそのまま LLM に投入）と Jev Adaptive RAG（5つの Jev ゲート経由）を同じ LLM で実行しています</p>
       </div>
       <div class="benchmark-loading">
         <span class="spinner"></span> 測定中...
@@ -29,6 +29,15 @@ export class BenchmarkComparator {
 
   render(bench: BenchmarkComparison): void {
     this.container.classList.remove('hidden');
+
+    const jev = bench.jevAdaptiveRag;
+    const jevPill = jev.hallucinationDetected
+      ? `<span class="status-pill danger">⚠️ 裏付けのない文 ${jev.unsupportedClaimCount} 件を検知</span>`
+      : jev.isFallback
+      ? '<span class="status-pill success">🛡️ 根拠不足のため生成をスキップ</span>'
+      : '<span class="status-pill success">✓ 全文の裏付けを確認</span>';
+    const latencyDelta =
+      jev.latencyChangePercent <= 0 ? `${Math.abs(jev.latencyChangePercent)}% 短縮` : `${jev.latencyChangePercent}% 増加`;
 
     this.container.innerHTML = `
       <div class="benchmark-header">
@@ -42,9 +51,9 @@ export class BenchmarkComparator {
         <!-- Naive RAG -->
         <div class="bench-col naive">
           <div class="col-header">
-            <h4>Naive RAG (従来の全件詰め込み)</h4>
+            <h4>Naive RAG (Top-5 詰め込み)</h4>
             <span class="status-pill ${bench.naiveRag.hallucinationDetected ? 'danger' : 'neutral'}">
-              ${bench.naiveRag.hallucinationDetected ? '⚠️ ハルシネーション混入' : '生成完了'}
+              ${bench.naiveRag.hallucinationDetected ? '⚠️ 裏付けのない文を含む' : '生成完了'}
             </span>
           </div>
           <div class="stat-metrics">
@@ -54,48 +63,52 @@ export class BenchmarkComparator {
             </div>
             <div class="stat-box">
               <span class="stat-val">${bench.naiveRag.tokensUsed}</span>
-              <span class="stat-lbl">消費トークン数</span>
+              <span class="stat-lbl">LLMトークン数</span>
             </div>
             <div class="stat-box">
               <span class="stat-val ${bench.naiveRag.unsupportedClaimCount > 0 ? 'bad' : 'good'}">
                 ${bench.naiveRag.unsupportedClaimCount} 件
               </span>
-              <span class="stat-lbl">未裏付け主張</span>
+              <span class="stat-lbl">未裏付け文</span>
             </div>
           </div>
           <div class="bench-answer">
             <div class="bench-answer-label">生成回答:</div>
-            <p>${this.escapeHtml(bench.naiveRag.answer)}</p>
+            <p>${this.formatAnswer(bench.naiveRag.answer)}</p>
           </div>
         </div>
 
         <!-- Jev Adaptive RAG -->
         <div class="bench-col jev">
           <div class="col-header">
-            <h4>Jev Adaptive RAG (5-Stage System One)</h4>
-            <span class="status-pill success">🛡️ ゼロハルシネーション保証</span>
+            <h4>Jev Adaptive RAG (5 Gates)</h4>
+            ${jevPill}
           </div>
           <div class="stat-metrics">
             <div class="stat-box">
-              <span class="stat-val highlight">${bench.jevAdaptiveRag.totalLatencyMs} ms</span>
-              <span class="stat-lbl">総レイテンシ</span>
+              <span class="stat-val highlight">${jev.totalLatencyMs} ms</span>
+              <span class="stat-lbl">総レイテンシ（${latencyDelta}）</span>
             </div>
             <div class="stat-box">
-              <span class="stat-val good">-${bench.jevAdaptiveRag.tokensSavedPercent}%</span>
-              <span class="stat-lbl">トークン削減率</span>
+              <span class="stat-val ${jev.tokensSavedPercent > 0 ? 'good' : ''}">${jev.tokensUsed}</span>
+              <span class="stat-lbl">LLMトークン数（${jev.tokensSavedPercent}% 削減）</span>
             </div>
             <div class="stat-box">
-              <span class="stat-val good">${bench.jevAdaptiveRag.attributionScore}%</span>
-              <span class="stat-lbl">引用忠実性</span>
+              <span class="stat-val ${jev.unsupportedClaimCount > 0 ? 'bad' : 'good'}">${jev.unsupportedClaimCount} 件</span>
+              <span class="stat-lbl">未裏付け文</span>
             </div>
           </div>
           <div class="bench-answer">
-            <div class="bench-answer-label">検証済み回答:</div>
-            <p>${this.escapeHtml(bench.jevAdaptiveRag.answer)}</p>
+            <div class="bench-answer-label">${jev.isFallback ? '安全フォールバック:' : '回答:'}</div>
+            <p>${this.formatAnswer(jev.answer)}</p>
           </div>
         </div>
       </div>
     `;
+  }
+
+  private formatAnswer(text: string): string {
+    return this.escapeHtml(text).replace(/\n/g, '<br/>');
   }
 
   private escapeHtml(str: string): string {
@@ -103,6 +116,7 @@ export class BenchmarkComparator {
       .replace(/&/g, '&amp;')
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;');
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
   }
 }

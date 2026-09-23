@@ -27,6 +27,10 @@ export class App {
     this.llmClient = new LLMClient(savedOpenAiKey);
     this.retriever = new InMemoryRetriever();
     this.orchestrator = new RagOrchestrator(this.jevClient, this.llmClient, this.retriever);
+
+    // APIキー設定済みなのに呼び出しに失敗した場合は、シミュレータで代替したことを明示する
+    this.jevClient.onFallback = (info) => this.showFallbackBadge(`Jev API 呼び出し失敗（${info.reason}）→ シミュレータで代替中`);
+    this.llmClient.onFallback = () => this.showFallbackBadge('LLM API 呼び出し失敗 → 生成シミュレータで代替中');
   }
 
   init(): void {
@@ -137,13 +141,22 @@ export class App {
     const badge = document.getElementById('status-api-badge');
     if (!badge) return;
 
-    if (this.jevClient.hasApiKey()) {
-      badge.className = 'status-indicator live';
-      badge.innerHTML = '<span class="dot"></span> TypeSafe Cloud API 連動中';
-    } else {
-      badge.className = 'status-indicator simulator';
-      badge.innerHTML = '<span class="dot"></span> Jev System One 内蔵シミュレータ稼働中 (APIキー不要)';
-    }
+    const jev = this.jevClient.hasApiKey() ? 'Jev: TypeSafe API' : 'Jev: シミュレータ';
+    const llm = this.llmClient.hasApiKey() ? 'LLM: OpenAI API' : 'LLM: シミュレータ';
+    const live = this.jevClient.hasApiKey() || this.llmClient.hasApiKey();
+    badge.className = `status-indicator ${live ? 'live' : 'simulator'}`;
+    badge.textContent = '';
+    badge.insertAdjacentHTML('beforeend', '<span class="dot"></span>');
+    badge.append(` ${jev} / ${llm}`);
+  }
+
+  private showFallbackBadge(message: string): void {
+    const badge = document.getElementById('status-api-badge');
+    if (!badge) return;
+    badge.className = 'status-indicator fallback';
+    badge.textContent = '';
+    badge.insertAdjacentHTML('beforeend', '<span class="dot"></span>');
+    badge.append(` ${message}`);
   }
 }
 

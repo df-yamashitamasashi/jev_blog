@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Jev Adaptive RAG Workbench — 5-Stage System One Studio</title>
+  <title>Jev Adaptive RAG Workbench</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -136,6 +136,16 @@
     .status-indicator.live .dot {
       background: var(--cyan);
       box-shadow: 0 0 8px var(--cyan);
+    }
+
+    .status-indicator.fallback {
+      border-color: var(--warning);
+      color: var(--warning);
+    }
+
+    .status-indicator.fallback .dot {
+      background: var(--warning);
+      box-shadow: 0 0 8px var(--warning);
     }
 
     .btn-ghost-sm {
@@ -932,12 +942,12 @@
         <div class="brand-icon">J</div>
         <div>
           <h1 class="brand-title">Jev Adaptive RAG Workbench</h1>
-          <p class="brand-subtitle">5-Stage System One Gated Architecture Studio</p>
+          <p class="brand-subtitle">5 System One Gates for Retrieval-Augmented Generation</p>
         </div>
       </div>
       <div class="header-actions">
         <div id="status-api-badge" class="status-indicator simulator">
-          <span class="dot"></span> 内蔵シミュレータ稼働中
+          <span class="dot"></span> Jev: シミュレータ / LLM: シミュレータ
         </div>
         <button id="btn-open-settings" class="btn-ghost-sm">⚙️ API設定</button>
       </div>
@@ -971,13 +981,16 @@
               🏠 リモートワーク手当（就業規程検索）
             </button>
             <button class="preset-btn" data-query="API認証トークンの有効期限とレート制限は？">
-              🔑 APIトークン有効期限（技術仕様検索・複合クエリ）
+              🔑 APIトークン有効期限とレート制限（Gate 2 クエリ分解）
+            </button>
+            <button class="preset-btn" data-query="有給休暇と特別休暇の違いは？">
+              ⚖️ 有給休暇と特別休暇の違い（Gate 2 比較質問）
             </button>
             <button class="preset-btn" data-query="こんにちは！はじめまして。">
               👋 挨拶クエリ（Gate 1 検索スキップ検証）
             </button>
             <button class="preset-btn" data-query="社内の宇宙旅行手当の申請方法は？">
-              🚀 宇宙旅行手当（Gate 4 ゼロハルシネーション検証）
+              🚀 宇宙旅行手当（Gate 4 根拠なし→生成スキップ）
             </button>
           </div>
         </div>
@@ -1015,7 +1028,7 @@
       </div>
       <div class="modal-body">
         <p style="font-size: 0.8rem; color: var(--text-muted);">
-          未入力の場合でも、内蔵シミュレーターにより本物と同一の確率分布・スコア判定でオフライン動作します。
+          未入力の場合は内蔵シミュレータで動作します。シミュレータは文字の一致率に基づく簡易判定で、Jev の出力形式（確率・スコア）と遅延の目安を再現するものです。本物の Jev の判定精度を確かめるには API キーを設定してください。<br/>キーはこのブラウザの localStorage に保存され、ブラウザから各 API へ直接送信されます。個人の検証用途に限って使用してください。
         </p>
         <div class="input-group">
           <label for="input-jev-key">TypeSafe API Key (TYPESAFE_API_KEY)</label>
