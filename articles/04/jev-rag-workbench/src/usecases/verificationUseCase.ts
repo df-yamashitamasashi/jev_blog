@@ -8,8 +8,8 @@ import { ClaimVerification, RerankedPassage } from '../domain/models';
 import { coverage } from '../domain/textSimilarity';
 import { displayText } from './assessUseCase';
 
-// Yes 確率 0.85 以上の文だけを「裏付けあり」とする（見逃すより、疑わしい文に警告を出す側に寄せる）
-export const SUPPORT_THRESHOLD = 0.85;
+// Yes 確率 0.80 以上の文を「裏付けあり」とする（実測では、根拠のない文は 0.25 以下、正しい文は 0.82 以上だった）
+export const SUPPORT_THRESHOLD = 0.8;
 
 // 「資料に記載がありません」のような文は事実の主張ではないので検証しない
 export const NO_INFO_PATTERN = /(記載|記述|情報)が(ありません|見当たりません|ございません)|記載されていません/;

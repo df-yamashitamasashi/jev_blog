@@ -340,3 +340,33 @@ def test_typesafe_backend_builds_sdk_questions():
         "model": "jev-test",
         "usage": {},
     }
+
+
+def test_low_confidence_vague_verdict_searches_anyway(docs_dir):
+    class UnsureJev(FakeJev):
+        def ask(self, state, questions):
+            resp = super().ask(state, questions)
+            if "intent" in resp["answers"]:
+                resp["answers"]["intent"] = {
+                    "choice": "clarification_needed",
+                    "confidence": 0.27,
+                }
+            return resp
+
+    answer = make_pipeline(docs_dir, jev=UnsureJev()).ask("有給休暇の繰り越し上限は？")
+    assert answer.status == "answered"
+    assert answer.gates["intent_overridden"] == "clarification_needed"
+
+
+def test_confident_vague_verdict_still_asks_back(docs_dir):
+    class SureJev(FakeJev):
+        def ask(self, state, questions):
+            resp = super().ask(state, questions)
+            if "intent" in resp["answers"]:
+                resp["answers"]["intent"] = {
+                    "choice": "clarification_needed",
+                    "confidence": 0.99,
+                }
+            return resp
+
+    assert make_pipeline(docs_dir, jev=SureJev()).ask("それ").status == "clarify"

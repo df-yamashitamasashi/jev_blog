@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { JevClient } from '../src/adapters/jevClient';
 import { TriageUseCase } from '../src/usecases/triageUseCase';
 
@@ -34,5 +34,19 @@ describe('TriageUseCase (Gate 1 & Gate 2)', () => {
     const result = await triage.execute('APIのレート制限は1分あたり何回ですか？');
     expect(result.routeAnswer?.choice).toBe('api');
     expect(result.targetCategory).toBe('api');
+  });
+
+  it('treats a low-confidence "vague" verdict as a real question', async () => {
+    const unsure = new JevClient();
+    vi.spyOn(unsure, 'systemOne').mockResolvedValue({
+      answers: {
+        intent: { choice: 'clarification_needed', probabilities: {}, confidence: 0.27 },
+        decompose: { noul: 0.1 },
+      },
+      latencyMs: 1,
+      isSimulated: true,
+    });
+    const result = await new TriageUseCase(unsure).execute('インボイスの登録番号を教えて');
+    expect(result.intent).toBe('knowledge_search');
   });
 });

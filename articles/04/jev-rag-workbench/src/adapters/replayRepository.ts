@@ -15,7 +15,7 @@ export interface ReplayMeta {
 
 export interface ReplayRecord {
   id: string;
-  split: 'test' | 'dev';
+  split: 'test' | 'dev' | 'holdout';
   type: string;
   query: string;
   answerable: boolean;

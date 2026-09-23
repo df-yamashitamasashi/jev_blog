@@ -1,0 +1,4 @@
+{"id": "s01c1", "split": "dev", "source_evidence": "繰り越せる日数の上限は20日", "claim": "翌年度に限り、使い切れなかった年次有給休暇を繰り越せる。", "supported": true, "kind": "paraphrase", "source": "hr/leave.md#4", "support": 0.98}
+{"id": "s01c2", "split": "dev", "source_evidence": "繰り越せる日数の上限は20日", "claim": "繰り越し分を含めて保有できる有給休暇は最大40日である。", "supported": true, "kind": "paraphrase", "source": "hr/leave.md#4", "support": 0.97}
+{"id": "s01c3", "split": "dev", "source_evidence": "繰り越せる日数の上限は20日", "claim": "繰り越せる日数の上限は30日である。", "supported": false, "kind": "num", "source": "hr/leave.md#4", "support": 0.07}
+{"id": "s01c4", "split": "dev", "source_evidence": "繰り越せる日数の上限は20日", "claim": "繰り越した有給休暇は、翌々年度まで使用できる。", "supported": false, "kind": "add", "source": "hr/leave.md#4", "support": 0.19}

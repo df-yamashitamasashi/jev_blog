@@ -11,6 +11,8 @@ import { splitTopics } from '../domain/textSimilarity';
 
 const ROUTE_CONFIDENCE_THRESHOLD = 0.6;
 const DECOMPOSE_THRESHOLD = 0.75;
+// 「挨拶」「曖昧」の判定がこの確信度未満なら、文書を調べる（本当の質問を聞き返すより、調べる方が害が小さい）
+const INTENT_CONFIDENCE_THRESHOLD = 0.5;
 
 export class TriageUseCase {
   constructor(private jevClient: JevClient) {}
@@ -51,7 +53,10 @@ export class TriageUseCase {
     const routeAns = response.answers['route'] as ChoiceAnswer | undefined;
     const decompAns = response.answers['decompose'] as NoulAnswer;
 
-    const resolvedIntent = (intentAns?.choice as TriageIntent) || 'knowledge_search';
+    let resolvedIntent = (intentAns?.choice as TriageIntent) || 'knowledge_search';
+    if (resolvedIntent !== 'knowledge_search' && (intentAns?.confidence ?? 0) < INTENT_CONFIDENCE_THRESHOLD) {
+      resolvedIntent = 'knowledge_search';
+    }
     const needsDecomposition = decompAns ? decompAns.noul >= DECOMPOSE_THRESHOLD : false;
 
     // 確信度が低いルーティングは誤った絞り込みの原因になるため、全カテゴリ検索にフォールバックする

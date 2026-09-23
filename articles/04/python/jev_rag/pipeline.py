@@ -109,6 +109,13 @@ class JevRagPipeline:
         qvec_future = self._pool.submit(self.embedder.embed, [query], "query")
         triage = gates.triage(query)
         t["triage"] = _ms(start)
+
+        if (
+            triage.intent != "knowledge_search"
+            and triage.intent_confidence < s.intent_confidence_threshold
+        ):
+            answer.gates["intent_overridden"] = triage.intent
+            triage.intent = "knowledge_search"
         answer.gates["triage"] = asdict(triage)
 
         if triage.intent in ("direct_answer", "clarification_needed"):

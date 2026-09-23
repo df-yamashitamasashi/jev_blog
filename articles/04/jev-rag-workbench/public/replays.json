@@ -6,9 +6,9 @@
   "thresholds": {
    "relevance": 1.0,
    "sufficiency": 0.7,
-   "support": 0.85
+   "support": 0.8
   },
-  "note": "本物の Jev / Gemini API で実行した評価の記録（test 60問＋調整用 dev 8問）"
+  "note": "本物の Jev / Gemini API で実行した評価の記録（評価60問＋追加10問＋調整用8問）"
  },
  "records": [
   {
@@ -867,7 +867,7 @@
     {
      "text": "在宅勤務は会社に届け出た自宅で行うか、会社が契約したサテライトオフィスを利用する必要があります。",
      "support": 0.84,
-     "supported": false
+     "supported": true
     }
    ],
    "citations": [
@@ -1136,7 +1136,7 @@
     {
      "text": "給与の支給日は毎月25日です。",
      "support": 0.82,
-     "supported": false
+     "supported": true
     },
     {
      "text": "土曜日は休日にあたるため、25日が休日の場合はその直前の営業日に支給されます。",
@@ -1579,7 +1579,7 @@
     {
      "text": "取引先との会食費は、参加者1人あたり5,000円まで経費とすることができます。",
      "support": 0.84,
-     "supported": false
+     "supported": true
     },
     {
      "text": "ただし、これを超える場合でも、事前に部長の承認を得ることで認められます。",
@@ -2414,27 +2414,80 @@
    "type": "answerable",
    "query": "インボイスの登録番号を教えて",
    "answerable": true,
-   "status": "clarify",
-   "answer": "ご質問の対象が特定できませんでした。どの制度・手続き・仕様について知りたいか、もう少し具体的に教えてください。",
+   "status": "answered",
+   "answer": "当社の適格請求書（インボイス）の登録番号は T1234567890123 です [1]。",
    "triage": {
-    "intent": "clarification_needed",
+    "intent": "knowledge_search",
     "intent_confidence": 0.27,
-    "route": "expense",
-    "route_confidence": 0.42,
-    "decompose": 0.06
+    "route": "faq",
+    "route_confidence": 0.4,
+    "decompose": 0.05
    },
    "subQueries": [],
-   "retrieved": [],
-   "sufficiency": null,
-   "claims": [],
-   "citations": [],
+   "retrieved": [
+    {
+     "id": "faq/billing.md#3",
+     "title": "SampleCloud FAQ：請求・支払い",
+     "heading": "適格請求書（インボイス）に対応していますか？",
+     "text": "対応しています。当社の登録番号は T1234567890123 です。",
+     "relevance": 1.81,
+     "accepted": true
+    },
+    {
+     "id": "general/office.md#2",
+     "title": "オフィス利用ルール",
+     "heading": "来客",
+     "text": "来客がある場合は、前日までに受付システムで来訪者を登録する。当日は受付で入館証を渡す。",
+     "relevance": 0.01,
+     "accepted": false
+    },
+    {
+     "id": "security/accounts.md#3",
+     "title": "アカウント・PC管理規程",
+     "heading": "第3条 ソフトウェアのインストール",
+     "text": "会社貸与PCには、許可リストに載っているソフトウェアのみインストールできる。許可リストにないソフトウェアを使いたい場合は、情報システム部に申請する。",
+     "relevance": 0.01,
+     "accepted": false
+    },
+    {
+     "id": "security/infosec.md#2",
+     "title": "情報セキュリティ規程",
+     "heading": "第2条 パスワードと多要素認証",
+     "text": "パスワードは12文字以上とし、ほかのサービスと使い回してはならない。定期的な変更は求めないが、漏えいのおそれがある場合は直ちに変更する。社内システムへのログインには多要素認証を必須とする。",
+     "relevance": 0.02,
+     "accepted": false
+    },
+    {
+     "id": "security/ai_guideline.md#1",
+     "title": "生成AI利用ガイドライン",
+     "heading": "1. 利用できるツール",
+     "text": "業務で利用できる生成AIは、会社が法人契約したツールに限る。個人で契約したアカウントを業務に使ってはならない。",
+     "relevance": 0.02,
+     "accepted": false
+    }
+   ],
+   "sufficiency": 0.97,
+   "claims": [
+    {
+     "text": "当社の適格請求書（インボイス）の登録番号は T1234567890123 です。",
+     "support": 0.95,
+     "supported": true
+    }
+   ],
+   "citations": [
+    "faq/billing.md#3"
+   ],
    "timingsMs": {
-    "triage": 203.4
+    "triage": 394.5,
+    "retrieval": 299.0,
+    "assess": 208.8,
+    "generate": 1629.6,
+    "verify": 262.0
    },
-   "totalMs": 203.4,
-   "jevCalls": 1,
-   "jevTokens": 957,
-   "llmTokens": 0,
+   "totalMs": 2793.9,
+   "jevCalls": 3,
+   "jevTokens": 3039,
+   "llmTokens": 219,
    "baseline": {
     "answer": "当社の適格請求書（インボイス）の登録番号は T1234567890123 です [1]。",
     "totalMs": 4137.4,
@@ -4724,6 +4777,597 @@
     "answer": "お問い合わせの件については、資料に記載がありません。",
     "totalMs": 2307.8,
     "llmTokens": 539
+   }
+  },
+  {
+   "id": "h01",
+   "split": "holdout",
+   "type": "answerable",
+   "query": "インボイス番号",
+   "answerable": true,
+   "status": "clarify",
+   "answer": "ご質問の対象が特定できませんでした。どの制度・手続き・仕様について知りたいか、もう少し具体的に教えてください。",
+   "triage": {
+    "intent": "clarification_needed",
+    "intent_confidence": 0.71,
+    "route": "expense",
+    "route_confidence": 0.53,
+    "decompose": 0.05
+   },
+   "subQueries": [],
+   "retrieved": [],
+   "sufficiency": null,
+   "claims": [],
+   "citations": [],
+   "timingsMs": {
+    "triage": 299.8
+   },
+   "totalMs": 299.8,
+   "jevCalls": 1,
+   "jevTokens": 950,
+   "llmTokens": 0,
+   "baseline": {
+    "answer": "当社の適格請求書（インボイス）の登録番号は T1234567890123 です [1]。",
+    "totalMs": 2730.9,
+    "llmTokens": 555
+   }
+  },
+  {
+   "id": "h02",
+   "split": "holdout",
+   "type": "answerable",
+   "query": "通勤手当の上限",
+   "answerable": true,
+   "status": "answered",
+   "answer": "通勤手当の支給額は、月50,000円が上限と定められています [1]。",
+   "triage": {
+    "intent": "knowledge_search",
+    "intent_confidence": 0.97,
+    "route": "hr",
+    "route_confidence": 0.98,
+    "decompose": 0.1
+   },
+   "subQueries": [],
+   "retrieved": [
+    {
+     "id": "hr/allowances.md#2",
+     "title": "給与・諸手当規程",
+     "heading": "第2条 通勤手当",
+     "text": "公共交通機関を利用して通勤する社員には、最も経済的かつ合理的な経路の定期券代を通勤手当として支給する。支給額は月50,000円を上限とする。",
+     "relevance": 1.8,
+     "accepted": true
+    },
+    {
+     "id": "hr/remote_work.md#4",
+     "title": "在宅勤務規程",
+     "heading": "第4条 在宅勤務手当",
+     "text": "在宅勤務を月4日以上行った月は、通信費・光熱費の補助として在宅勤務手当5,000円を給与に加算して支給する。",
+     "relevance": 0.04,
+     "accepted": false
+    },
+    {
+     "id": "expense/domestic_travel.md#3",
+     "title": "国内出張旅費規程",
+     "heading": "第3条 宿泊費",
+     "text": "宿泊費は実費を支給する。1泊あたりの上限は、東京23区・大阪市・名古屋市が12,000円、その他の地域が10,000円とする。",
+     "relevance": 0.05,
+     "accepted": false
+    },
+    {
+     "id": "hr/allowances.md#3",
+     "title": "給与・諸手当規程",
+     "heading": "第3条 住宅手当",
+     "text": "世帯主である社員に、住宅手当として月20,000円を支給する。",
+     "relevance": 0.06,
+     "accepted": false
+    },
+    {
+     "id": "hr/leave.md#4",
+     "title": "休暇規程",
+     "heading": "第4条 年次有給休暇の繰り越し",
+     "text": "当年度に使い切れなかった年次有給休暇は、翌年度に限り繰り越すことができる。繰り越せる日数の上限は20日とし、繰り越し分と当年度付与分を合わせて保有できる日数は最大40日とする。上限を超えた日数は消滅する。",
+     "relevance": 0.05,
+     "accepted": false
+    }
+   ],
+   "sufficiency": 0.97,
+   "claims": [
+    {
+     "text": "通勤手当の支給額は、月50,000円が上限と定められています。",
+     "support": 0.98,
+     "supported": true
+    }
+   ],
+   "citations": [
+    "hr/allowances.md#2"
+   ],
+   "timingsMs": {
+    "triage": 198.5,
+    "retrieval": 248.1,
+    "assess": 293.1,
+    "generate": 1636.2,
+    "verify": 295.3
+   },
+   "totalMs": 2671.2,
+   "jevCalls": 3,
+   "jevTokens": 3024,
+   "llmTokens": 308,
+   "baseline": {
+    "answer": "通勤手当の支給額は、月50,000円が上限と定められています [1]。",
+    "totalMs": 1610.6,
+    "llmTokens": 488
+   }
+  },
+  {
+   "id": "h03",
+   "split": "holdout",
+   "type": "answerable",
+   "query": "APIキーを止めずに切り替える方法を教えて",
+   "answerable": true,
+   "status": "answered",
+   "answer": "APIキーは1つのプロジェクトにつき最大2本まで同時に有効にできるため、新しいキーを発行してから古いキーを無効化することで停止せずに切り替えられます[1]。",
+   "triage": {
+    "intent": "knowledge_search",
+    "intent_confidence": 0.5,
+    "route": "api",
+    "route_confidence": 0.89,
+    "decompose": 0.12
+   },
+   "subQueries": [],
+   "retrieved": [
+    {
+     "id": "api/auth.md#4",
+     "title": "SampleCloud API 認証仕様",
+     "heading": "APIキーのローテーション",
+     "text": "APIキーは1つのプロジェクトにつき最大2本まで同時に有効にできる。新しいキーを発行してから古いキーを無効化することで、停止せずにキーを切り替えられる。",
+     "relevance": 1.79,
+     "accepted": true
+    },
+    {
+     "id": "api/auth.md#1",
+     "title": "SampleCloud API 認証仕様",
+     "heading": "認証方式",
+     "text": "SampleCloud API は、APIキーと OAuth 2.0（クライアントクレデンシャルズフロー）の2つの認証方式に対応する。",
+     "relevance": 0.32,
+     "accepted": false
+    },
+    {
+     "id": "api/rate_limit.md#1",
+     "title": "SampleCloud API レート制限",
+     "heading": "プラン別の上限",
+     "text": "1分あたりのリクエスト数の上限は、Freeプランが60回、Standardプランが600回、Enterpriseプランが6,000回である。",
+     "relevance": 0.02,
+     "accepted": false
+    },
+    {
+     "id": "api/rate_limit.md#3",
+     "title": "SampleCloud API レート制限",
+     "heading": "上限を超えたとき",
+     "text": "上限を超えると HTTP 429 が返る。レスポンスの Retry-After ヘッダーに、再試行できるまでの秒数が入る。",
+     "relevance": 0.04,
+     "accepted": false
+    },
+    {
+     "id": "api/rate_limit.md#2",
+     "title": "SampleCloud API レート制限",
+     "heading": "瞬間的なリクエスト（バースト）",
+     "text": "1秒あたりの上限は、Freeプランが5回、Standardプランが20回、Enterpriseプランが100回である。",
+     "relevance": 0.02,
+     "accepted": false
+    }
+   ],
+   "sufficiency": 0.95,
+   "claims": [
+    {
+     "text": "APIキーは1つのプロジェクトにつき最大2本まで同時に有効にできるため、新しいキーを発行してから古いキーを無効化することで停止せずに切り替えられます。",
+     "support": 0.92,
+     "supported": true
+    }
+   ],
+   "citations": [
+    "api/auth.md#4"
+   ],
+   "timingsMs": {
+    "triage": 237.9,
+    "retrieval": 318.0,
+    "assess": 206.9,
+    "generate": 1653.6,
+    "verify": 204.1
+   },
+   "totalMs": 2620.5,
+   "jevCalls": 3,
+   "jevTokens": 3055,
+   "llmTokens": 452,
+   "baseline": {
+    "answer": "APIキーは1つのプロジェクトにつき最大2本まで同時に有効にできます [1]。そのため、新しいキーを発行してから古いキーを無効化することで、停止せずにキーを切り替えられます [1]。",
+    "totalMs": 1959.0,
+    "llmTokens": 443
+   }
+  },
+  {
+   "id": "h04",
+   "split": "holdout",
+   "type": "answerable",
+   "query": "有休の繰り越し",
+   "answerable": true,
+   "status": "answered",
+   "answer": "当年度に使い切れなかった年次有給休暇は、翌年度に限り最大20日まで繰り越すことができます [1]。また、繰り越し分と当年度付与分を合わせて保有できる日数は最大40日であり、上限を超えた日数は消滅します [1]。",
+   "triage": {
+    "intent": "knowledge_search",
+    "intent_confidence": 0.76,
+    "route": "hr",
+    "route_confidence": 1.0,
+    "decompose": 0.16
+   },
+   "subQueries": [],
+   "retrieved": [
+    {
+     "id": "hr/leave.md#4",
+     "title": "休暇規程",
+     "heading": "第4条 年次有給休暇の繰り越し",
+     "text": "当年度に使い切れなかった年次有給休暇は、翌年度に限り繰り越すことができる。繰り越せる日数の上限は20日とし、繰り越し分と当年度付与分を合わせて保有できる日数は最大40日とする。上限を超えた日数は消滅する。",
+     "relevance": 1.82,
+     "accepted": true
+    },
+    {
+     "id": "hr/leave.md#1",
+     "title": "休暇規程",
+     "heading": "第1条 年次有給休暇の付与",
+     "text": "入社日から6か月間継続勤務し、所定労働日の8割以上出勤した社員には、10日の年次有給休暇を付与する。その後は1年ごとに勤続年数に応じて付与日数を増やし、勤続6年6か月以上で年20日を上限とする。",
+     "relevance": 0.71,
+     "accepted": false
+    },
+    {
+     "id": "hr/leave.md#3",
+     "title": "休暇規程",
+     "heading": "第3条 取得の申請",
+     "text": "年次有給休暇を取得するときは、原則として取得日の3営業日前までに勤怠システムで申請し、所属長の承認を得る。急病などやむを得ない場合は、事後の申請を認める。",
+     "relevance": 0.17,
+     "accepted": false
+    },
+    {
+     "id": "hr/leave.md#2",
+     "title": "休暇規程",
+     "heading": "第2条 取得単位",
+     "text": "年次有給休暇は1日単位のほか、半日単位（年10回まで）および時間単位（年5日分まで）で取得できる。",
+     "relevance": 0.2,
+     "accepted": false
+    },
+    {
+     "id": "hr/leave.md#5",
+     "title": "休暇規程",
+     "heading": "第5条 特別休暇",
+     "text": "会社は、年次有給休暇とは別に、次の特別休暇を有給で付与する。\n- 夏季休暇：毎年7月から9月の間に3日\n- 結婚休暇：本人が結婚したとき5日（入籍日から6か月以内に取得）\n- 配偶者出産休暇：配偶者が出産したとき3日\n- 忌引休暇：配偶者・父母・子が亡くなったとき5日、祖父母・兄弟姉妹が亡くなったとき2日\n\n特別休暇は翌年度に繰り越すことはできない。",
+     "relevance": 1.06,
+     "accepted": true
+    }
+   ],
+   "sufficiency": 0.81,
+   "claims": [
+    {
+     "text": "当年度に使い切れなかった年次有給休暇は、翌年度に限り最大20日まで繰り越すことができます。",
+     "support": 0.98,
+     "supported": true
+    },
+    {
+     "text": "また、繰り越し分と当年度付与分を合わせて保有できる日数は最大40日であり、上限を超えた日数は消滅します。",
+     "support": 0.98,
+     "supported": true
+    }
+   ],
+   "citations": [
+    "hr/leave.md#4",
+    "hr/leave.md#5"
+   ],
+   "timingsMs": {
+    "triage": 217.9,
+    "retrieval": 281.7,
+    "assess": 196.0,
+    "generate": 1783.0,
+    "verify": 280.8
+   },
+   "totalMs": 2759.4,
+   "jevCalls": 3,
+   "jevTokens": 3592,
+   "llmTokens": 420,
+   "baseline": {
+    "answer": "当年度に使い切れなかった年次有給休暇は、翌年度に限り最大20日まで繰り越すことができます [1]。繰り越し分と当年度付与分を合わせて保有できる日数は最大40日であり、上限を超えた日数は消滅します [1]。",
+    "totalMs": 2057.9,
+    "llmTokens": 626
+   }
+  },
+  {
+   "id": "h05",
+   "split": "holdout",
+   "type": "answerable",
+   "query": "Webhookの署名方式",
+   "answerable": true,
+   "status": "answered",
+   "answer": "Webhookの署名方式は、リクエストボディをWebhookシークレットでHMAC-SHA256署名する方式です[1]。",
+   "triage": {
+    "intent": "knowledge_search",
+    "intent_confidence": 0.6,
+    "route": "api",
+    "route_confidence": 1.0,
+    "decompose": 0.1
+   },
+   "subQueries": [],
+   "retrieved": [
+    {
+     "id": "api/webhooks.md#1",
+     "title": "SampleCloud Webhook 仕様",
+     "heading": "署名の検証",
+     "text": "Webhook のリクエストには X-Sample-Signature ヘッダーが付く。値は、リクエストボディを Webhook シークレットで HMAC-SHA256 署名したものである。受信側はこの署名を検証し、一致しないリクエストを破棄すること。",
+     "relevance": 1.88,
+     "accepted": true
+    },
+    {
+     "id": "api/webhooks.md#2",
+     "title": "SampleCloud Webhook 仕様",
+     "heading": "タイムアウトとリトライ",
+     "text": "受信側は10秒以内に 2xx のステータスコードを返す必要がある。それ以外の応答やタイムアウトは失敗とみなし、1分、2分、4分、8分、16分の間隔で最大5回まで再送する。",
+     "relevance": 0.08,
+     "accepted": false
+    },
+    {
+     "id": "api/auth.md#1",
+     "title": "SampleCloud API 認証仕様",
+     "heading": "認証方式",
+     "text": "SampleCloud API は、APIキーと OAuth 2.0（クライアントクレデンシャルズフロー）の2つの認証方式に対応する。",
+     "relevance": 0.1,
+     "accepted": false
+    },
+    {
+     "id": "api/errors.md#1",
+     "title": "SampleCloud API エラーコード",
+     "heading": "クライアントエラー",
+     "text": "- 400 Bad Request：リクエストの形式が正しくない\n- 401 Unauthorized：認証情報がない、または期限切れ\n- 403 Forbidden：権限がない操作を行った\n- 404 Not Found：対象のリソースが存在しない\n- 409 Conflict：同じリソースを同時に更新しようとした\n- 422 Unprocessable Entity：入力値の検証に失敗した\n- 429 Too Many Requests：レート制限を超えた",
+     "relevance": 0.03,
+     "accepted": false
+    },
+    {
+     "id": "api/auth.md#2",
+     "title": "SampleCloud API 認証仕様",
+     "heading": "アクセストークン",
+     "text": "OAuth 2.0 で発行されるアクセストークンの有効期限は1時間である。期限切れのトークンでリクエストすると HTTP 401 が返る。",
+     "relevance": 0.14,
+     "accepted": false
+    }
+   ],
+   "sufficiency": 0.96,
+   "claims": [
+    {
+     "text": "Webhookの署名方式は、リクエストボディをWebhookシークレットでHMAC-SHA256署名する方式です。",
+     "support": 0.98,
+     "supported": true
+    }
+   ],
+   "citations": [
+    "api/webhooks.md#1"
+   ],
+   "timingsMs": {
+    "triage": 524.8,
+    "retrieval": 17.0,
+    "assess": 229.0,
+    "generate": 1849.3,
+    "verify": 193.9
+   },
+   "totalMs": 2814.1,
+   "jevCalls": 3,
+   "jevTokens": 3199,
+   "llmTokens": 381,
+   "baseline": {
+    "answer": "Webhookの署名は、リクエストボディをWebhookシークレットでHMAC-SHA256署名したものであり、X-Sample-Signatureヘッダーに付与されます [1]。受信側はこの署名を検証し、一致しないリクエストを破棄する必要があります [1]。",
+    "totalMs": 1908.5,
+    "llmTokens": 680
+   }
+  },
+  {
+   "id": "h06",
+   "split": "holdout",
+   "type": "unanswerable",
+   "query": "駐車場",
+   "answerable": false,
+   "status": "clarify",
+   "answer": "ご質問の対象が特定できませんでした。どの制度・手続き・仕様について知りたいか、もう少し具体的に教えてください。",
+   "triage": {
+    "intent": "clarification_needed",
+    "intent_confidence": 0.8,
+    "route": "general",
+    "route_confidence": 0.97,
+    "decompose": 0.07
+   },
+   "subQueries": [],
+   "retrieved": [],
+   "sufficiency": null,
+   "claims": [],
+   "citations": [],
+   "timingsMs": {
+    "triage": 206.5
+   },
+   "totalMs": 206.5,
+   "jevCalls": 1,
+   "jevTokens": 947,
+   "llmTokens": 0,
+   "baseline": {
+    "answer": "駐車場については資料に記載がありません。",
+    "totalMs": 2514.9,
+    "llmTokens": 482
+   }
+  },
+  {
+   "id": "h07",
+   "split": "holdout",
+   "type": "unanswerable",
+   "query": "副業の申請方法",
+   "answerable": false,
+   "status": "no_answer",
+   "answer": "社内の資料を確認しましたが、このご質問に答えられる記載は見つかりませんでした。担当部署へお問い合わせください。",
+   "triage": {
+    "intent": "knowledge_search",
+    "intent_confidence": 0.98,
+    "route": "hr",
+    "route_confidence": 0.99,
+    "decompose": 0.1
+   },
+   "subQueries": [],
+   "retrieved": [
+    {
+     "id": "hr/remote_work.md#2",
+     "title": "在宅勤務規程",
+     "heading": "第2条 実施日数と申請",
+     "text": "在宅勤務は週3日までとする。在宅勤務を行う週の前週金曜日までに勤怠システムで申請し、所属長の承認を得る。",
+     "relevance": 0.08,
+     "accepted": false
+    },
+    {
+     "id": "hr/leave.md#3",
+     "title": "休暇規程",
+     "heading": "第3条 取得の申請",
+     "text": "年次有給休暇を取得するときは、原則として取得日の3営業日前までに勤怠システムで申請し、所属長の承認を得る。急病などやむを得ない場合は、事後の申請を認める。",
+     "relevance": 0.2,
+     "accepted": false
+    },
+    {
+     "id": "hr/working_hours.md#3",
+     "title": "勤務時間・フレックスタイム規程",
+     "heading": "第3条 時間外労働",
+     "text": "時間外労働を行う場合は、事前に勤怠システムで申請し、所属長の承認を得なければならない。22時から翌5時までの深夜労働は原則として禁止する。",
+     "relevance": 0.12,
+     "accepted": false
+    },
+    {
+     "id": "expense/expense.md#1",
+     "title": "経費精算規程",
+     "heading": "第1条 申請期限",
+     "text": "経費は、支出が発生した月の翌月10日までに経費精算システムで申請する。期限を過ぎた申請は、所属長の理由書がある場合に限り受け付ける。",
+     "relevance": 0.1,
+     "accepted": false
+    },
+    {
+     "id": "expense/expense.md#2",
+     "title": "経費精算規程",
+     "heading": "第2条 領収書",
+     "text": "申請には領収書を添付する。紙の領収書はスマートフォンで撮影した画像を添付すれば、原本の提出は不要とする。",
+     "relevance": 0.09,
+     "accepted": false
+    }
+   ],
+   "sufficiency": 0.04,
+   "claims": [],
+   "citations": [],
+   "timingsMs": {
+    "triage": 331.4,
+    "retrieval": 140.3,
+    "assess": 243.9
+   },
+   "totalMs": 715.6,
+   "jevCalls": 2,
+   "jevTokens": 2541,
+   "llmTokens": 0,
+   "baseline": {
+    "answer": "副業の申請方法については、資料に記載がありません。",
+    "totalMs": 2342.9,
+    "llmTokens": 619
+   }
+  },
+  {
+   "id": "h08",
+   "split": "holdout",
+   "type": "chitchat",
+   "query": "ありがとうございました！",
+   "answerable": false,
+   "status": "direct",
+   "answer": "こんにちは！社内の規程や手続きについて、知りたいことを質問してください。",
+   "triage": {
+    "intent": "direct_answer",
+    "intent_confidence": 1.0,
+    "route": "general",
+    "route_confidence": 0.95,
+    "decompose": 0.02
+   },
+   "subQueries": [],
+   "retrieved": [],
+   "sufficiency": null,
+   "claims": [],
+   "citations": [],
+   "timingsMs": {
+    "triage": 329.4
+   },
+   "totalMs": 329.4,
+   "jevCalls": 1,
+   "jevTokens": 943,
+   "llmTokens": 0,
+   "baseline": {
+    "answer": "お役に立てて幸いです。なお、今後のご案内等について資料に記載がありません。",
+    "totalMs": 2906.0,
+    "llmTokens": 453
+   }
+  },
+  {
+   "id": "h09",
+   "split": "holdout",
+   "type": "vague",
+   "query": "これってどう？",
+   "answerable": false,
+   "status": "clarify",
+   "answer": "ご質問の対象が特定できませんでした。どの制度・手続き・仕様について知りたいか、もう少し具体的に教えてください。",
+   "triage": {
+    "intent": "clarification_needed",
+    "intent_confidence": 0.99,
+    "route": "general",
+    "route_confidence": 0.96,
+    "decompose": 0.1
+   },
+   "subQueries": [],
+   "retrieved": [],
+   "sufficiency": null,
+   "claims": [],
+   "citations": [],
+   "timingsMs": {
+    "triage": 276.7
+   },
+   "totalMs": 276.7,
+   "jevCalls": 1,
+   "jevTokens": 950,
+   "llmTokens": 0,
+   "baseline": {
+    "answer": "ご質問の内容についての詳細は資料に記載がありません。具体的な確認事項をお知らせください。",
+    "totalMs": 2883.7,
+    "llmTokens": 560
+   }
+  },
+  {
+   "id": "h10",
+   "split": "holdout",
+   "type": "vague",
+   "query": "例のやつ、教えて",
+   "answerable": false,
+   "status": "clarify",
+   "answer": "ご質問の対象が特定できませんでした。どの制度・手続き・仕様について知りたいか、もう少し具体的に教えてください。",
+   "triage": {
+    "intent": "clarification_needed",
+    "intent_confidence": 1.0,
+    "route": "general",
+    "route_confidence": 0.79,
+    "decompose": 0.09
+   },
+   "subQueries": [],
+   "retrieved": [],
+   "sufficiency": null,
+   "claims": [],
+   "citations": [],
+   "timingsMs": {
+    "triage": 251.7
+   },
+   "totalMs": 251.7,
+   "jevCalls": 1,
+   "jevTokens": 951,
+   "llmTokens": 0,
+   "baseline": {
+    "answer": "お問い合わせの件について、提示された資料に記載がありません。",
+    "totalMs": 3832.4,
+    "llmTokens": 524
    }
   },
   {

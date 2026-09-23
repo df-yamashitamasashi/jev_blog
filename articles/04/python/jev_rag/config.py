@@ -20,9 +20,12 @@ class Settings:
     # Gate thresholds
     relevance_threshold: float = 1.0  # Gate 3: Score expected value (0-2)
     sufficiency_threshold: float = 0.70  # Gate 4: Yes probability
-    support_threshold: float = 0.85  # Gate 5: Yes probability
+    support_threshold: float = 0.80  # Gate 5: Yes probability
     decompose_threshold: float = 0.75  # Gate 2: Yes probability
     route_confidence_threshold: float = 0.60  # Gate 1: route confidence
+    # Gate 1: a "greeting" / "vague" verdict below this confidence is treated as
+    # "search the documents" (asking back on a real question is worse than searching)
+    intent_confidence_threshold: float = 0.50
 
     # Behaviour
     fail_mode: Literal["closed", "open"] = "closed"  # when Jev is unavailable

@@ -77,7 +77,7 @@ except ImportError:
 # Thresholds (see the article for the trade-offs of each value)
 RELEVANCE_THRESHOLD = 1.0  # Gate 3: Score expected value (0-2)
 SUFFICIENCY_THRESHOLD = 0.70  # Gate 4: Yes probability
-SUPPORT_THRESHOLD = 0.85  # Gate 5: Yes probability
+SUPPORT_THRESHOLD = 0.80  # Gate 5: Yes probability
 DECOMPOSE_THRESHOLD = 0.75  # Gate 2: Yes probability
 TOP_K = 5
 
@@ -454,7 +454,11 @@ class JevAdaptiveRagPipeline:
                 ),
             },
         )
-        intent = triage_resp.answers["intent"].choice
+        intent_ans = triage_resp.answers["intent"]
+        intent = intent_ans.choice
+        # A low-confidence "greeting" / "vague" verdict is treated as a real question
+        if intent != "knowledge_search" and intent_ans.confidence < 0.5:
+            intent = "knowledge_search"
 
         if intent in ("direct_answer", "clarification_needed"):
             answer = (

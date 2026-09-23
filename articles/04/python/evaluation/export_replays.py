@@ -3,7 +3,8 @@
     cd articles/04/python
     python -m evaluation.export_replays
 
-Writes ../jev-rag-workbench/public/replays.json (no API calls).
+Writes ../jev-rag-workbench/public/replays.json (no API calls). Uses the v2 results
+(see run_v2.py): the evaluated questions with v2 applied, plus the unseen holdout set.
 """
 
 import json
@@ -22,8 +23,12 @@ def main() -> None:
     index = json.loads((RESULTS / "index.json").read_text(encoding="utf-8"))
     chunks = {c["id"]: c for c in index["chunks"]}
     records = []
-    for split in ("test", "dev"):
-        for r in load(RESULTS / split / "questions.jsonl"):
+    for split, folder in (
+        ("test", "test_v2"),
+        ("holdout", "holdout"),
+        ("dev", "dev_v2"),
+    ):
+        for r in load(RESULTS / folder / "questions.jsonl"):
             g = r["gates"]
             accepted = set(g.get("accepted", []))
             # Rows served from the response cache have no real timings (dev re-runs)
@@ -70,8 +75,8 @@ def main() -> None:
             "jevModel": "jev-1.13.0",
             "generationModel": "gemini-3.8-flash",
             "embeddingModel": "gemini-embedding-2",
-            "thresholds": {"relevance": 1.0, "sufficiency": 0.7, "support": 0.85},
-            "note": "本物の Jev / Gemini API で実行した評価の記録（test 60問＋調整用 dev 8問）",
+            "thresholds": {"relevance": 1.0, "sufficiency": 0.7, "support": 0.8},
+            "note": "本物の Jev / Gemini API で実行した評価の記録（評価60問＋追加10問＋調整用8問）",
         },
         "records": records,
     }

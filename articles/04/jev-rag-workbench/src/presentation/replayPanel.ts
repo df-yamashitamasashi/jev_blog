@@ -10,6 +10,7 @@ const GROUPS: { label: string; match: (r: ReplayRecord) => boolean }[] = [
   { label: '惜しいけれど答えのない質問', match: (r) => r.split === 'test' && r.type === 'unanswerable' },
   { label: '閲覧権限のない文書にしか答えがない質問', match: (r) => r.split === 'test' && r.type === 'restricted' },
   { label: '挨拶・曖昧な入力', match: (r) => r.split === 'test' && (r.type === 'chitchat' || r.type === 'vague') },
+  { label: '追加の10問（改善後に初めて実行）', match: (r) => r.split === 'holdout' },
   { label: '調整用（dev）', match: (r) => r.split === 'dev' },
 ];
 
@@ -46,7 +47,7 @@ export class ReplayPanel {
         <span class="counts-badge">${data.records.length}問</span>
       </div>
       <p class="replay-note">
-        本物の Jev（${data.meta.jevModel}）と Gemini（${data.meta.generationModel}）で実行した評価の記録です。
+        本物の Jev（${data.meta.jevModel}）と Gemini（${data.meta.generationModel}）で実行した記録です。
         API キーがなくても、実際に誰が何をしたかを図で確認できます。
       </p>
       <div class="presets-grid">

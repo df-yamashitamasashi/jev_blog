@@ -99,7 +99,8 @@ LLM や Embedding を別のサービスに替える場合は、`jev_rag.gemini.G
 | `TOP_K` | `5` | 検索で取り出すチャンク数 |
 | `RELEVANCE_THRESHOLD` | `1.0` | Gate 3: この点数（0〜2）未満のチャンクは LLM に渡さない |
 | `SUFFICIENCY_THRESHOLD` | `0.70` | Gate 4: 「答えられる」確率がこれ未満なら回答しない |
-| `SUPPORT_THRESHOLD` | `0.85` | Gate 5: 「文書で裏付けられる」確率がこれ未満の文に印を付ける |
+| `SUPPORT_THRESHOLD` | `0.80` | Gate 5: 「文書で裏付けられる」確率がこれ未満の文に印を付ける |
+| `INTENT_CONFIDENCE_THRESHOLD` | `0.50` | Gate 1: 「挨拶」「曖昧」の判定がこの確信度未満なら、文書を調べる |
 | `USE_ROUTING` | `false` | Gate 1 の分野判定で検索を絞り込む |
 | `FAIL_MODE` | `closed` | Jev に接続できないとき。`closed`＝回答しない / `open`＝検証なしで回答 |
 | `UNSUPPORTED_POLICY` | `flag` | 根拠のない文を `flag`＝印を付けて残す / `remove`＝削除する |
