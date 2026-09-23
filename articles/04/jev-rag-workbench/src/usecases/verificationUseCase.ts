@@ -1,14 +1,18 @@
 /**
- * UseCase: Gate 5 - Faithfulness & Citation Verification
+ * UseCase: Gate 5 - Faithfulness & Citation Verification (all sentences in ONE Jev call)
  */
 
 import { JevClient } from '../adapters/jevClient';
-import { Noul, NoulAnswer } from '../domain/jevPrimitives';
+import { JevQuestion, NoulAnswer } from '../domain/jevPrimitives';
 import { ClaimVerification, RerankedPassage } from '../domain/models';
 import { coverage } from '../domain/textSimilarity';
+import { displayText } from './assessUseCase';
 
-// Yes 確率 0.85 以上の文だけを「裏付けあり」とする（誤って通すより、疑わしい文に警告を出す側に寄せる）
+// Yes 確率 0.85 以上の文だけを「裏付けあり」とする（見逃すより、疑わしい文に警告を出す側に寄せる）
 export const SUPPORT_THRESHOLD = 0.85;
+
+// 「資料に記載がありません」のような文は事実の主張ではないので検証しない
+export const NO_INFO_PATTERN = /(記載|記述|情報)が(ありません|見当たりません|ございません)|記載されていません/;
 
 export interface VerificationResult {
   claims: ClaimVerification[];
@@ -17,61 +21,52 @@ export interface VerificationResult {
   totalLatencyMs: number;
 }
 
-const SUPPORT_QUESTION: Noul = {
-  type: 'noul',
-  instructions:
-    '`claim` に書かれた主張や数値・条件は、`source` の文脈によって論理的かつ事実として客観的に裏付けられていますか？',
-};
-
 export class VerificationUseCase {
   constructor(private jevClient: JevClient) {}
 
   async execute(claims: string[], passages: RerankedPassage[]): Promise<VerificationResult> {
-    if (claims.length === 0) {
-      return {
-        claims: [],
-        attributionScore: 100,
-        allPassed: true,
-        totalLatencyMs: 0,
-      };
+    const factual = claims.filter((c) => !NO_INFO_PATTERN.test(c));
+    if (factual.length === 0) {
+      return { claims: [], attributionScore: 100, allPassed: true, totalLatencyMs: 0 };
     }
 
-    const startTime = performance.now();
-    const fullSourceText = passages.map((p) => p.chunk.text).join('\n');
+    const state: Record<string, string> = {
+      source: passages.map((p) => displayText(p.chunk)).join('\n\n'),
+    };
+    const questions: Record<string, JevQuestion> = {};
+    factual.forEach((claim, i) => {
+      const n = i + 1;
+      state[`claim_${n}`] = claim;
+      questions[`supported_${n}`] = {
+        type: 'noul',
+        instructions: `\`claim_${n}\` の内容（数値・条件・対象を含む）は、\`source\` に書かれていることだけで裏付けられますか？`,
+      };
+    });
 
-    // Verify all claims in parallel (one Jev call per claim)
-    const verifiedClaims: ClaimVerification[] = await Promise.all(
-      claims.map(async (claim) => {
-        const response = await this.jevClient.systemOne({
-          state: { claim, source: fullSourceText },
-          questions: { is_supported: SUPPORT_QUESTION },
-        });
-        const noulAns = response.answers['is_supported'] as NoulAnswer;
-        const supportScore = noulAns ? noulAns.noul : 0;
-        const isSupported = supportScore >= SUPPORT_THRESHOLD;
+    const response = await this.jevClient.systemOne({ state, questions });
 
-        // 引用元の表示用に、主張と最も重なりの大きいパッセージを紐づける
-        const source = isSupported ? this.findBestPassage(claim, passages) : undefined;
-
-        return {
-          claim,
-          sourceChunkId: source?.chunk.id,
-          sourceDocTitle: source?.chunk.docTitle,
-          isSupported,
-          supportScore,
-          noulAnswer: noulAns,
-          latencyMs: response.latencyMs,
-        };
-      })
-    );
+    const verifiedClaims: ClaimVerification[] = factual.map((claim, i) => {
+      const noulAns = (response.answers[`supported_${i + 1}`] as NoulAnswer | undefined) ?? { noul: 0 };
+      const isSupported = noulAns.noul >= SUPPORT_THRESHOLD;
+      // 引用元の表示用に、主張と最も重なりの大きいパッセージを紐づける
+      const source = isSupported ? this.findBestPassage(claim, passages) : undefined;
+      return {
+        claim,
+        sourceChunkId: source?.chunk.id,
+        sourceDocTitle: source?.chunk.docTitle,
+        isSupported,
+        supportScore: noulAns.noul,
+        noulAnswer: noulAns,
+        latencyMs: response.latencyMs,
+      };
+    });
 
     const passedCount = verifiedClaims.filter((c) => c.isSupported).length;
-
     return {
       claims: verifiedClaims,
       attributionScore: Math.round((passedCount / verifiedClaims.length) * 100),
       allPassed: passedCount === verifiedClaims.length,
-      totalLatencyMs: Math.round(performance.now() - startTime),
+      totalLatencyMs: response.latencyMs,
     };
   }
 

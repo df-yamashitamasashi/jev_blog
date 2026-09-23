@@ -1,0 +1,5292 @@
+{
+ "meta": {
+  "jevModel": "jev-1.13.0",
+  "generationModel": "gemini-3.8-flash",
+  "embeddingModel": "gemini-embedding-2",
+  "thresholds": {
+   "relevance": 1.0,
+   "sufficiency": 0.7,
+   "support": 0.85
+  },
+  "note": "本物の Jev / Gemini API で実行した評価の記録（test 60問＋調整用 dev 8問）"
+ },
+ "records": [
+  {
+   "id": "t01",
+   "split": "test",
+   "type": "answerable",
+   "query": "有給休暇は入社してからいつ、何日もらえますか？",
+   "answerable": true,
+   "status": "answered",
+   "answer": "入社日から6か月間継続勤務し、所定労働日の8割以上出勤した場合に、10日の年次有給休暇が付与されます [1]。その後は1年ごとに勤続年数に応じて付与日数が増え、勤続6年6か月以上で年20日が上限となります [1]。",
+   "triage": {
+    "intent": "knowledge_search",
+    "intent_confidence": 0.99,
+    "route": "hr",
+    "route_confidence": 1.0,
+    "decompose": 0.52
+   },
+   "subQueries": [],
+   "retrieved": [
+    {
+     "id": "hr/leave.md#1",
+     "title": "休暇規程",
+     "heading": "第1条 年次有給休暇の付与",
+     "text": "入社日から6か月間継続勤務し、所定労働日の8割以上出勤した社員には、10日の年次有給休暇を付与する。その後は1年ごとに勤続年数に応じて付与日数を増やし、勤続6年6か月以上で年20日を上限とする。",
+     "relevance": 1.83,
+     "accepted": true
+    },
+    {
+     "id": "hr/leave.md#2",
+     "title": "休暇規程",
+     "heading": "第2条 取得単位",
+     "text": "年次有給休暇は1日単位のほか、半日単位（年10回まで）および時間単位（年5日分まで）で取得できる。",
+     "relevance": 0.87,
+     "accepted": false
+    },
+    {
+     "id": "hr/leave.md#3",
+     "title": "休暇規程",
+     "heading": "第3条 取得の申請",
+     "text": "年次有給休暇を取得するときは、原則として取得日の3営業日前までに勤怠システムで申請し、所属長の承認を得る。急病などやむを得ない場合は、事後の申請を認める。",
+     "relevance": 0.75,
+     "accepted": false
+    },
+    {
+     "id": "hr/leave.md#4",
+     "title": "休暇規程",
+     "heading": "第4条 年次有給休暇の繰り越し",
+     "text": "当年度に使い切れなかった年次有給休暇は、翌年度に限り繰り越すことができる。繰り越せる日数の上限は20日とし、繰り越し分と当年度付与分を合わせて保有できる日数は最大40日とする。上限を超えた日数は消滅する。",
+     "relevance": 0.83,
+     "accepted": false
+    },
+    {
+     "id": "hr/leave.md#5",
+     "title": "休暇規程",
+     "heading": "第5条 特別休暇",
+     "text": "会社は、年次有給休暇とは別に、次の特別休暇を有給で付与する。\n- 夏季休暇：毎年7月から9月の間に3日\n- 結婚休暇：本人が結婚したとき5日（入籍日から6か月以内に取得）\n- 配偶者出産休暇：配偶者が出産したとき3日\n- 忌引休暇：配偶者・父母・子が亡くなったとき5日、祖父母・兄弟姉妹が亡くなったとき2日\n\n特別休暇は翌年度に繰り越すことはできない。",
+     "relevance": 1.0,
+     "accepted": true
+    }
+   ],
+   "sufficiency": 0.88,
+   "claims": [
+    {
+     "text": "入社日から6か月間継続勤務し、所定労働日の8割以上出勤した場合に、10日の年次有給休暇が付与されます。",
+     "support": 0.98,
+     "supported": true
+    },
+    {
+     "text": "その後は1年ごとに勤続年数に応じて付与日数が増え、勤続6年6か月以上で年20日が上限となります。",
+     "support": 0.97,
+     "supported": true
+    }
+   ],
+   "citations": [
+    "hr/leave.md#1",
+    "hr/leave.md#5"
+   ],
+   "timingsMs": {
+    "triage": 393.6,
+    "retrieval": 178.2,
+    "assess": 294.3,
+    "generate": 2836.2,
+    "verify": 222.5
+   },
+   "totalMs": 3924.8,
+   "jevCalls": 3,
+   "jevTokens": 3614,
+   "llmTokens": 573,
+   "baseline": {
+    "answer": "入社日から6か月間継続勤務し、所定労働日の8割以上出勤した社員に対して、10日の年次有給休暇が付与されます [1]。その後は1年ごとに勤続年数に応じて付与日数が増え、勤続6年6か月以上で年20日が上限となります [1]。",
+    "totalMs": 2112.1,
+    "llmTokens": 643
+   }
+  },
+  {
+   "id": "t02",
+   "split": "test",
+   "type": "answerable",
+   "query": "使い切れなかった有休は来年に持ち越せる？上限は？",
+   "answerable": true,
+   "status": "answered",
+   "answer": "当年度に使い切れなかった年次有給休暇は、翌年度に限り繰り越すことができます [1]。繰り越せる日数の上限は20日であり、繰り越し分と当年度付与分を合わせて保有できる日数は最大40日となります [1]。",
+   "triage": {
+    "intent": "knowledge_search",
+    "intent_confidence": 0.97,
+    "route": "hr",
+    "route_confidence": 1.0,
+    "decompose": 0.76
+   },
+   "subQueries": [
+    "使い切れなかった有休は来年に持ち越せる？上限は？"
+   ],
+   "retrieved": [
+    {
+     "id": "hr/leave.md#4",
+     "title": "休暇規程",
+     "heading": "第4条 年次有給休暇の繰り越し",
+     "text": "当年度に使い切れなかった年次有給休暇は、翌年度に限り繰り越すことができる。繰り越せる日数の上限は20日とし、繰り越し分と当年度付与分を合わせて保有できる日数は最大40日とする。上限を超えた日数は消滅する。",
+     "relevance": 1.78,
+     "accepted": true
+    },
+    {
+     "id": "hr/leave.md#1",
+     "title": "休暇規程",
+     "heading": "第1条 年次有給休暇の付与",
+     "text": "入社日から6か月間継続勤務し、所定労働日の8割以上出勤した社員には、10日の年次有給休暇を付与する。その後は1年ごとに勤続年数に応じて付与日数を増やし、勤続6年6か月以上で年20日を上限とする。",
+     "relevance": 0.86,
+     "accepted": false
+    },
+    {
+     "id": "expense/domestic_travel.md#3",
+     "title": "国内出張旅費規程",
+     "heading": "第3条 宿泊費",
+     "text": "宿泊費は実費を支給する。1泊あたりの上限は、東京23区・大阪市・名古屋市が12,000円、その他の地域が10,000円とする。",
+     "relevance": 0.01,
+     "accepted": false
+    },
+    {
+     "id": "hr/allowances.md#2",
+     "title": "給与・諸手当規程",
+     "heading": "第2条 通勤手当",
+     "text": "公共交通機関を利用して通勤する社員には、最も経済的かつ合理的な経路の定期券代を通勤手当として支給する。支給額は月50,000円を上限とする。",
+     "relevance": 0.02,
+     "accepted": false
+    },
+    {
+     "id": "api/rate_limit.md#3",
+     "title": "SampleCloud API レート制限",
+     "heading": "上限を超えたとき",
+     "text": "上限を超えると HTTP 429 が返る。レスポンスの Retry-After ヘッダーに、再試行できるまでの秒数が入る。",
+     "relevance": 0.01,
+     "accepted": false
+    }
+   ],
+   "sufficiency": 0.96,
+   "claims": [
+    {
+     "text": "当年度に使い切れなかった年次有給休暇は、翌年度に限り繰り越すことができます。",
+     "support": 0.98,
+     "supported": true
+    },
+    {
+     "text": "繰り越せる日数の上限は20日であり、繰り越し分と当年度付与分を合わせて保有できる日数は最大40日となります。",
+     "support": 0.97,
+     "supported": true
+    }
+   ],
+   "citations": [
+    "hr/leave.md#4"
+   ],
+   "timingsMs": {
+    "triage": 275.0,
+    "retrieval": 188.7,
+    "assess": 214.5,
+    "generate": 2368.3,
+    "verify": 241.4
+   },
+   "totalMs": 3288.0,
+   "jevCalls": 3,
+   "jevTokens": 3311,
+   "llmTokens": 501,
+   "baseline": {
+    "answer": "当年度に使い切れなかった年次有給休暇は、翌年度に限り繰り越すことができます [1]。繰り越せる日数の上限は20日であり、繰り越し分と当年度付与分を合わせて保有できる日数は最大40日と定められています [1]。上限を超えた日数は消滅します [1]。",
+    "totalMs": 2984.7,
+    "llmTokens": 584
+   }
+  },
+  {
+   "id": "t03",
+   "split": "test",
+   "type": "answerable",
+   "query": "有給休暇は最大で何日まで保有できますか？",
+   "answerable": true,
+   "status": "answered",
+   "answer": "繰り越し分と当年度付与分を合わせて保有できる年次有給休暇の日数は、最大40日です [1]。上限を超えた日数は消滅します [1]。",
+   "triage": {
+    "intent": "knowledge_search",
+    "intent_confidence": 0.98,
+    "route": "hr",
+    "route_confidence": 1.0,
+    "decompose": 0.05
+   },
+   "subQueries": [],
+   "retrieved": [
+    {
+     "id": "hr/leave.md#4",
+     "title": "休暇規程",
+     "heading": "第4条 年次有給休暇の繰り越し",
+     "text": "当年度に使い切れなかった年次有給休暇は、翌年度に限り繰り越すことができる。繰り越せる日数の上限は20日とし、繰り越し分と当年度付与分を合わせて保有できる日数は最大40日とする。上限を超えた日数は消滅する。",
+     "relevance": 1.82,
+     "accepted": true
+    },
+    {
+     "id": "hr/leave.md#1",
+     "title": "休暇規程",
+     "heading": "第1条 年次有給休暇の付与",
+     "text": "入社日から6か月間継続勤務し、所定労働日の8割以上出勤した社員には、10日の年次有給休暇を付与する。その後は1年ごとに勤続年数に応じて付与日数を増やし、勤続6年6か月以上で年20日を上限とする。",
+     "relevance": 1.01,
+     "accepted": true
+    },
+    {
+     "id": "hr/leave.md#2",
+     "title": "休暇規程",
+     "heading": "第2条 取得単位",
+     "text": "年次有給休暇は1日単位のほか、半日単位（年10回まで）および時間単位（年5日分まで）で取得できる。",
+     "relevance": 0.53,
+     "accepted": false
+    },
+    {
+     "id": "hr/leave.md#3",
+     "title": "休暇規程",
+     "heading": "第3条 取得の申請",
+     "text": "年次有給休暇を取得するときは、原則として取得日の3営業日前までに勤怠システムで申請し、所属長の承認を得る。急病などやむを得ない場合は、事後の申請を認める。",
+     "relevance": 0.16,
+     "accepted": false
+    },
+    {
+     "id": "hr/leave.md#5",
+     "title": "休暇規程",
+     "heading": "第5条 特別休暇",
+     "text": "会社は、年次有給休暇とは別に、次の特別休暇を有給で付与する。\n- 夏季休暇：毎年7月から9月の間に3日\n- 結婚休暇：本人が結婚したとき5日（入籍日から6か月以内に取得）\n- 配偶者出産休暇：配偶者が出産したとき3日\n- 忌引休暇：配偶者・父母・子が亡くなったとき5日、祖父母・兄弟姉妹が亡くなったとき2日\n\n特別休暇は翌年度に繰り越すことはできない。",
+     "relevance": 0.53,
+     "accepted": false
+    }
+   ],
+   "sufficiency": 0.93,
+   "claims": [
+    {
+     "text": "繰り越し分と当年度付与分を合わせて保有できる年次有給休暇の日数は、最大40日です。",
+     "support": 0.97,
+     "supported": true
+    },
+    {
+     "text": "上限を超えた日数は消滅します。",
+     "support": 0.97,
+     "supported": true
+    }
+   ],
+   "citations": [
+    "hr/leave.md#4",
+    "hr/leave.md#1"
+   ],
+   "timingsMs": {
+    "triage": 236.4,
+    "retrieval": 610.5,
+    "assess": 251.3,
+    "generate": 4357.9,
+    "verify": 194.3
+   },
+   "totalMs": 5650.4,
+   "jevCalls": 3,
+   "jevTokens": 3500,
+   "llmTokens": 360,
+   "baseline": {
+    "answer": "年次有給休暇は、繰り越し分と当年度付与分を合わせて最大40日まで保有できます [1]。",
+    "totalMs": 2793.5,
+    "llmTokens": 692
+   }
+  },
+  {
+   "id": "t04",
+   "split": "test",
+   "type": "answerable",
+   "query": "時間単位の有休は年に何日分まで使える？",
+   "answerable": true,
+   "status": "answered",
+   "answer": "時間単位の年次有給休暇は、年に5日分まで取得できます [1]。",
+   "triage": {
+    "intent": "knowledge_search",
+    "intent_confidence": 0.97,
+    "route": "hr",
+    "route_confidence": 1.0,
+    "decompose": 0.08
+   },
+   "subQueries": [],
+   "retrieved": [
+    {
+     "id": "hr/leave.md#2",
+     "title": "休暇規程",
+     "heading": "第2条 取得単位",
+     "text": "年次有給休暇は1日単位のほか、半日単位（年10回まで）および時間単位（年5日分まで）で取得できる。",
+     "relevance": 1.8,
+     "accepted": true
+    },
+    {
+     "id": "hr/working_hours.md#1",
+     "title": "勤務時間・フレックスタイム規程",
+     "heading": "第1条 標準勤務時間",
+     "text": "標準の勤務時間は9時から18時までとし、12時から13時までの60分を休憩時間とする。",
+     "relevance": 0.07,
+     "accepted": false
+    },
+    {
+     "id": "hr/working_hours.md#3",
+     "title": "勤務時間・フレックスタイム規程",
+     "heading": "第3条 時間外労働",
+     "text": "時間外労働を行う場合は、事前に勤怠システムで申請し、所属長の承認を得なければならない。22時から翌5時までの深夜労働は原則として禁止する。",
+     "relevance": 0.03,
+     "accepted": false
+    },
+    {
+     "id": "hr/working_hours.md#4",
+     "title": "勤務時間・フレックスタイム規程",
+     "heading": "第4条 休日",
+     "text": "休日は土曜日、日曜日、国民の祝日および年末年始（12月29日から1月3日）とする。",
+     "relevance": 0.06,
+     "accepted": false
+    },
+    {
+     "id": "hr/working_hours.md#2",
+     "title": "勤務時間・フレックスタイム規程",
+     "heading": "第2条 フレックスタイム制",
+     "text": "全社員にフレックスタイム制を適用する。必ず勤務しなければならないコアタイムは11時から15時まで、始業・終業時刻を選べるフレキシブルタイムは7時から22時までとする。清算期間は1か月とする。",
+     "relevance": 0.05,
+     "accepted": false
+    }
+   ],
+   "sufficiency": 0.98,
+   "claims": [
+    {
+     "text": "時間単位の年次有給休暇は、年に5日分まで取得できます。",
+     "support": 0.97,
+     "supported": true
+    }
+   ],
+   "citations": [
+    "hr/leave.md#2"
+   ],
+   "timingsMs": {
+    "triage": 211.9,
+    "retrieval": 278.3,
+    "assess": 274.9,
+    "generate": 1860.3,
+    "verify": 172.9
+   },
+   "totalMs": 2798.3,
+   "jevCalls": 3,
+   "jevTokens": 3019,
+   "llmTokens": 378,
+   "baseline": {
+    "answer": "時間単位の年次有給休暇は、年に5日分まで取得できます [1]。",
+    "totalMs": 3255.1,
+    "llmTokens": 588
+   }
+  },
+  {
+   "id": "t05",
+   "split": "test",
+   "type": "answerable",
+   "query": "祖母が亡くなった場合の忌引休暇は何日？",
+   "answerable": true,
+   "status": "answered",
+   "answer": "資料には祖父母が亡くなったときの忌引休暇として2日と定められています [1]。したがって、祖母が亡くなった場合は2日付与されます [1]。",
+   "triage": {
+    "intent": "knowledge_search",
+    "intent_confidence": 0.97,
+    "route": "hr",
+    "route_confidence": 1.0,
+    "decompose": 0.05
+   },
+   "subQueries": [],
+   "retrieved": [
+    {
+     "id": "hr/leave.md#5",
+     "title": "休暇規程",
+     "heading": "第5条 特別休暇",
+     "text": "会社は、年次有給休暇とは別に、次の特別休暇を有給で付与する。\n- 夏季休暇：毎年7月から9月の間に3日\n- 結婚休暇：本人が結婚したとき5日（入籍日から6か月以内に取得）\n- 配偶者出産休暇：配偶者が出産したとき3日\n- 忌引休暇：配偶者・父母・子が亡くなったとき5日、祖父母・兄弟姉妹が亡くなったとき2日\n\n特別休暇は翌年度に繰り越すことはできない。",
+     "relevance": 1.82,
+     "accepted": true
+    },
+    {
+     "id": "hr/childcare.md#4",
+     "title": "育児・介護休業規程",
+     "heading": "第4条 子の看護休暇",
+     "text": "小学校入学前の子を養育する社員は、子の看護のため、子が1人の場合は年5日、2人以上の場合は年10日の看護休暇を取得できる。",
+     "relevance": 0.03,
+     "accepted": false
+    },
+    {
+     "id": "hr/leave.md#3",
+     "title": "休暇規程",
+     "heading": "第3条 取得の申請",
+     "text": "年次有給休暇を取得するときは、原則として取得日の3営業日前までに勤怠システムで申請し、所属長の承認を得る。急病などやむを得ない場合は、事後の申請を認める。",
+     "relevance": 0.1,
+     "accepted": false
+    },
+    {
+     "id": "hr/leave.md#1",
+     "title": "休暇規程",
+     "heading": "第1条 年次有給休暇の付与",
+     "text": "入社日から6か月間継続勤務し、所定労働日の8割以上出勤した社員には、10日の年次有給休暇を付与する。その後は1年ごとに勤続年数に応じて付与日数を増やし、勤続6年6か月以上で年20日を上限とする。",
+     "relevance": 0.08,
+     "accepted": false
+    },
+    {
+     "id": "hr/leave.md#2",
+     "title": "休暇規程",
+     "heading": "第2条 取得単位",
+     "text": "年次有給休暇は1日単位のほか、半日単位（年10回まで）および時間単位（年5日分まで）で取得できる。",
+     "relevance": 0.06,
+     "accepted": false
+    }
+   ],
+   "sufficiency": 0.98,
+   "claims": [
+    {
+     "text": "資料には祖父母が亡くなったときの忌引休暇として2日と定められています。",
+     "support": 0.98,
+     "supported": true
+    },
+    {
+     "text": "したがって、祖母が亡くなった場合は2日付与されます。",
+     "support": 0.92,
+     "supported": true
+    }
+   ],
+   "citations": [
+    "hr/leave.md#5"
+   ],
+   "timingsMs": {
+    "triage": 224.8,
+    "retrieval": 527.6,
+    "assess": 493.2,
+    "generate": 2762.5,
+    "verify": 192.1
+   },
+   "totalMs": 4200.3,
+   "jevCalls": 3,
+   "jevTokens": 3399,
+   "llmTokens": 307,
+   "baseline": {
+    "answer": "祖父母が亡くなった場合の忌引休暇は2日です [1]。なお、祖母単独についての詳細な記載はありません [1]。",
+    "totalMs": 2012.4,
+    "llmTokens": 569
+   }
+  },
+  {
+   "id": "t06",
+   "split": "test",
+   "type": "answerable",
+   "query": "夏休みは何日もらえて、いつ取れますか？",
+   "answerable": true,
+   "status": "no_answer",
+   "answer": "社内の資料を確認しましたが、このご質問に答えられる記載は見つかりませんでした。担当部署へお問い合わせください。",
+   "triage": {
+    "intent": "knowledge_search",
+    "intent_confidence": 0.94,
+    "route": "hr",
+    "route_confidence": 1.0,
+    "decompose": 0.82
+   },
+   "subQueries": [],
+   "retrieved": [
+    {
+     "id": "hr/leave.md#5",
+     "title": "休暇規程",
+     "heading": "第5条 特別休暇",
+     "text": "会社は、年次有給休暇とは別に、次の特別休暇を有給で付与する。\n- 夏季休暇：毎年7月から9月の間に3日\n- 結婚休暇：本人が結婚したとき5日（入籍日から6か月以内に取得）\n- 配偶者出産休暇：配偶者が出産したとき3日\n- 忌引休暇：配偶者・父母・子が亡くなったとき5日、祖父母・兄弟姉妹が亡くなったとき2日\n\n特別休暇は翌年度に繰り越すことはできない。",
+     "relevance": 1.8,
+     "accepted": true
+    },
+    {
+     "id": "hr/leave.md#3",
+     "title": "休暇規程",
+     "heading": "第3条 取得の申請",
+     "text": "年次有給休暇を取得するときは、原則として取得日の3営業日前までに勤怠システムで申請し、所属長の承認を得る。急病などやむを得ない場合は、事後の申請を認める。",
+     "relevance": 0.79,
+     "accepted": false
+    },
+    {
+     "id": "hr/leave.md#2",
+     "title": "休暇規程",
+     "heading": "第2条 取得単位",
+     "text": "年次有給休暇は1日単位のほか、半日単位（年10回まで）および時間単位（年5日分まで）で取得できる。",
+     "relevance": 0.58,
+     "accepted": false
+    },
+    {
+     "id": "hr/leave.md#1",
+     "title": "休暇規程",
+     "heading": "第1条 年次有給休暇の付与",
+     "text": "入社日から6か月間継続勤務し、所定労働日の8割以上出勤した社員には、10日の年次有給休暇を付与する。その後は1年ごとに勤続年数に応じて付与日数を増やし、勤続6年6か月以上で年20日を上限とする。",
+     "relevance": 0.55,
+     "accepted": false
+    },
+    {
+     "id": "hr/working_hours.md#4",
+     "title": "勤務時間・フレックスタイム規程",
+     "heading": "第4条 休日",
+     "text": "休日は土曜日、日曜日、国民の祝日および年末年始（12月29日から1月3日）とする。",
+     "relevance": 0.3,
+     "accepted": false
+    }
+   ],
+   "sufficiency": 0.52,
+   "claims": [],
+   "citations": [],
+   "timingsMs": {
+    "triage": 208.6,
+    "retrieval": 280.7,
+    "assess": 210.5
+   },
+   "totalMs": 699.8,
+   "jevCalls": 2,
+   "jevTokens": 2683,
+   "llmTokens": 0,
+   "baseline": {
+    "answer": "夏季休暇は、毎年7月から9月の間に3日付与されます [1]。",
+    "totalMs": 1899.5,
+    "llmTokens": 546
+   }
+  },
+  {
+   "id": "t07",
+   "split": "test",
+   "type": "answerable",
+   "query": "フレックスのコアタイムは何時から何時まで？",
+   "answerable": true,
+   "status": "answered",
+   "answer": "フレックスタイム制のコアタイムは、11時から15時までです [1]。",
+   "triage": {
+    "intent": "knowledge_search",
+    "intent_confidence": 0.96,
+    "route": "hr",
+    "route_confidence": 1.0,
+    "decompose": 0.07
+   },
+   "subQueries": [],
+   "retrieved": [
+    {
+     "id": "hr/working_hours.md#2",
+     "title": "勤務時間・フレックスタイム規程",
+     "heading": "第2条 フレックスタイム制",
+     "text": "全社員にフレックスタイム制を適用する。必ず勤務しなければならないコアタイムは11時から15時まで、始業・終業時刻を選べるフレキシブルタイムは7時から22時までとする。清算期間は1か月とする。",
+     "relevance": 1.79,
+     "accepted": true
+    },
+    {
+     "id": "hr/working_hours.md#1",
+     "title": "勤務時間・フレックスタイム規程",
+     "heading": "第1条 標準勤務時間",
+     "text": "標準の勤務時間は9時から18時までとし、12時から13時までの60分を休憩時間とする。",
+     "relevance": 0.62,
+     "accepted": false
+    },
+    {
+     "id": "hr/working_hours.md#4",
+     "title": "勤務時間・フレックスタイム規程",
+     "heading": "第4条 休日",
+     "text": "休日は土曜日、日曜日、国民の祝日および年末年始（12月29日から1月3日）とする。",
+     "relevance": 0.03,
+     "accepted": false
+    },
+    {
+     "id": "hr/working_hours.md#3",
+     "title": "勤務時間・フレックスタイム規程",
+     "heading": "第3条 時間外労働",
+     "text": "時間外労働を行う場合は、事前に勤怠システムで申請し、所属長の承認を得なければならない。22時から翌5時までの深夜労働は原則として禁止する。",
+     "relevance": 0.17,
+     "accepted": false
+    },
+    {
+     "id": "api/webhooks.md#2",
+     "title": "SampleCloud Webhook 仕様",
+     "heading": "タイムアウトとリトライ",
+     "text": "受信側は10秒以内に 2xx のステータスコードを返す必要がある。それ以外の応答やタイムアウトは失敗とみなし、1分、2分、4分、8分、16分の間隔で最大5回まで再送する。",
+     "relevance": 0.01,
+     "accepted": false
+    }
+   ],
+   "sufficiency": 0.98,
+   "claims": [
+    {
+     "text": "フレックスタイム制のコアタイムは、11時から15時までです。",
+     "support": 0.98,
+     "supported": true
+    }
+   ],
+   "citations": [
+    "hr/working_hours.md#2"
+   ],
+   "timingsMs": {
+    "triage": 191.4,
+    "retrieval": 254.3,
+    "assess": 203.5,
+    "generate": 2026.5,
+    "verify": 196.6
+   },
+   "totalMs": 2872.4,
+   "jevCalls": 3,
+   "jevTokens": 3132,
+   "llmTokens": 310,
+   "baseline": {
+    "answer": "フレックスタイム制において必ず勤務しなければならないコアタイムは、11時から15時までです[1]。",
+    "totalMs": 2220.9,
+    "llmTokens": 465
+   }
+  },
+  {
+   "id": "t08",
+   "split": "test",
+   "type": "answerable",
+   "query": "残業するときの手続きを教えてください",
+   "answerable": true,
+   "status": "answered",
+   "answer": "時間外労働を行う場合は、事前に勤怠システムで申請し、所属長の承認を得る必要があります [1]。",
+   "triage": {
+    "intent": "knowledge_search",
+    "intent_confidence": 1.0,
+    "route": "hr",
+    "route_confidence": 1.0,
+    "decompose": 0.08
+   },
+   "subQueries": [],
+   "retrieved": [
+    {
+     "id": "hr/working_hours.md#3",
+     "title": "勤務時間・フレックスタイム規程",
+     "heading": "第3条 時間外労働",
+     "text": "時間外労働を行う場合は、事前に勤怠システムで申請し、所属長の承認を得なければならない。22時から翌5時までの深夜労働は原則として禁止する。",
+     "relevance": 1.83,
+     "accepted": true
+    },
+    {
+     "id": "hr/working_hours.md#2",
+     "title": "勤務時間・フレックスタイム規程",
+     "heading": "第2条 フレックスタイム制",
+     "text": "全社員にフレックスタイム制を適用する。必ず勤務しなければならないコアタイムは11時から15時まで、始業・終業時刻を選べるフレキシブルタイムは7時から22時までとする。清算期間は1か月とする。",
+     "relevance": 0.76,
+     "accepted": false
+    },
+    {
+     "id": "general/office.md#1",
+     "title": "オフィス利用ルール",
+     "heading": "入退館",
+     "text": "入退館には社員証（ICカード）を使う。オフィスの最終退館時刻は22時とする。",
+     "relevance": 0.65,
+     "accepted": false
+    },
+    {
+     "id": "hr/leave.md#3",
+     "title": "休暇規程",
+     "heading": "第3条 取得の申請",
+     "text": "年次有給休暇を取得するときは、原則として取得日の3営業日前までに勤怠システムで申請し、所属長の承認を得る。急病などやむを得ない場合は、事後の申請を認める。",
+     "relevance": 0.41,
+     "accepted": false
+    },
+    {
+     "id": "hr/remote_work.md#2",
+     "title": "在宅勤務規程",
+     "heading": "第2条 実施日数と申請",
+     "text": "在宅勤務は週3日までとする。在宅勤務を行う週の前週金曜日までに勤怠システムで申請し、所属長の承認を得る。",
+     "relevance": 0.25,
+     "accepted": false
+    }
+   ],
+   "sufficiency": 0.87,
+   "claims": [
+    {
+     "text": "時間外労働を行う場合は、事前に勤怠システムで申請し、所属長の承認を得る必要があります。",
+     "support": 0.98,
+     "supported": true
+    }
+   ],
+   "citations": [
+    "hr/working_hours.md#3"
+   ],
+   "timingsMs": {
+    "triage": 159.6,
+    "retrieval": 453.4,
+    "assess": 206.7,
+    "generate": 1313.0,
+    "verify": 276.0
+   },
+   "totalMs": 2408.8,
+   "jevCalls": 3,
+   "jevTokens": 3089,
+   "llmTokens": 311,
+   "baseline": {
+    "answer": "時間外労働を行う場合は、事前に勤怠システムで申請し、所属長の承認を得る必要があります [1]。なお、22時から翌5時までの深夜労働は原則として禁止されています [1]。",
+    "totalMs": 2098.9,
+    "llmTokens": 577
+   }
+  },
+  {
+   "id": "t09",
+   "split": "test",
+   "type": "answerable",
+   "query": "在宅勤務は週に何日までできますか？",
+   "answerable": true,
+   "status": "answered",
+   "answer": "在宅勤務は週3日まで可能です [1]。",
+   "triage": {
+    "intent": "knowledge_search",
+    "intent_confidence": 0.99,
+    "route": "hr",
+    "route_confidence": 1.0,
+    "decompose": 0.05
+   },
+   "subQueries": [],
+   "retrieved": [
+    {
+     "id": "hr/remote_work.md#2",
+     "title": "在宅勤務規程",
+     "heading": "第2条 実施日数と申請",
+     "text": "在宅勤務は週3日までとする。在宅勤務を行う週の前週金曜日までに勤怠システムで申請し、所属長の承認を得る。",
+     "relevance": 1.8,
+     "accepted": true
+    },
+    {
+     "id": "hr/remote_work.md#4",
+     "title": "在宅勤務規程",
+     "heading": "第4条 在宅勤務手当",
+     "text": "在宅勤務を月4日以上行った月は、通信費・光熱費の補助として在宅勤務手当5,000円を給与に加算して支給する。",
+     "relevance": 0.92,
+     "accepted": false
+    },
+    {
+     "id": "hr/remote_work.md#1",
+     "title": "在宅勤務規程",
+     "heading": "第1条 対象者",
+     "text": "在宅勤務の対象者は、試用期間を終えた正社員および契約社員とする。",
+     "relevance": 0.11,
+     "accepted": false
+    },
+    {
+     "id": "hr/remote_work.md#3",
+     "title": "在宅勤務規程",
+     "heading": "第3条 勤務場所",
+     "text": "在宅勤務は、会社に届け出た自宅で行う。カフェなど不特定多数が出入りする場所での業務は禁止する。ただし、会社が契約したサテライトオフィスは利用できる。",
+     "relevance": 0.34,
+     "accepted": false
+    },
+    {
+     "id": "hr/remote_work.md#5",
+     "title": "在宅勤務規程",
+     "heading": "第5条 貸与品",
+     "text": "業務に必要なノートPC1台と外付けディスプレイ1台を会社が貸与する。",
+     "relevance": 0.06,
+     "accepted": false
+    }
+   ],
+   "sufficiency": 0.98,
+   "claims": [
+    {
+     "text": "在宅勤務は週3日まで可能です。",
+     "support": 0.98,
+     "supported": true
+    }
+   ],
+   "citations": [
+    "hr/remote_work.md#2"
+   ],
+   "timingsMs": {
+    "triage": 198.4,
+    "retrieval": 445.2,
+    "assess": 289.0,
+    "generate": 1365.4,
+    "verify": 189.8
+   },
+   "totalMs": 2487.7,
+   "jevCalls": 3,
+   "jevTokens": 2924,
+   "llmTokens": 201,
+   "baseline": {
+    "answer": "在宅勤務は週3日まで実施することができます [1]。",
+    "totalMs": 2307.8,
+    "llmTokens": 499
+   }
+  },
+  {
+   "id": "t10",
+   "split": "test",
+   "type": "answerable",
+   "query": "カフェでリモートワークしてもいい？",
+   "answerable": true,
+   "status": "answered",
+   "answer": "カフェなど不特定多数が出入りする場所での業務は禁止されているため、カフェでリモートワークを行うことはできません[1]。在宅勤務は会社に届け出た自宅で行うか、会社が契約したサテライトオフィスを利用する必要があります[1]。",
+   "triage": {
+    "intent": "knowledge_search",
+    "intent_confidence": 0.47,
+    "route": "hr",
+    "route_confidence": 0.47,
+    "decompose": 0.1
+   },
+   "subQueries": [],
+   "retrieved": [
+    {
+     "id": "hr/remote_work.md#3",
+     "title": "在宅勤務規程",
+     "heading": "第3条 勤務場所",
+     "text": "在宅勤務は、会社に届け出た自宅で行う。カフェなど不特定多数が出入りする場所での業務は禁止する。ただし、会社が契約したサテライトオフィスは利用できる。",
+     "relevance": 1.85,
+     "accepted": true
+    },
+    {
+     "id": "hr/remote_work.md#5",
+     "title": "在宅勤務規程",
+     "heading": "第5条 貸与品",
+     "text": "業務に必要なノートPC1台と外付けディスプレイ1台を会社が貸与する。",
+     "relevance": 0.3,
+     "accepted": false
+    },
+    {
+     "id": "security/infosec.md#4",
+     "title": "情報セキュリティ規程",
+     "heading": "第4条 紛失・盗難時の報告",
+     "text": "会社貸与のPCやスマートフォンを紛失した場合、または盗難にあった場合は、気づいてから1時間以内に情報システム部へ報告する。",
+     "relevance": 0.2,
+     "accepted": false
+    },
+    {
+     "id": "security/infosec.md#2",
+     "title": "情報セキュリティ規程",
+     "heading": "第2条 パスワードと多要素認証",
+     "text": "パスワードは12文字以上とし、ほかのサービスと使い回してはならない。定期的な変更は求めないが、漏えいのおそれがある場合は直ちに変更する。社内システムへのログインには多要素認証を必須とする。",
+     "relevance": 0.23,
+     "accepted": false
+    },
+    {
+     "id": "security/accounts.md#2",
+     "title": "アカウント・PC管理規程",
+     "heading": "第2条 パスワードを忘れたとき",
+     "text": "パスワードを忘れた場合は、セルフサービスポータルから本人がリセットする。多要素認証の端末を失った場合は、情報システム部に連絡する。",
+     "relevance": 0.07,
+     "accepted": false
+    }
+   ],
+   "sufficiency": 0.95,
+   "claims": [
+    {
+     "text": "カフェなど不特定多数が出入りする場所での業務は禁止されているため、カフェでリモートワークを行うことはできません。",
+     "support": 0.93,
+     "supported": true
+    },
+    {
+     "text": "在宅勤務は会社に届け出た自宅で行うか、会社が契約したサテライトオフィスを利用する必要があります。",
+     "support": 0.84,
+     "supported": false
+    }
+   ],
+   "citations": [
+    "hr/remote_work.md#3"
+   ],
+   "timingsMs": {
+    "triage": 227.7,
+    "retrieval": 314.4,
+    "assess": 253.8,
+    "generate": 1278.8,
+    "verify": 249.8
+   },
+   "totalMs": 2324.5,
+   "jevCalls": 3,
+   "jevTokens": 3222,
+   "llmTokens": 333,
+   "baseline": {
+    "answer": "カフェなど不特定多数が出入りする場所での業務は禁止されているため、カフェでリモートワークを行うことはできません [1]。在宅勤務は会社に届け出た自宅で行うことと定められており、会社が契約したサテライトオフィスであれば利用可能です [1]。",
+    "totalMs": 3825.7,
+    "llmTokens": 601
+   }
+  },
+  {
+   "id": "t11",
+   "split": "test",
+   "type": "answerable",
+   "query": "在宅勤務手当はいくらで、どんな条件でもらえますか？",
+   "answerable": true,
+   "status": "answered",
+   "answer": "在宅勤務手当の金額は5,000円です[1]。支給条件は、在宅勤務を月4日以上行うことであり、通信費・光熱費の補助として給与に加算して支給されます[1]。",
+   "triage": {
+    "intent": "knowledge_search",
+    "intent_confidence": 1.0,
+    "route": "hr",
+    "route_confidence": 1.0,
+    "decompose": 0.87
+   },
+   "subQueries": [
+    "在宅勤務手当はいくらで"
+   ],
+   "retrieved": [
+    {
+     "id": "hr/remote_work.md#4",
+     "title": "在宅勤務規程",
+     "heading": "第4条 在宅勤務手当",
+     "text": "在宅勤務を月4日以上行った月は、通信費・光熱費の補助として在宅勤務手当5,000円を給与に加算して支給する。",
+     "relevance": 1.82,
+     "accepted": true
+    },
+    {
+     "id": "hr/remote_work.md#2",
+     "title": "在宅勤務規程",
+     "heading": "第2条 実施日数と申請",
+     "text": "在宅勤務は週3日までとする。在宅勤務を行う週の前週金曜日までに勤怠システムで申請し、所属長の承認を得る。",
+     "relevance": 1.4,
+     "accepted": true
+    },
+    {
+     "id": "hr/remote_work.md#1",
+     "title": "在宅勤務規程",
+     "heading": "第1条 対象者",
+     "text": "在宅勤務の対象者は、試用期間を終えた正社員および契約社員とする。",
+     "relevance": 1.09,
+     "accepted": true
+    },
+    {
+     "id": "hr/remote_work.md#3",
+     "title": "在宅勤務規程",
+     "heading": "第3条 勤務場所",
+     "text": "在宅勤務は、会社に届け出た自宅で行う。カフェなど不特定多数が出入りする場所での業務は禁止する。ただし、会社が契約したサテライトオフィスは利用できる。",
+     "relevance": 0.95,
+     "accepted": false
+    },
+    {
+     "id": "hr/remote_work.md#5",
+     "title": "在宅勤務規程",
+     "heading": "第5条 貸与品",
+     "text": "業務に必要なノートPC1台と外付けディスプレイ1台を会社が貸与する。",
+     "relevance": 0.29,
+     "accepted": false
+    }
+   ],
+   "sufficiency": 0.87,
+   "claims": [
+    {
+     "text": "在宅勤務手当の金額は5,000円です。",
+     "support": 0.97,
+     "supported": true
+    },
+    {
+     "text": "支給条件は、在宅勤務を月4日以上行うことであり、通信費・光熱費の補助として給与に加算して支給されます。",
+     "support": 0.96,
+     "supported": true
+    }
+   ],
+   "citations": [
+    "hr/remote_work.md#4",
+    "hr/remote_work.md#2",
+    "hr/remote_work.md#1"
+   ],
+   "timingsMs": {
+    "triage": 258.9,
+    "retrieval": 747.2,
+    "assess": 278.4,
+    "generate": 1801.2,
+    "verify": 291.8
+   },
+   "totalMs": 3377.5,
+   "jevCalls": 3,
+   "jevTokens": 3208,
+   "llmTokens": 476,
+   "baseline": {
+    "answer": "在宅勤務手当は5,000円です [1]。支給される条件は、在宅勤務を月4日以上行うことです [1]。また、手当は通信費や光熱費の補助として給与に加算して支給されます [1]。",
+    "totalMs": 1681.6,
+    "llmTokens": 457
+   }
+  },
+  {
+   "id": "t12",
+   "split": "test",
+   "type": "answerable",
+   "query": "通勤手当の上限額は？",
+   "answerable": true,
+   "status": "answered",
+   "answer": "通勤手当の支給額は、月50,000円が上限とされています [1]。",
+   "triage": {
+    "intent": "knowledge_search",
+    "intent_confidence": 0.98,
+    "route": "hr",
+    "route_confidence": 0.98,
+    "decompose": 0.07
+   },
+   "subQueries": [],
+   "retrieved": [
+    {
+     "id": "hr/allowances.md#2",
+     "title": "給与・諸手当規程",
+     "heading": "第2条 通勤手当",
+     "text": "公共交通機関を利用して通勤する社員には、最も経済的かつ合理的な経路の定期券代を通勤手当として支給する。支給額は月50,000円を上限とする。",
+     "relevance": 1.8,
+     "accepted": true
+    },
+    {
+     "id": "hr/remote_work.md#4",
+     "title": "在宅勤務規程",
+     "heading": "第4条 在宅勤務手当",
+     "text": "在宅勤務を月4日以上行った月は、通信費・光熱費の補助として在宅勤務手当5,000円を給与に加算して支給する。",
+     "relevance": 0.05,
+     "accepted": false
+    },
+    {
+     "id": "hr/allowances.md#3",
+     "title": "給与・諸手当規程",
+     "heading": "第3条 住宅手当",
+     "text": "世帯主である社員に、住宅手当として月20,000円を支給する。",
+     "relevance": 0.06,
+     "accepted": false
+    },
+    {
+     "id": "hr/allowances.md#4",
+     "title": "給与・諸手当規程",
+     "heading": "第4条 家族手当",
+     "text": "扶養する配偶者がいる社員には月10,000円、扶養する子1人につき月5,000円を家族手当として支給する。",
+     "relevance": 0.06,
+     "accepted": false
+    },
+    {
+     "id": "expense/domestic_travel.md#3",
+     "title": "国内出張旅費規程",
+     "heading": "第3条 宿泊費",
+     "text": "宿泊費は実費を支給する。1泊あたりの上限は、東京23区・大阪市・名古屋市が12,000円、その他の地域が10,000円とする。",
+     "relevance": 0.05,
+     "accepted": false
+    }
+   ],
+   "sufficiency": 0.97,
+   "claims": [
+    {
+     "text": "通勤手当の支給額は、月50,000円が上限とされています。",
+     "support": 0.98,
+     "supported": true
+    }
+   ],
+   "citations": [
+    "hr/allowances.md#2"
+   ],
+   "timingsMs": {
+    "triage": 367.4,
+    "retrieval": 140.7,
+    "assess": 179.1,
+    "generate": 1245.8,
+    "verify": 173.6
+   },
+   "totalMs": 2106.5,
+   "jevCalls": 3,
+   "jevTokens": 2972,
+   "llmTokens": 223,
+   "baseline": {
+    "answer": "通勤手当の支給額は、月50,000円が上限とされています [1]。",
+    "totalMs": 1685.1,
+    "llmTokens": 463
+   }
+  },
+  {
+   "id": "t13",
+   "split": "test",
+   "type": "answerable",
+   "query": "給料日はいつ？25日が土曜日だったらどうなる？",
+   "answerable": true,
+   "status": "answered",
+   "answer": "給与の支給日は毎月25日です [1]。土曜日は休日にあたるため、25日が休日の場合はその直前の営業日に支給されます [1][2]。",
+   "triage": {
+    "intent": "knowledge_search",
+    "intent_confidence": 0.95,
+    "route": "hr",
+    "route_confidence": 1.0,
+    "decompose": 0.8
+   },
+   "subQueries": [
+    "給料日はいつ？25日が土曜日だったらどうなる？"
+   ],
+   "retrieved": [
+    {
+     "id": "hr/allowances.md#1",
+     "title": "給与・諸手当規程",
+     "heading": "第1条 給与の支給日",
+     "text": "給与は毎月25日に支給する。支給日が休日にあたる場合は、その直前の営業日に支給する。",
+     "relevance": 1.84,
+     "accepted": true
+    },
+    {
+     "id": "hr/working_hours.md#4",
+     "title": "勤務時間・フレックスタイム規程",
+     "heading": "第4条 休日",
+     "text": "休日は土曜日、日曜日、国民の祝日および年末年始（12月29日から1月3日）とする。",
+     "relevance": 1.26,
+     "accepted": true
+    },
+    {
+     "id": "expense/expense.md#5",
+     "title": "経費精算規程",
+     "heading": "第5条 精算額の支払い",
+     "text": "毎月末に締めて承認された精算額は、翌月25日の給与と合わせて支払う。",
+     "relevance": 1.06,
+     "accepted": true
+    },
+    {
+     "id": "hr/remote_work.md#2",
+     "title": "在宅勤務規程",
+     "heading": "第2条 実施日数と申請",
+     "text": "在宅勤務は週3日までとする。在宅勤務を行う週の前週金曜日までに勤怠システムで申請し、所属長の承認を得る。",
+     "relevance": 0.02,
+     "accepted": false
+    },
+    {
+     "id": "general/office.md#4",
+     "title": "オフィス利用ルール",
+     "heading": "ゴミと喫煙",
+     "text": "ゴミは毎週金曜日の夕方に回収する。オフィス内は全面禁煙とする。",
+     "relevance": 0.02,
+     "accepted": false
+    }
+   ],
+   "sufficiency": 0.94,
+   "claims": [
+    {
+     "text": "給与の支給日は毎月25日です。",
+     "support": 0.82,
+     "supported": false
+    },
+    {
+     "text": "土曜日は休日にあたるため、25日が休日の場合はその直前の営業日に支給されます。",
+     "support": 0.88,
+     "supported": true
+    }
+   ],
+   "citations": [
+    "hr/allowances.md#1",
+    "hr/working_hours.md#4",
+    "expense/expense.md#5"
+   ],
+   "timingsMs": {
+    "triage": 226.4,
+    "retrieval": 203.1,
+    "assess": 183.9,
+    "generate": 1419.4,
+    "verify": 285.7
+   },
+   "totalMs": 2318.4,
+   "jevCalls": 3,
+   "jevTokens": 3145,
+   "llmTokens": 531,
+   "baseline": {
+    "answer": "給与の支給日は毎月25日です [1]。土曜日は休日に定められており、支給日が休日にあたる場合はその直前の営業日に支給されます [1][2]。",
+    "totalMs": 2080.6,
+    "llmTokens": 612
+   }
+  },
+  {
+   "id": "t14",
+   "split": "test",
+   "type": "answerable",
+   "query": "子どもが2人いる場合、看護休暇は年に何日？",
+   "answerable": true,
+   "status": "answered",
+   "answer": "小学校入学前の子を養育する場合、子が2人以上のときは年に10日の看護休暇を取得できます[1]。",
+   "triage": {
+    "intent": "knowledge_search",
+    "intent_confidence": 0.9,
+    "route": "hr",
+    "route_confidence": 1.0,
+    "decompose": 0.12
+   },
+   "subQueries": [],
+   "retrieved": [
+    {
+     "id": "hr/childcare.md#4",
+     "title": "育児・介護休業規程",
+     "heading": "第4条 子の看護休暇",
+     "text": "小学校入学前の子を養育する社員は、子の看護のため、子が1人の場合は年5日、2人以上の場合は年10日の看護休暇を取得できる。",
+     "relevance": 1.81,
+     "accepted": true
+    },
+    {
+     "id": "hr/childcare.md#1",
+     "title": "育児・介護休業規程",
+     "heading": "第1条 育児休業",
+     "text": "社員は、子が1歳になるまでの間、育児休業を取得できる。保育所に入れないなどの事情がある場合は、最長で子が2歳になるまで延長できる。",
+     "relevance": 0.51,
+     "accepted": false
+    },
+    {
+     "id": "hr/childcare.md#3",
+     "title": "育児・介護休業規程",
+     "heading": "第3条 介護休業",
+     "text": "要介護状態にある対象家族1人につき、通算93日まで介護休業を取得できる。3回まで分割して取得できる。",
+     "relevance": 0.1,
+     "accepted": false
+    },
+    {
+     "id": "hr/leave.md#5",
+     "title": "休暇規程",
+     "heading": "第5条 特別休暇",
+     "text": "会社は、年次有給休暇とは別に、次の特別休暇を有給で付与する。\n- 夏季休暇：毎年7月から9月の間に3日\n- 結婚休暇：本人が結婚したとき5日（入籍日から6か月以内に取得）\n- 配偶者出産休暇：配偶者が出産したとき3日\n- 忌引休暇：配偶者・父母・子が亡くなったとき5日、祖父母・兄弟姉妹が亡くなったとき2日\n\n特別休暇は翌年度に繰り越すことはできない。",
+     "relevance": 0.11,
+     "accepted": false
+    },
+    {
+     "id": "hr/childcare.md#2",
+     "title": "育児・介護休業規程",
+     "heading": "第2条 出生時育児休業（産後パパ育休）",
+     "text": "子の出生後8週間以内に、最大28日の出生時育児休業を取得できる。2回まで分割して取得できる。",
+     "relevance": 0.36,
+     "accepted": false
+    }
+   ],
+   "sufficiency": 0.97,
+   "claims": [
+    {
+     "text": "小学校入学前の子を養育する場合、子が2人以上のときは年に10日の看護休暇を取得できます。",
+     "support": 0.98,
+     "supported": true
+    }
+   ],
+   "citations": [
+    "hr/childcare.md#4"
+   ],
+   "timingsMs": {
+    "triage": 212.1,
+    "retrieval": 146.2,
+    "assess": 182.3,
+    "generate": 1816.1,
+    "verify": 276.9
+   },
+   "totalMs": 2633.7,
+   "jevCalls": 3,
+   "jevTokens": 3143,
+   "llmTokens": 394,
+   "baseline": {
+    "answer": "小学校入学前の子を養育する社員は、子が2人以上の場合は年10日の看護休暇を取得できます [1]。",
+    "totalMs": 1778.3,
+    "llmTokens": 535
+   }
+  },
+  {
+   "id": "t15",
+   "split": "test",
+   "type": "answerable",
+   "query": "介護休業は何回に分けて取れますか？",
+   "answerable": true,
+   "status": "answered",
+   "answer": "介護休業は、要介護状態にある対象家族1人につき、3回まで分割して取得できます [1]。",
+   "triage": {
+    "intent": "knowledge_search",
+    "intent_confidence": 0.95,
+    "route": "hr",
+    "route_confidence": 1.0,
+    "decompose": 0.09
+   },
+   "subQueries": [],
+   "retrieved": [
+    {
+     "id": "hr/childcare.md#3",
+     "title": "育児・介護休業規程",
+     "heading": "第3条 介護休業",
+     "text": "要介護状態にある対象家族1人につき、通算93日まで介護休業を取得できる。3回まで分割して取得できる。",
+     "relevance": 1.8,
+     "accepted": true
+    },
+    {
+     "id": "hr/childcare.md#4",
+     "title": "育児・介護休業規程",
+     "heading": "第4条 子の看護休暇",
+     "text": "小学校入学前の子を養育する社員は、子の看護のため、子が1人の場合は年5日、2人以上の場合は年10日の看護休暇を取得できる。",
+     "relevance": 0.1,
+     "accepted": false
+    },
+    {
+     "id": "hr/childcare.md#1",
+     "title": "育児・介護休業規程",
+     "heading": "第1条 育児休業",
+     "text": "社員は、子が1歳になるまでの間、育児休業を取得できる。保育所に入れないなどの事情がある場合は、最長で子が2歳になるまで延長できる。",
+     "relevance": 0.13,
+     "accepted": false
+    },
+    {
+     "id": "hr/childcare.md#2",
+     "title": "育児・介護休業規程",
+     "heading": "第2条 出生時育児休業（産後パパ育休）",
+     "text": "子の出生後8週間以内に、最大28日の出生時育児休業を取得できる。2回まで分割して取得できる。",
+     "relevance": 0.37,
+     "accepted": false
+    },
+    {
+     "id": "hr/leave.md#2",
+     "title": "休暇規程",
+     "heading": "第2条 取得単位",
+     "text": "年次有給休暇は1日単位のほか、半日単位（年10回まで）および時間単位（年5日分まで）で取得できる。",
+     "relevance": 0.12,
+     "accepted": false
+    }
+   ],
+   "sufficiency": 0.97,
+   "claims": [
+    {
+     "text": "介護休業は、要介護状態にある対象家族1人につき、3回まで分割して取得できます。",
+     "support": 0.97,
+     "supported": true
+    }
+   ],
+   "citations": [
+    "hr/childcare.md#3"
+   ],
+   "timingsMs": {
+    "triage": 210.0,
+    "retrieval": 213.6,
+    "assess": 225.1,
+    "generate": 2157.6,
+    "verify": 198.7
+   },
+   "totalMs": 3004.9,
+   "jevCalls": 3,
+   "jevTokens": 2986,
+   "llmTokens": 214,
+   "baseline": {
+    "answer": "介護休業は、要介護状態にある対象家族1人につき3回まで分割して取得できます [1]。",
+    "totalMs": 2246.3,
+    "llmTokens": 535
+   }
+  },
+  {
+   "id": "t16",
+   "split": "test",
+   "type": "answerable",
+   "query": "情報処理安全確保支援士に合格したら奨励金はいくら？",
+   "answerable": true,
+   "status": "answered",
+   "answer": "情報処理安全確保支援士試験に合格した場合の奨励金は50,000円です[1]。",
+   "triage": {
+    "intent": "knowledge_search",
+    "intent_confidence": 0.8,
+    "route": "hr",
+    "route_confidence": 0.87,
+    "decompose": 0.08
+   },
+   "subQueries": [],
+   "retrieved": [
+    {
+     "id": "hr/training.md#1",
+     "title": "研修・資格取得支援規程",
+     "heading": "第1条 資格取得奨励金",
+     "text": "会社が指定する資格に合格した社員に、次の奨励金を支給する。\n- 応用情報技術者試験：30,000円\n- 情報処理安全確保支援士試験：50,000円\n- AWS認定ソリューションアーキテクト – アソシエイト：20,000円",
+     "relevance": 1.79,
+     "accepted": true
+    },
+    {
+     "id": "hr/training.md#2",
+     "title": "研修・資格取得支援規程",
+     "heading": "第2条 受験料",
+     "text": "指定資格の受験料は、合格した場合に限り会社が負担する。同じ資格の受験料の負担は2回までとする。",
+     "relevance": 0.74,
+     "accepted": false
+    },
+    {
+     "id": "hr/training.md#3",
+     "title": "研修・資格取得支援規程",
+     "heading": "第3条 書籍の購入",
+     "text": "業務に関係する書籍は、1人あたり月5,000円まで経費として購入できる。",
+     "relevance": 0.05,
+     "accepted": false
+    },
+    {
+     "id": "security/infosec.md#1",
+     "title": "情報セキュリティ規程",
+     "heading": "第1条 情報の区分",
+     "text": "社内の情報は「極秘」「社外秘」「公開」の3つに区分する。区分が不明な情報は「社外秘」として扱う。",
+     "relevance": 0.01,
+     "accepted": false
+    },
+    {
+     "id": "security/infosec.md#2",
+     "title": "情報セキュリティ規程",
+     "heading": "第2条 パスワードと多要素認証",
+     "text": "パスワードは12文字以上とし、ほかのサービスと使い回してはならない。定期的な変更は求めないが、漏えいのおそれがある場合は直ちに変更する。社内システムへのログインには多要素認証を必須とする。",
+     "relevance": 0.01,
+     "accepted": false
+    }
+   ],
+   "sufficiency": 0.97,
+   "claims": [
+    {
+     "text": "情報処理安全確保支援士試験に合格した場合の奨励金は50,000円です。",
+     "support": 0.98,
+     "supported": true
+    }
+   ],
+   "citations": [
+    "hr/training.md#1"
+   ],
+   "timingsMs": {
+    "triage": 214.2,
+    "retrieval": 333.4,
+    "assess": 178.0,
+    "generate": 1541.1,
+    "verify": 217.0
+   },
+   "totalMs": 2483.7,
+   "jevCalls": 3,
+   "jevTokens": 3142,
+   "llmTokens": 358,
+   "baseline": {
+    "answer": "情報処理安全確保支援士試験に合格した場合の奨励金は50,000円です [1]。",
+    "totalMs": 2035.6,
+    "llmTokens": 488
+   }
+  },
+  {
+   "id": "t17",
+   "split": "test",
+   "type": "answerable",
+   "query": "経費精算の締め切りはいつ？",
+   "answerable": true,
+   "status": "answered",
+   "answer": "経費精算の申請期限は、支出が発生した月の翌月10日までです[1]。ただし、期限を過ぎた場合でも所属長の理由書があれば受け付けられます[1]。",
+   "triage": {
+    "intent": "knowledge_search",
+    "intent_confidence": 0.99,
+    "route": "expense",
+    "route_confidence": 1.0,
+    "decompose": 0.04
+   },
+   "subQueries": [],
+   "retrieved": [
+    {
+     "id": "expense/expense.md#1",
+     "title": "経費精算規程",
+     "heading": "第1条 申請期限",
+     "text": "経費は、支出が発生した月の翌月10日までに経費精算システムで申請する。期限を過ぎた申請は、所属長の理由書がある場合に限り受け付ける。",
+     "relevance": 1.84,
+     "accepted": true
+    },
+    {
+     "id": "expense/expense.md#5",
+     "title": "経費精算規程",
+     "heading": "第5条 精算額の支払い",
+     "text": "毎月末に締めて承認された精算額は、翌月25日の給与と合わせて支払う。",
+     "relevance": 1.12,
+     "accepted": true
+    },
+    {
+     "id": "expense/expense.md#4",
+     "title": "経費精算規程",
+     "heading": "第4条 接待交際費",
+     "text": "取引先との会食費は、参加者1人あたり5,000円までとする。これを超える場合は、事前に部長の承認を得る。",
+     "relevance": 0.07,
+     "accepted": false
+    },
+    {
+     "id": "expense/expense.md#3",
+     "title": "経費精算規程",
+     "heading": "第3条 事前申請",
+     "text": "1件10,000円以上の支出は、支出の前に所属長の承認を得なければならない。",
+     "relevance": 0.15,
+     "accepted": false
+    },
+    {
+     "id": "expense/expense.md#2",
+     "title": "経費精算規程",
+     "heading": "第2条 領収書",
+     "text": "申請には領収書を添付する。紙の領収書はスマートフォンで撮影した画像を添付すれば、原本の提出は不要とする。",
+     "relevance": 0.15,
+     "accepted": false
+    }
+   ],
+   "sufficiency": 0.85,
+   "claims": [
+    {
+     "text": "経費精算の申請期限は、支出が発生した月の翌月10日までです。",
+     "support": 0.98,
+     "supported": true
+    },
+    {
+     "text": "ただし、期限を過ぎた場合でも所属長の理由書があれば受け付けられます。",
+     "support": 0.97,
+     "supported": true
+    }
+   ],
+   "citations": [
+    "expense/expense.md#1",
+    "expense/expense.md#5"
+   ],
+   "timingsMs": {
+    "triage": 207.1,
+    "retrieval": 242.9,
+    "assess": 289.2,
+    "generate": 1343.6,
+    "verify": 216.2
+   },
+   "totalMs": 2299.0,
+   "jevCalls": 3,
+   "jevTokens": 3110,
+   "llmTokens": 386,
+   "baseline": {
+    "answer": "経費精算の申請期限は、支出が発生した月の翌月10日までです [1]。なお、期限を過ぎた申請は、所属長の理由書がある場合に限り受け付けられます [1]。",
+    "totalMs": 2588.6,
+    "llmTokens": 435
+   }
+  },
+  {
+   "id": "t18",
+   "split": "test",
+   "type": "answerable",
+   "query": "取引先との飲み会、1人いくらまで経費で落とせる？",
+   "answerable": true,
+   "status": "answered",
+   "answer": "取引先との会食費は、参加者1人あたり5,000円まで経費とすることができます [1]。ただし、これを超える場合でも、事前に部長の承認を得ることで認められます [1]。",
+   "triage": {
+    "intent": "knowledge_search",
+    "intent_confidence": 0.91,
+    "route": "expense",
+    "route_confidence": 1.0,
+    "decompose": 0.1
+   },
+   "subQueries": [],
+   "retrieved": [
+    {
+     "id": "expense/expense.md#4",
+     "title": "経費精算規程",
+     "heading": "第4条 接待交際費",
+     "text": "取引先との会食費は、参加者1人あたり5,000円までとする。これを超える場合は、事前に部長の承認を得る。",
+     "relevance": 1.77,
+     "accepted": true
+    },
+    {
+     "id": "hr/training.md#3",
+     "title": "研修・資格取得支援規程",
+     "heading": "第3条 書籍の購入",
+     "text": "業務に関係する書籍は、1人あたり月5,000円まで経費として購入できる。",
+     "relevance": 0.24,
+     "accepted": false
+    },
+    {
+     "id": "expense/expense.md#3",
+     "title": "経費精算規程",
+     "heading": "第3条 事前申請",
+     "text": "1件10,000円以上の支出は、支出の前に所属長の承認を得なければならない。",
+     "relevance": 0.79,
+     "accepted": false
+    },
+    {
+     "id": "expense/expense.md#1",
+     "title": "経費精算規程",
+     "heading": "第1条 申請期限",
+     "text": "経費は、支出が発生した月の翌月10日までに経費精算システムで申請する。期限を過ぎた申請は、所属長の理由書がある場合に限り受け付ける。",
+     "relevance": 0.14,
+     "accepted": false
+    },
+    {
+     "id": "expense/domestic_travel.md#2",
+     "title": "国内出張旅費規程",
+     "heading": "第2条 日当",
+     "text": "出張中の食事代などの補助として、日帰り出張は1日2,000円、宿泊を伴う出張は1日3,000円の日当を支給する。",
+     "relevance": 0.31,
+     "accepted": false
+    }
+   ],
+   "sufficiency": 0.9,
+   "claims": [
+    {
+     "text": "取引先との会食費は、参加者1人あたり5,000円まで経費とすることができます。",
+     "support": 0.84,
+     "supported": false
+    },
+    {
+     "text": "ただし、これを超える場合でも、事前に部長の承認を得ることで認められます。",
+     "support": 0.86,
+     "supported": true
+    }
+   ],
+   "citations": [
+    "expense/expense.md#4"
+   ],
+   "timingsMs": {
+    "triage": 208.2,
+    "retrieval": 291.3,
+    "assess": 211.8,
+    "generate": 1883.7,
+    "verify": 226.8
+   },
+   "totalMs": 2821.8,
+   "jevCalls": 3,
+   "jevTokens": 3082,
+   "llmTokens": 384,
+   "baseline": {
+    "answer": "取引先との会食費は、参加者1人あたり5,000円まで経費として認められています [1]。ただし、この金額を超える場合でも、事前に部長の承認を得ることで精算が可能です [1]。",
+    "totalMs": 2959.9,
+    "llmTokens": 462
+   }
+  },
+  {
+   "id": "t19",
+   "split": "test",
+   "type": "answerable",
+   "query": "日帰り出張の日当は？",
+   "answerable": true,
+   "status": "answered",
+   "answer": "日帰り出張の日当は、1日2,000円支給されます [1]。",
+   "triage": {
+    "intent": "knowledge_search",
+    "intent_confidence": 0.98,
+    "route": "expense",
+    "route_confidence": 0.78,
+    "decompose": 0.08
+   },
+   "subQueries": [],
+   "retrieved": [
+    {
+     "id": "expense/domestic_travel.md#2",
+     "title": "国内出張旅費規程",
+     "heading": "第2条 日当",
+     "text": "出張中の食事代などの補助として、日帰り出張は1日2,000円、宿泊を伴う出張は1日3,000円の日当を支給する。",
+     "relevance": 1.8,
+     "accepted": true
+    },
+    {
+     "id": "expense/domestic_travel.md#1",
+     "title": "国内出張旅費規程",
+     "heading": "第1条 適用範囲",
+     "text": "この規程は国内出張に適用する。出張とは、勤務地から片道100km以上の移動、または宿泊を伴う業務上の移動をいう。",
+     "relevance": 0.77,
+     "accepted": false
+    },
+    {
+     "id": "expense/domestic_travel.md#3",
+     "title": "国内出張旅費規程",
+     "heading": "第3条 宿泊費",
+     "text": "宿泊費は実費を支給する。1泊あたりの上限は、東京23区・大阪市・名古屋市が12,000円、その他の地域が10,000円とする。",
+     "relevance": 0.29,
+     "accepted": false
+    },
+    {
+     "id": "expense/domestic_travel.md#4",
+     "title": "国内出張旅費規程",
+     "heading": "第4条 交通機関",
+     "text": "新幹線は普通車指定席を利用する。グリーン車は部長以上に限り利用できる。航空機は片道500km以上の移動に限り利用できる。",
+     "relevance": 0.13,
+     "accepted": false
+    },
+    {
+     "id": "hr/remote_work.md#4",
+     "title": "在宅勤務規程",
+     "heading": "第4条 在宅勤務手当",
+     "text": "在宅勤務を月4日以上行った月は、通信費・光熱費の補助として在宅勤務手当5,000円を給与に加算して支給する。",
+     "relevance": 0.02,
+     "accepted": false
+    }
+   ],
+   "sufficiency": 0.97,
+   "claims": [
+    {
+     "text": "日帰り出張の日当は、1日2,000円支給されます。",
+     "support": 0.98,
+     "supported": true
+    }
+   ],
+   "citations": [
+    "expense/domestic_travel.md#2"
+   ],
+   "timingsMs": {
+    "triage": 273.0,
+    "retrieval": 460.2,
+    "assess": 204.2,
+    "generate": 1587.4,
+    "verify": 212.6
+   },
+   "totalMs": 2737.5,
+   "jevCalls": 3,
+   "jevTokens": 2964,
+   "llmTokens": 219,
+   "baseline": {
+    "answer": "日帰り出張の日当は、食事代などの補助として1日2,000円支給されます [1]。",
+    "totalMs": 2124.1,
+    "llmTokens": 571
+   }
+  },
+  {
+   "id": "t20",
+   "split": "test",
+   "type": "answerable",
+   "query": "新幹線のグリーン車は使えますか？",
+   "answerable": true,
+   "status": "answered",
+   "answer": "新幹線のグリーン車は、部長以上に限り利用できます [1]。部長未満の利用可否など、その他の詳細については資料に記載がありません。",
+   "triage": {
+    "intent": "knowledge_search",
+    "intent_confidence": 0.52,
+    "route": "expense",
+    "route_confidence": 0.69,
+    "decompose": 0.09
+   },
+   "subQueries": [],
+   "retrieved": [
+    {
+     "id": "expense/domestic_travel.md#4",
+     "title": "国内出張旅費規程",
+     "heading": "第4条 交通機関",
+     "text": "新幹線は普通車指定席を利用する。グリーン車は部長以上に限り利用できる。航空機は片道500km以上の移動に限り利用できる。",
+     "relevance": 1.83,
+     "accepted": true
+    },
+    {
+     "id": "faq/data.md#4",
+     "title": "SampleCloud FAQ：データの管理",
+     "heading": "データはどこに保存されていますか？",
+     "text": "東京リージョンのデータセンターに保存しています。災害対策として、大阪リージョンにも複製しています。",
+     "relevance": 0.01,
+     "accepted": false
+    },
+    {
+     "id": "hr/allowances.md#2",
+     "title": "給与・諸手当規程",
+     "heading": "第2条 通勤手当",
+     "text": "公共交通機関を利用して通勤する社員には、最も経済的かつ合理的な経路の定期券代を通勤手当として支給する。支給額は月50,000円を上限とする。",
+     "relevance": 0.25,
+     "accepted": false
+    },
+    {
+     "id": "expense/domestic_travel.md#1",
+     "title": "国内出張旅費規程",
+     "heading": "第1条 適用範囲",
+     "text": "この規程は国内出張に適用する。出張とは、勤務地から片道100km以上の移動、または宿泊を伴う業務上の移動をいう。",
+     "relevance": 0.45,
+     "accepted": false
+    },
+    {
+     "id": "expense/expense.md#4",
+     "title": "経費精算規程",
+     "heading": "第4条 接待交際費",
+     "text": "取引先との会食費は、参加者1人あたり5,000円までとする。これを超える場合は、事前に部長の承認を得る。",
+     "relevance": 0.02,
+     "accepted": false
+    }
+   ],
+   "sufficiency": 0.77,
+   "claims": [
+    {
+     "text": "新幹線のグリーン車は、部長以上に限り利用できます。",
+     "support": 0.97,
+     "supported": true
+    },
+    {
+     "text": "部長未満の利用可否など、その他の詳細については資料に記載がありません。",
+     "support": null,
+     "supported": null
+    }
+   ],
+   "citations": [
+    "expense/domestic_travel.md#4"
+   ],
+   "timingsMs": {
+    "triage": 332.5,
+    "retrieval": 201.4,
+    "assess": 231.1,
+    "generate": 1934.8,
+    "verify": 254.6
+   },
+   "totalMs": 2954.5,
+   "jevCalls": 3,
+   "jevTokens": 3000,
+   "llmTokens": 224,
+   "baseline": {
+    "answer": "新幹線のグリーン車は、部長以上に限り利用できます [1]。部長未満の社員が利用できるかについての詳細は資料に記載がありません。",
+    "totalMs": 2379.7,
+    "llmTokens": 446
+   }
+  },
+  {
+   "id": "t21",
+   "split": "test",
+   "type": "answerable",
+   "query": "パスワードは何文字以上にする必要がある？",
+   "answerable": true,
+   "status": "answered",
+   "answer": "パスワードは12文字以上にする必要があります [1]。ほかのサービスと使い回してはならず、漏えいのおそれがある場合は直ちに変更が求められます [1]。社内システムへのログインには多要素認証が必須とされています [1]。",
+   "triage": {
+    "intent": "knowledge_search",
+    "intent_confidence": 0.89,
+    "route": "security",
+    "route_confidence": 1.0,
+    "decompose": 0.04
+   },
+   "subQueries": [],
+   "retrieved": [
+    {
+     "id": "security/infosec.md#2",
+     "title": "情報セキュリティ規程",
+     "heading": "第2条 パスワードと多要素認証",
+     "text": "パスワードは12文字以上とし、ほかのサービスと使い回してはならない。定期的な変更は求めないが、漏えいのおそれがある場合は直ちに変更する。社内システムへのログインには多要素認証を必須とする。",
+     "relevance": 1.79,
+     "accepted": true
+    },
+    {
+     "id": "security/accounts.md#2",
+     "title": "アカウント・PC管理規程",
+     "heading": "第2条 パスワードを忘れたとき",
+     "text": "パスワードを忘れた場合は、セルフサービスポータルから本人がリセットする。多要素認証の端末を失った場合は、情報システム部に連絡する。",
+     "relevance": 0.41,
+     "accepted": false
+    },
+    {
+     "id": "hr/leave.md#1",
+     "title": "休暇規程",
+     "heading": "第1条 年次有給休暇の付与",
+     "text": "入社日から6か月間継続勤務し、所定労働日の8割以上出勤した社員には、10日の年次有給休暇を付与する。その後は1年ごとに勤続年数に応じて付与日数を増やし、勤続6年6か月以上で年20日を上限とする。",
+     "relevance": 0.01,
+     "accepted": false
+    },
+    {
+     "id": "general/office.md#1",
+     "title": "オフィス利用ルール",
+     "heading": "入退館",
+     "text": "入退館には社員証（ICカード）を使う。オフィスの最終退館時刻は22時とする。",
+     "relevance": 0.01,
+     "accepted": false
+    },
+    {
+     "id": "api/webhooks.md#2",
+     "title": "SampleCloud Webhook 仕様",
+     "heading": "タイムアウトとリトライ",
+     "text": "受信側は10秒以内に 2xx のステータスコードを返す必要がある。それ以外の応答やタイムアウトは失敗とみなし、1分、2分、4分、8分、16分の間隔で最大5回まで再送する。",
+     "relevance": 0.01,
+     "accepted": false
+    }
+   ],
+   "sufficiency": 0.98,
+   "claims": [
+    {
+     "text": "パスワードは12文字以上にする必要があります。",
+     "support": 0.98,
+     "supported": true
+    },
+    {
+     "text": "ほかのサービスと使い回してはならず、漏えいのおそれがある場合は直ちに変更が求められます。",
+     "support": 0.96,
+     "supported": true
+    },
+    {
+     "text": "社内システムへのログインには多要素認証が必須とされています。",
+     "support": 0.98,
+     "supported": true
+    }
+   ],
+   "citations": [
+    "security/infosec.md#2"
+   ],
+   "timingsMs": {
+    "triage": 222.9,
+    "retrieval": 366.4,
+    "assess": 285.3,
+    "generate": 1288.3,
+    "verify": 292.4
+   },
+   "totalMs": 2455.3,
+   "jevCalls": 3,
+   "jevTokens": 3385,
+   "llmTokens": 263,
+   "baseline": {
+    "answer": "パスワードは12文字以上にする必要があります [1]。",
+    "totalMs": 3077.2,
+    "llmTokens": 588
+   }
+  },
+  {
+   "id": "t22",
+   "split": "test",
+   "type": "answerable",
+   "query": "会社のPCをなくしたらどうすればいい？",
+   "answerable": true,
+   "status": "answered",
+   "answer": "会社貸与のPCを紛失した場合は、気づいてから1時間以内に情報システム部へ報告してください [1]。",
+   "triage": {
+    "intent": "knowledge_search",
+    "intent_confidence": 0.96,
+    "route": "security",
+    "route_confidence": 1.0,
+    "decompose": 0.09
+   },
+   "subQueries": [],
+   "retrieved": [
+    {
+     "id": "security/accounts.md#4",
+     "title": "アカウント・PC管理規程",
+     "heading": "第4条 PCの交換と返却",
+     "text": "会社貸与PCは4年ごとに交換する。退職する社員は、最終出社日までに貸与品をすべて返却する。",
+     "relevance": 0.55,
+     "accepted": false
+    },
+    {
+     "id": "security/infosec.md#4",
+     "title": "情報セキュリティ規程",
+     "heading": "第4条 紛失・盗難時の報告",
+     "text": "会社貸与のPCやスマートフォンを紛失した場合、または盗難にあった場合は、気づいてから1時間以内に情報システム部へ報告する。",
+     "relevance": 1.85,
+     "accepted": true
+    },
+    {
+     "id": "security/infosec.md#3",
+     "title": "情報セキュリティ規程",
+     "heading": "第3条 社外への持ち出し",
+     "text": "社外で業務を行う場合は、ディスクが暗号化された会社貸与PCのみを使用する。USBメモリなどの外部記録媒体の使用は禁止する。",
+     "relevance": 0.33,
+     "accepted": false
+    },
+    {
+     "id": "security/accounts.md#3",
+     "title": "アカウント・PC管理規程",
+     "heading": "第3条 ソフトウェアのインストール",
+     "text": "会社貸与PCには、許可リストに載っているソフトウェアのみインストールできる。許可リストにないソフトウェアを使いたい場合は、情報システム部に申請する。",
+     "relevance": 0.06,
+     "accepted": false
+    },
+    {
+     "id": "security/accounts.md#2",
+     "title": "アカウント・PC管理規程",
+     "heading": "第2条 パスワードを忘れたとき",
+     "text": "パスワードを忘れた場合は、セルフサービスポータルから本人がリセットする。多要素認証の端末を失った場合は、情報システム部に連絡する。",
+     "relevance": 0.39,
+     "accepted": false
+    }
+   ],
+   "sufficiency": 0.85,
+   "claims": [
+    {
+     "text": "会社貸与のPCを紛失した場合は、気づいてから1時間以内に情報システム部へ報告してください。",
+     "support": 0.98,
+     "supported": true
+    }
+   ],
+   "citations": [
+    "security/infosec.md#4"
+   ],
+   "timingsMs": {
+    "triage": 208.3,
+    "retrieval": 196.6,
+    "assess": 233.5,
+    "generate": 3148.2,
+    "verify": 233.6
+   },
+   "totalMs": 4020.2,
+   "jevCalls": 3,
+   "jevTokens": 3069,
+   "llmTokens": 352,
+   "baseline": {
+    "answer": "会社貸与のPCを紛失した場合は、気づいてから1時間以内に情報システム部へ報告してください [2]。",
+    "totalMs": 16561.0,
+    "llmTokens": 593
+   }
+  },
+  {
+   "id": "t23",
+   "split": "test",
+   "type": "answerable",
+   "query": "社外秘の資料を、会社が契約している生成AIに入力しても大丈夫？",
+   "answerable": true,
+   "status": "answered",
+   "answer": "はい、会社が法人契約したツールには「社外秘」までの情報を入力してよいため、問題ありません [1]。ただし、「極秘」情報や顧客の個人情報が含まれている場合は入力してはなりません [1]。",
+   "triage": {
+    "intent": "knowledge_search",
+    "intent_confidence": 0.96,
+    "route": "security",
+    "route_confidence": 1.0,
+    "decompose": 0.12
+   },
+   "subQueries": [],
+   "retrieved": [
+    {
+     "id": "security/ai_guideline.md#2",
+     "title": "生成AI利用ガイドライン",
+     "heading": "2. 入力してよい情報",
+     "text": "会社が法人契約したツールには「社外秘」までの情報を入力してよい。「極秘」情報と、顧客の個人情報は入力してはならない。",
+     "relevance": 1.85,
+     "accepted": true
+    },
+    {
+     "id": "security/ai_guideline.md#1",
+     "title": "生成AI利用ガイドライン",
+     "heading": "1. 利用できるツール",
+     "text": "業務で利用できる生成AIは、会社が法人契約したツールに限る。個人で契約したアカウントを業務に使ってはならない。",
+     "relevance": 0.98,
+     "accepted": false
+    },
+    {
+     "id": "security/ai_guideline.md#3",
+     "title": "生成AI利用ガイドライン",
+     "heading": "3. 生成物の扱い",
+     "text": "生成AIが作成した文章やコードを顧客向けの資料や製品に使う場合は、必ず担当者が内容を確認し、第三者の権利を侵害していないことを確かめる。",
+     "relevance": 0.39,
+     "accepted": false
+    },
+    {
+     "id": "security/infosec.md#1",
+     "title": "情報セキュリティ規程",
+     "heading": "第1条 情報の区分",
+     "text": "社内の情報は「極秘」「社外秘」「公開」の3つに区分する。区分が不明な情報は「社外秘」として扱う。",
+     "relevance": 1.04,
+     "accepted": true
+    },
+    {
+     "id": "security/infosec.md#3",
+     "title": "情報セキュリティ規程",
+     "heading": "第3条 社外への持ち出し",
+     "text": "社外で業務を行う場合は、ディスクが暗号化された会社貸与PCのみを使用する。USBメモリなどの外部記録媒体の使用は禁止する。",
+     "relevance": 0.25,
+     "accepted": false
+    }
+   ],
+   "sufficiency": 0.95,
+   "claims": [
+    {
+     "text": "はい、会社が法人契約したツールには「社外秘」までの情報を入力してよいため、問題ありません。",
+     "support": 0.9,
+     "supported": true
+    },
+    {
+     "text": "ただし、「極秘」情報や顧客の個人情報が含まれている場合は入力してはなりません。",
+     "support": 0.96,
+     "supported": true
+    }
+   ],
+   "citations": [
+    "security/ai_guideline.md#2",
+    "security/infosec.md#1"
+   ],
+   "timingsMs": {
+    "triage": 232.8,
+    "retrieval": 211.9,
+    "assess": 323.3,
+    "generate": 1875.8,
+    "verify": 236.8
+   },
+   "totalMs": 2880.5,
+   "jevCalls": 3,
+   "jevTokens": 3250,
+   "llmTokens": 430,
+   "baseline": {
+    "answer": "会社が法人契約した生成AIツールには、「社外秘」までの情報を入力してよいと定められているため大丈夫です [1]。ただし、「極秘」情報や顧客の個人情報については入力が禁止されています [1]。",
+    "totalMs": 2115.8,
+    "llmTokens": 449
+   }
+  },
+  {
+   "id": "t24",
+   "split": "test",
+   "type": "answerable",
+   "query": "SampleCloud のアクセストークンの有効期限はどれくらい？",
+   "answerable": true,
+   "status": "answered",
+   "answer": "SampleCloudのアクセストークンの有効期限は1時間です[1]。",
+   "triage": {
+    "intent": "knowledge_search",
+    "intent_confidence": 0.98,
+    "route": "api",
+    "route_confidence": 0.98,
+    "decompose": 0.04
+   },
+   "subQueries": [],
+   "retrieved": [
+    {
+     "id": "api/auth.md#2",
+     "title": "SampleCloud API 認証仕様",
+     "heading": "アクセストークン",
+     "text": "OAuth 2.0 で発行されるアクセストークンの有効期限は1時間である。期限切れのトークンでリクエストすると HTTP 401 が返る。",
+     "relevance": 1.8,
+     "accepted": true
+    },
+    {
+     "id": "api/auth.md#3",
+     "title": "SampleCloud API 認証仕様",
+     "heading": "リフレッシュトークン",
+     "text": "リフレッシュトークンの有効期限は30日である。/v1/oauth/token にリフレッシュトークンを送ると、新しいアクセストークンを取得できる。",
+     "relevance": 0.94,
+     "accepted": false
+    },
+    {
+     "id": "api/errors.md#1",
+     "title": "SampleCloud API エラーコード",
+     "heading": "クライアントエラー",
+     "text": "- 400 Bad Request：リクエストの形式が正しくない\n- 401 Unauthorized：認証情報がない、または期限切れ\n- 403 Forbidden：権限がない操作を行った\n- 404 Not Found：対象のリソースが存在しない\n- 409 Conflict：同じリソースを同時に更新しようとした\n- 422 Unprocessable Entity：入力値の検証に失敗した\n- 429 Too Many Requests：レート制限を超えた",
+     "relevance": 0.86,
+     "accepted": false
+    },
+    {
+     "id": "faq/data.md#2",
+     "title": "SampleCloud FAQ：データの管理",
+     "heading": "解約後のデータはどうなりますか？",
+     "text": "解約から30日後に、すべてのデータを完全に削除します。削除後の復元はできません。",
+     "relevance": 0.07,
+     "accepted": false
+    },
+    {
+     "id": "api/rate_limit.md#2",
+     "title": "SampleCloud API レート制限",
+     "heading": "瞬間的なリクエスト（バースト）",
+     "text": "1秒あたりの上限は、Freeプランが5回、Standardプランが20回、Enterpriseプランが100回である。",
+     "relevance": 0.03,
+     "accepted": false
+    }
+   ],
+   "sufficiency": 0.98,
+   "claims": [
+    {
+     "text": "SampleCloudのアクセストークンの有効期限は1時間です。",
+     "support": 0.97,
+     "supported": true
+    }
+   ],
+   "citations": [
+    "api/auth.md#2"
+   ],
+   "timingsMs": {
+    "triage": 255.3,
+    "retrieval": 188.4,
+    "assess": 288.3,
+    "generate": 1613.6,
+    "verify": 278.9
+   },
+   "totalMs": 2624.5,
+   "jevCalls": 3,
+   "jevTokens": 3115,
+   "llmTokens": 297,
+   "baseline": {
+    "answer": "SampleCloudのOAuth 2.0で発行されるアクセストークンの有効期限は1時間です [1]。",
+    "totalMs": 2381.0,
+    "llmTokens": 492
+   }
+  },
+  {
+   "id": "t25",
+   "split": "test",
+   "type": "answerable",
+   "query": "Standardプランは1分に何回までAPIを呼べる？",
+   "answerable": true,
+   "status": "answered",
+   "answer": "Standardプランにおける1分あたりのリクエスト数の上限は600回です [1]。",
+   "triage": {
+    "intent": "knowledge_search",
+    "intent_confidence": 0.99,
+    "route": "api",
+    "route_confidence": 0.99,
+    "decompose": 0.04
+   },
+   "subQueries": [],
+   "retrieved": [
+    {
+     "id": "api/rate_limit.md#1",
+     "title": "SampleCloud API レート制限",
+     "heading": "プラン別の上限",
+     "text": "1分あたりのリクエスト数の上限は、Freeプランが60回、Standardプランが600回、Enterpriseプランが6,000回である。",
+     "relevance": 1.79,
+     "accepted": true
+    },
+    {
+     "id": "api/rate_limit.md#2",
+     "title": "SampleCloud API レート制限",
+     "heading": "瞬間的なリクエスト（バースト）",
+     "text": "1秒あたりの上限は、Freeプランが5回、Standardプランが20回、Enterpriseプランが100回である。",
+     "relevance": 1.01,
+     "accepted": true
+    },
+    {
+     "id": "api/rate_limit.md#3",
+     "title": "SampleCloud API レート制限",
+     "heading": "上限を超えたとき",
+     "text": "上限を超えると HTTP 429 が返る。レスポンスの Retry-After ヘッダーに、再試行できるまでの秒数が入る。",
+     "relevance": 0.59,
+     "accepted": false
+    },
+    {
+     "id": "faq/contract.md#4",
+     "title": "SampleCloud FAQ：契約・解約",
+     "heading": "プランを下位プランに変更するとどうなりますか？",
+     "text": "下位プランへの変更は、次回の契約更新日から適用されます。上位プランへの変更は即時に適用され、差額は日割りで請求します。",
+     "relevance": 0.05,
+     "accepted": false
+    },
+    {
+     "id": "api/auth.md#4",
+     "title": "SampleCloud API 認証仕様",
+     "heading": "APIキーのローテーション",
+     "text": "APIキーは1つのプロジェクトにつき最大2本まで同時に有効にできる。新しいキーを発行してから古いキーを無効化することで、停止せずにキーを切り替えられる。",
+     "relevance": 0.03,
+     "accepted": false
+    }
+   ],
+   "sufficiency": 0.99,
+   "claims": [
+    {
+     "text": "Standardプランにおける1分あたりのリクエスト数の上限は600回です。",
+     "support": 0.98,
+     "supported": true
+    }
+   ],
+   "citations": [
+    "api/rate_limit.md#1",
+    "api/rate_limit.md#2"
+   ],
+   "timingsMs": {
+    "triage": 205.3,
+    "retrieval": 181.6,
+    "assess": 270.8,
+    "generate": 4591.5,
+    "verify": 226.7
+   },
+   "totalMs": 5475.9,
+   "jevCalls": 3,
+   "jevTokens": 3095,
+   "llmTokens": 468,
+   "baseline": {
+    "answer": "Standardプランでは、1分あたり600回までAPIリクエストを呼ぶことができます[1]。",
+    "totalMs": 2064.0,
+    "llmTokens": 585
+   }
+  },
+  {
+   "id": "t26",
+   "split": "test",
+   "type": "answerable",
+   "query": "年払いを途中で解約したら返金はありますか？",
+   "answerable": true,
+   "status": "answered",
+   "answer": "年払いプランを途中で解約した場合でも、残りの期間分の返金は行っていません [1]。なお、契約期間の終了日まではすべての機能を利用できます [1]。",
+   "triage": {
+    "intent": "knowledge_search",
+    "intent_confidence": 0.94,
+    "route": "faq",
+    "route_confidence": 1.0,
+    "decompose": 0.09
+   },
+   "subQueries": [],
+   "retrieved": [
+    {
+     "id": "faq/contract.md#2",
+     "title": "SampleCloud FAQ：契約・解約",
+     "heading": "年払いプランを途中で解約したら返金されますか？",
+     "text": "年払いプランを途中で解約した場合でも、残りの期間分の返金は行っていません。契約期間の終了日まではすべての機能を利用できます。",
+     "relevance": 1.84,
+     "accepted": true
+    },
+    {
+     "id": "faq/contract.md#1",
+     "title": "SampleCloud FAQ：契約・解約",
+     "heading": "解約はいつまでに申し込めばよいですか？",
+     "text": "契約更新日の7日前までに、管理画面の「プラン設定」から解約を申し込んでください。",
+     "relevance": 0.57,
+     "accepted": false
+    },
+    {
+     "id": "faq/contract.md#3",
+     "title": "SampleCloud FAQ：契約・解約",
+     "heading": "解約すると違約金はかかりますか？",
+     "text": "違約金はかかりません。",
+     "relevance": 0.71,
+     "accepted": false
+    },
+    {
+     "id": "faq/contract.md#4",
+     "title": "SampleCloud FAQ：契約・解約",
+     "heading": "プランを下位プランに変更するとどうなりますか？",
+     "text": "下位プランへの変更は、次回の契約更新日から適用されます。上位プランへの変更は即時に適用され、差額は日割りで請求します。",
+     "relevance": 0.4,
+     "accepted": false
+    },
+    {
+     "id": "faq/data.md#2",
+     "title": "SampleCloud FAQ：データの管理",
+     "heading": "解約後のデータはどうなりますか？",
+     "text": "解約から30日後に、すべてのデータを完全に削除します。削除後の復元はできません。",
+     "relevance": 0.33,
+     "accepted": false
+    }
+   ],
+   "sufficiency": 0.96,
+   "claims": [
+    {
+     "text": "年払いプランを途中で解約した場合でも、残りの期間分の返金は行っていません。",
+     "support": 0.97,
+     "supported": true
+    },
+    {
+     "text": "なお、契約期間の終了日まではすべての機能を利用できます。",
+     "support": 0.97,
+     "supported": true
+    }
+   ],
+   "citations": [
+    "faq/contract.md#2"
+   ],
+   "timingsMs": {
+    "triage": 203.2,
+    "retrieval": 230.6,
+    "assess": 281.0,
+    "generate": 1572.5,
+    "verify": 236.2
+   },
+   "totalMs": 2523.4,
+   "jevCalls": 3,
+   "jevTokens": 3133,
+   "llmTokens": 361,
+   "baseline": {
+    "answer": "年払いプランを途中で解約した場合でも、残りの期間分の返金は行っていません [1]。なお、契約期間の終了日まではすべての機能を利用できます [1]。",
+    "totalMs": 1732.4,
+    "llmTokens": 430
+   }
+  },
+  {
+   "id": "t27",
+   "split": "test",
+   "type": "answerable",
+   "query": "解約後、データはいつ消えますか？",
+   "answerable": true,
+   "status": "answered",
+   "answer": "解約から30日後に、すべてのデータが完全に削除されます [1]。",
+   "triage": {
+    "intent": "knowledge_search",
+    "intent_confidence": 0.93,
+    "route": "faq",
+    "route_confidence": 0.99,
+    "decompose": 0.08
+   },
+   "subQueries": [],
+   "retrieved": [
+    {
+     "id": "faq/data.md#2",
+     "title": "SampleCloud FAQ：データの管理",
+     "heading": "解約後のデータはどうなりますか？",
+     "text": "解約から30日後に、すべてのデータを完全に削除します。削除後の復元はできません。",
+     "relevance": 1.77,
+     "accepted": true
+    },
+    {
+     "id": "faq/contract.md#1",
+     "title": "SampleCloud FAQ：契約・解約",
+     "heading": "解約はいつまでに申し込めばよいですか？",
+     "text": "契約更新日の7日前までに、管理画面の「プラン設定」から解約を申し込んでください。",
+     "relevance": 0.44,
+     "accepted": false
+    },
+    {
+     "id": "faq/data.md#1",
+     "title": "SampleCloud FAQ：データの管理",
+     "heading": "データをエクスポートできますか？",
+     "text": "管理者アカウントから、いつでも CSV または JSON 形式で全データをエクスポートできます。",
+     "relevance": 0.64,
+     "accepted": false
+    },
+    {
+     "id": "faq/data.md#3",
+     "title": "SampleCloud FAQ：データの管理",
+     "heading": "バックアップはありますか？",
+     "text": "データは毎日バックアップし、7日間保存しています。",
+     "relevance": 0.84,
+     "accepted": false
+    },
+    {
+     "id": "faq/contract.md#3",
+     "title": "SampleCloud FAQ：契約・解約",
+     "heading": "解約すると違約金はかかりますか？",
+     "text": "違約金はかかりません。",
+     "relevance": 0.11,
+     "accepted": false
+    }
+   ],
+   "sufficiency": 0.97,
+   "claims": [
+    {
+     "text": "解約から30日後に、すべてのデータが完全に削除されます。",
+     "support": 0.97,
+     "supported": true
+    }
+   ],
+   "citations": [
+    "faq/data.md#2"
+   ],
+   "timingsMs": {
+    "triage": 223.9,
+    "retrieval": 309.2,
+    "assess": 239.9,
+    "generate": 1090.9,
+    "verify": 375.8
+   },
+   "totalMs": 2239.6,
+   "jevCalls": 3,
+   "jevTokens": 2903,
+   "llmTokens": 197,
+   "baseline": {
+    "answer": "解約から30日後に、すべてのデータが完全に削除されます [1]。削除後の復元はできません [1]。",
+    "totalMs": 2071.0,
+    "llmTokens": 362
+   }
+  },
+  {
+   "id": "t28",
+   "split": "test",
+   "type": "answerable",
+   "query": "インボイスの登録番号を教えて",
+   "answerable": true,
+   "status": "clarify",
+   "answer": "ご質問の対象が特定できませんでした。どの制度・手続き・仕様について知りたいか、もう少し具体的に教えてください。",
+   "triage": {
+    "intent": "clarification_needed",
+    "intent_confidence": 0.27,
+    "route": "expense",
+    "route_confidence": 0.42,
+    "decompose": 0.06
+   },
+   "subQueries": [],
+   "retrieved": [],
+   "sufficiency": null,
+   "claims": [],
+   "citations": [],
+   "timingsMs": {
+    "triage": 203.4
+   },
+   "totalMs": 203.4,
+   "jevCalls": 1,
+   "jevTokens": 957,
+   "llmTokens": 0,
+   "baseline": {
+    "answer": "当社の適格請求書（インボイス）の登録番号は T1234567890123 です [1]。",
+    "totalMs": 4137.4,
+    "llmTokens": 616
+   }
+  },
+  {
+   "id": "t29",
+   "split": "test",
+   "type": "compound",
+   "query": "有給休暇と特別休暇は、それぞれ翌年度に繰り越せますか？",
+   "answerable": true,
+   "status": "answered",
+   "answer": "年次有給休暇は、当年度に使い切れなかった場合に上限を20日として翌年度に限り繰り越すことができます [2]。一方で、特別休暇は翌年度に繰り越すことはできません [1]。",
+   "triage": {
+    "intent": "knowledge_search",
+    "intent_confidence": 0.98,
+    "route": "hr",
+    "route_confidence": 1.0,
+    "decompose": 0.92
+   },
+   "subQueries": [
+    "有給休暇",
+    "特別休暇は",
+    "それぞれ翌年度に繰り越せますか？"
+   ],
+   "retrieved": [
+    {
+     "id": "hr/leave.md#5",
+     "title": "休暇規程",
+     "heading": "第5条 特別休暇",
+     "text": "会社は、年次有給休暇とは別に、次の特別休暇を有給で付与する。\n- 夏季休暇：毎年7月から9月の間に3日\n- 結婚休暇：本人が結婚したとき5日（入籍日から6か月以内に取得）\n- 配偶者出産休暇：配偶者が出産したとき3日\n- 忌引休暇：配偶者・父母・子が亡くなったとき5日、祖父母・兄弟姉妹が亡くなったとき2日\n\n特別休暇は翌年度に繰り越すことはできない。",
+     "relevance": 1.37,
+     "accepted": true
+    },
+    {
+     "id": "hr/leave.md#4",
+     "title": "休暇規程",
+     "heading": "第4条 年次有給休暇の繰り越し",
+     "text": "当年度に使い切れなかった年次有給休暇は、翌年度に限り繰り越すことができる。繰り越せる日数の上限は20日とし、繰り越し分と当年度付与分を合わせて保有できる日数は最大40日とする。上限を超えた日数は消滅する。",
+     "relevance": 1.79,
+     "accepted": true
+    },
+    {
+     "id": "hr/leave.md#1",
+     "title": "休暇規程",
+     "heading": "第1条 年次有給休暇の付与",
+     "text": "入社日から6か月間継続勤務し、所定労働日の8割以上出勤した社員には、10日の年次有給休暇を付与する。その後は1年ごとに勤続年数に応じて付与日数を増やし、勤続6年6か月以上で年20日を上限とする。",
+     "relevance": 0.63,
+     "accepted": false
+    },
+    {
+     "id": "hr/leave.md#2",
+     "title": "休暇規程",
+     "heading": "第2条 取得単位",
+     "text": "年次有給休暇は1日単位のほか、半日単位（年10回まで）および時間単位（年5日分まで）で取得できる。",
+     "relevance": 0.23,
+     "accepted": false
+    },
+    {
+     "id": "hr/leave.md#3",
+     "title": "休暇規程",
+     "heading": "第3条 取得の申請",
+     "text": "年次有給休暇を取得するときは、原則として取得日の3営業日前までに勤怠システムで申請し、所属長の承認を得る。急病などやむを得ない場合は、事後の申請を認める。",
+     "relevance": 0.15,
+     "accepted": false
+    }
+   ],
+   "sufficiency": 0.96,
+   "claims": [
+    {
+     "text": "年次有給休暇は、当年度に使い切れなかった場合に上限を20日として翌年度に限り繰り越すことができます。",
+     "support": 0.97,
+     "supported": true
+    },
+    {
+     "text": "一方で、特別休暇は翌年度に繰り越すことはできません。",
+     "support": 0.98,
+     "supported": true
+    }
+   ],
+   "citations": [
+    "hr/leave.md#5",
+    "hr/leave.md#4"
+   ],
+   "timingsMs": {
+    "triage": 279.2,
+    "retrieval": 975.0,
+    "assess": 254.3,
+    "generate": 1530.8,
+    "verify": 259.5
+   },
+   "totalMs": 3298.8,
+   "jevCalls": 3,
+   "jevTokens": 3611,
+   "llmTokens": 418,
+   "baseline": {
+    "answer": "年次有給休暇は、当年度に使い切れなかった場合に上限を20日として翌年度に限り繰り越すことができます [1]。一方で、特別休暇は翌年度に繰り越すことはできません [2]。",
+    "totalMs": 1778.3,
+    "llmTokens": 626
+   }
+  },
+  {
+   "id": "t30",
+   "split": "test",
+   "type": "compound",
+   "query": "アクセストークンとリフレッシュトークンの有効期限は？",
+   "answerable": true,
+   "status": "answered",
+   "answer": "アクセストークンの有効期限は1時間です [2]。リフレッシュトークンの有効期限は30日です [1]。",
+   "triage": {
+    "intent": "knowledge_search",
+    "intent_confidence": 0.91,
+    "route": "api",
+    "route_confidence": 0.97,
+    "decompose": 0.78
+   },
+   "subQueries": [
+    "アクセストークン",
+    "リフレッシュトークンの有効期限は？"
+   ],
+   "retrieved": [
+    {
+     "id": "api/auth.md#3",
+     "title": "SampleCloud API 認証仕様",
+     "heading": "リフレッシュトークン",
+     "text": "リフレッシュトークンの有効期限は30日である。/v1/oauth/token にリフレッシュトークンを送ると、新しいアクセストークンを取得できる。",
+     "relevance": 1.48,
+     "accepted": true
+    },
+    {
+     "id": "api/auth.md#2",
+     "title": "SampleCloud API 認証仕様",
+     "heading": "アクセストークン",
+     "text": "OAuth 2.0 で発行されるアクセストークンの有効期限は1時間である。期限切れのトークンでリクエストすると HTTP 401 が返る。",
+     "relevance": 1.82,
+     "accepted": true
+    },
+    {
+     "id": "api/errors.md#1",
+     "title": "SampleCloud API エラーコード",
+     "heading": "クライアントエラー",
+     "text": "- 400 Bad Request：リクエストの形式が正しくない\n- 401 Unauthorized：認証情報がない、または期限切れ\n- 403 Forbidden：権限がない操作を行った\n- 404 Not Found：対象のリソースが存在しない\n- 409 Conflict：同じリソースを同時に更新しようとした\n- 422 Unprocessable Entity：入力値の検証に失敗した\n- 429 Too Many Requests：レート制限を超えた",
+     "relevance": 0.77,
+     "accepted": false
+    },
+    {
+     "id": "api/webhooks.md#1",
+     "title": "SampleCloud Webhook 仕様",
+     "heading": "署名の検証",
+     "text": "Webhook のリクエストには X-Sample-Signature ヘッダーが付く。値は、リクエストボディを Webhook シークレットで HMAC-SHA256 署名したものである。受信側はこの署名を検証し、一致しないリクエストを破棄すること。",
+     "relevance": 0.02,
+     "accepted": false
+    },
+    {
+     "id": "security/accounts.md#3",
+     "title": "アカウント・PC管理規程",
+     "heading": "第3条 ソフトウェアのインストール",
+     "text": "会社貸与PCには、許可リストに載っているソフトウェアのみインストールできる。許可リストにないソフトウェアを使いたい場合は、情報システム部に申請する。",
+     "relevance": 0.01,
+     "accepted": false
+    }
+   ],
+   "sufficiency": 0.96,
+   "claims": [
+    {
+     "text": "アクセストークンの有効期限は1時間です。",
+     "support": 0.98,
+     "supported": true
+    },
+    {
+     "text": "リフレッシュトークンの有効期限は30日です。",
+     "support": 0.98,
+     "supported": true
+    }
+   ],
+   "citations": [
+    "api/auth.md#3",
+    "api/auth.md#2"
+   ],
+   "timingsMs": {
+    "triage": 243.3,
+    "retrieval": 727.1,
+    "assess": 221.1,
+    "generate": 1859.8,
+    "verify": 207.5
+   },
+   "totalMs": 3258.9,
+   "jevCalls": 3,
+   "jevTokens": 3385,
+   "llmTokens": 429,
+   "baseline": {
+    "answer": "OAuth 2.0 で発行されるアクセストークンの有効期限は1時間です [2]。また、リフレッシュトークンの有効期限は30日です [1]。",
+    "totalMs": 2328.0,
+    "llmTokens": 544
+   }
+  },
+  {
+   "id": "t31",
+   "split": "test",
+   "type": "compound",
+   "query": "通勤手当と住宅手当の金額を教えて",
+   "answerable": true,
+   "status": "answered",
+   "answer": "通勤手当は、最も経済的かつ合理的な経路の定期券代が月50,000円を上限として支給されます [2]。また、住宅手当は世帯主である社員に対して月20,000円が支給されます [1]。",
+   "triage": {
+    "intent": "knowledge_search",
+    "intent_confidence": 0.96,
+    "route": "hr",
+    "route_confidence": 1.0,
+    "decompose": 0.8
+   },
+   "subQueries": [
+    "通勤手当",
+    "住宅手当の金額を教えて"
+   ],
+   "retrieved": [
+    {
+     "id": "hr/allowances.md#3",
+     "title": "給与・諸手当規程",
+     "heading": "第3条 住宅手当",
+     "text": "世帯主である社員に、住宅手当として月20,000円を支給する。",
+     "relevance": 1.82,
+     "accepted": true
+    },
+    {
+     "id": "hr/allowances.md#2",
+     "title": "給与・諸手当規程",
+     "heading": "第2条 通勤手当",
+     "text": "公共交通機関を利用して通勤する社員には、最も経済的かつ合理的な経路の定期券代を通勤手当として支給する。支給額は月50,000円を上限とする。",
+     "relevance": 1.81,
+     "accepted": true
+    },
+    {
+     "id": "hr/remote_work.md#4",
+     "title": "在宅勤務規程",
+     "heading": "第4条 在宅勤務手当",
+     "text": "在宅勤務を月4日以上行った月は、通信費・光熱費の補助として在宅勤務手当5,000円を給与に加算して支給する。",
+     "relevance": 0.09,
+     "accepted": false
+    },
+    {
+     "id": "hr/allowances.md#4",
+     "title": "給与・諸手当規程",
+     "heading": "第4条 家族手当",
+     "text": "扶養する配偶者がいる社員には月10,000円、扶養する子1人につき月5,000円を家族手当として支給する。",
+     "relevance": 0.12,
+     "accepted": false
+    },
+    {
+     "id": "hr/allowances.md#1",
+     "title": "給与・諸手当規程",
+     "heading": "第1条 給与の支給日",
+     "text": "給与は毎月25日に支給する。支給日が休日にあたる場合は、その直前の営業日に支給する。",
+     "relevance": 0.03,
+     "accepted": false
+    }
+   ],
+   "sufficiency": 0.77,
+   "claims": [
+    {
+     "text": "通勤手当は、最も経済的かつ合理的な経路の定期券代が月50,000円を上限として支給されます。",
+     "support": 0.94,
+     "supported": true
+    },
+    {
+     "text": "また、住宅手当は世帯主である社員に対して月20,000円が支給されます。",
+     "support": 0.97,
+     "supported": true
+    }
+   ],
+   "citations": [
+    "hr/allowances.md#3",
+    "hr/allowances.md#2"
+   ],
+   "timingsMs": {
+    "triage": 239.4,
+    "retrieval": 810.4,
+    "assess": 345.6,
+    "generate": 1970.7,
+    "verify": 238.8
+   },
+   "totalMs": 3604.8,
+   "jevCalls": 3,
+   "jevTokens": 3157,
+   "llmTokens": 560,
+   "baseline": {
+    "answer": "通勤手当は、最も経済的かつ合理的な経路の定期券代が支給され、上限額は月50,000円です [2]。住宅手当は、世帯主である社員に対して月20,000円が支給されます [1]。",
+    "totalMs": 2122.6,
+    "llmTokens": 486
+   }
+  },
+  {
+   "id": "t32",
+   "split": "test",
+   "type": "compound",
+   "query": "育児休業は最長いつまで取れる？産後パパ育休は何日？",
+   "answerable": true,
+   "status": "answered",
+   "answer": "育児休業は、事情がある場合は最長で子が2歳になるまで延長して取得できます [2]。また、産後パパ育休（出生時育児休業）は、最大28日取得できます [1]。",
+   "triage": {
+    "intent": "knowledge_search",
+    "intent_confidence": 0.85,
+    "route": "hr",
+    "route_confidence": 1.0,
+    "decompose": 0.91
+   },
+   "subQueries": [
+    "育児休業は最長いつまで取れる？産後パパ育休は何日？"
+   ],
+   "retrieved": [
+    {
+     "id": "hr/childcare.md#2",
+     "title": "育児・介護休業規程",
+     "heading": "第2条 出生時育児休業（産後パパ育休）",
+     "text": "子の出生後8週間以内に、最大28日の出生時育児休業を取得できる。2回まで分割して取得できる。",
+     "relevance": 1.87,
+     "accepted": true
+    },
+    {
+     "id": "hr/childcare.md#1",
+     "title": "育児・介護休業規程",
+     "heading": "第1条 育児休業",
+     "text": "社員は、子が1歳になるまでの間、育児休業を取得できる。保育所に入れないなどの事情がある場合は、最長で子が2歳になるまで延長できる。",
+     "relevance": 1.85,
+     "accepted": true
+    },
+    {
+     "id": "hr/childcare.md#3",
+     "title": "育児・介護休業規程",
+     "heading": "第3条 介護休業",
+     "text": "要介護状態にある対象家族1人につき、通算93日まで介護休業を取得できる。3回まで分割して取得できる。",
+     "relevance": 0.1,
+     "accepted": false
+    },
+    {
+     "id": "hr/childcare.md#4",
+     "title": "育児・介護休業規程",
+     "heading": "第4条 子の看護休暇",
+     "text": "小学校入学前の子を養育する社員は、子の看護のため、子が1人の場合は年5日、2人以上の場合は年10日の看護休暇を取得できる。",
+     "relevance": 0.21,
+     "accepted": false
+    },
+    {
+     "id": "hr/leave.md#5",
+     "title": "休暇規程",
+     "heading": "第5条 特別休暇",
+     "text": "会社は、年次有給休暇とは別に、次の特別休暇を有給で付与する。\n- 夏季休暇：毎年7月から9月の間に3日\n- 結婚休暇：本人が結婚したとき5日（入籍日から6か月以内に取得）\n- 配偶者出産休暇：配偶者が出産したとき3日\n- 忌引休暇：配偶者・父母・子が亡くなったとき5日、祖父母・兄弟姉妹が亡くなったとき2日\n\n特別休暇は翌年度に繰り越すことはできない。",
+     "relevance": 0.14,
+     "accepted": false
+    }
+   ],
+   "sufficiency": 0.94,
+   "claims": [
+    {
+     "text": "育児休業は、事情がある場合は最長で子が2歳になるまで延長して取得できます。",
+     "support": 0.96,
+     "supported": true
+    },
+    {
+     "text": "また、産後パパ育休（出生時育児休業）は、最大28日取得できます。",
+     "support": 0.96,
+     "supported": true
+    }
+   ],
+   "citations": [
+    "hr/childcare.md#2",
+    "hr/childcare.md#1"
+   ],
+   "timingsMs": {
+    "triage": 198.2,
+    "retrieval": 306.1,
+    "assess": 225.4,
+    "generate": 1662.7,
+    "verify": 209.7
+   },
+   "totalMs": 2602.1,
+   "jevCalls": 3,
+   "jevTokens": 3343,
+   "llmTokens": 559,
+   "baseline": {
+    "answer": "育児休業は、保育所に入れないなどの事情がある場合、最長で子が2歳になるまで延長できます [2]。また、出生時育児休業（産後パパ育休）は、子の出生後8週間以内に最大28日取得できます [1]。",
+    "totalMs": 1926.8,
+    "llmTokens": 576
+   }
+  },
+  {
+   "id": "t33",
+   "split": "test",
+   "type": "compound",
+   "query": "解約の申し込み期限と、違約金の有無は？",
+   "answerable": true,
+   "status": "answered",
+   "answer": "解約の申し込み期限は、契約更新日の7日前までです [2]。また、解約に伴う違約金はかかりません [1]。",
+   "triage": {
+    "intent": "knowledge_search",
+    "intent_confidence": 0.93,
+    "route": "faq",
+    "route_confidence": 1.0,
+    "decompose": 0.92
+   },
+   "subQueries": [
+    "解約の申し込み期限",
+    "違約金の有無は？"
+   ],
+   "retrieved": [
+    {
+     "id": "faq/contract.md#3",
+     "title": "SampleCloud FAQ：契約・解約",
+     "heading": "解約すると違約金はかかりますか？",
+     "text": "違約金はかかりません。",
+     "relevance": 1.85,
+     "accepted": true
+    },
+    {
+     "id": "faq/contract.md#1",
+     "title": "SampleCloud FAQ：契約・解約",
+     "heading": "解約はいつまでに申し込めばよいですか？",
+     "text": "契約更新日の7日前までに、管理画面の「プラン設定」から解約を申し込んでください。",
+     "relevance": 1.82,
+     "accepted": true
+    },
+    {
+     "id": "faq/data.md#2",
+     "title": "SampleCloud FAQ：データの管理",
+     "heading": "解約後のデータはどうなりますか？",
+     "text": "解約から30日後に、すべてのデータを完全に削除します。削除後の復元はできません。",
+     "relevance": 0.36,
+     "accepted": false
+    },
+    {
+     "id": "faq/contract.md#2",
+     "title": "SampleCloud FAQ：契約・解約",
+     "heading": "年払いプランを途中で解約したら返金されますか？",
+     "text": "年払いプランを途中で解約した場合でも、残りの期間分の返金は行っていません。契約期間の終了日まではすべての機能を利用できます。",
+     "relevance": 0.77,
+     "accepted": false
+    },
+    {
+     "id": "expense/expense.md#1",
+     "title": "経費精算規程",
+     "heading": "第1条 申請期限",
+     "text": "経費は、支出が発生した月の翌月10日までに経費精算システムで申請する。期限を過ぎた申請は、所属長の理由書がある場合に限り受け付ける。",
+     "relevance": 0.05,
+     "accepted": false
+    }
+   ],
+   "sufficiency": 0.94,
+   "claims": [
+    {
+     "text": "解約の申し込み期限は、契約更新日の7日前までです。",
+     "support": 0.97,
+     "supported": true
+    },
+    {
+     "text": "また、解約に伴う違約金はかかりません。",
+     "support": 0.97,
+     "supported": true
+    }
+   ],
+   "citations": [
+    "faq/contract.md#3",
+    "faq/contract.md#1"
+   ],
+   "timingsMs": {
+    "triage": 319.3,
+    "retrieval": 993.4,
+    "assess": 367.6,
+    "generate": 1748.7,
+    "verify": 231.6
+   },
+   "totalMs": 3660.6,
+   "jevCalls": 3,
+   "jevTokens": 3112,
+   "llmTokens": 430,
+   "baseline": {
+    "answer": "解約の申し込み期限は契約更新日の7日前までです [2]。また、解約に伴う違約金はかかりません [1]。",
+    "totalMs": 2212.0,
+    "llmTokens": 504
+   }
+  },
+  {
+   "id": "t34",
+   "split": "test",
+   "type": "compound",
+   "query": "Freeプランの1分あたりと1秒あたりのリクエスト上限は？",
+   "answerable": true,
+   "status": "answered",
+   "answer": "Freeプランの1分あたりのリクエスト数の上限は60回です [1]。また、1秒あたりの上限は5回です [2]。",
+   "triage": {
+    "intent": "knowledge_search",
+    "intent_confidence": 0.97,
+    "route": "api",
+    "route_confidence": 0.97,
+    "decompose": 0.6
+   },
+   "subQueries": [],
+   "retrieved": [
+    {
+     "id": "api/rate_limit.md#1",
+     "title": "SampleCloud API レート制限",
+     "heading": "プラン別の上限",
+     "text": "1分あたりのリクエスト数の上限は、Freeプランが60回、Standardプランが600回、Enterpriseプランが6,000回である。",
+     "relevance": 1.62,
+     "accepted": true
+    },
+    {
+     "id": "api/rate_limit.md#2",
+     "title": "SampleCloud API レート制限",
+     "heading": "瞬間的なリクエスト（バースト）",
+     "text": "1秒あたりの上限は、Freeプランが5回、Standardプランが20回、Enterpriseプランが100回である。",
+     "relevance": 1.81,
+     "accepted": true
+    },
+    {
+     "id": "api/auth.md#2",
+     "title": "SampleCloud API 認証仕様",
+     "heading": "アクセストークン",
+     "text": "OAuth 2.0 で発行されるアクセストークンの有効期限は1時間である。期限切れのトークンでリクエストすると HTTP 401 が返る。",
+     "relevance": 0.03,
+     "accepted": false
+    },
+    {
+     "id": "api/errors.md#1",
+     "title": "SampleCloud API エラーコード",
+     "heading": "クライアントエラー",
+     "text": "- 400 Bad Request：リクエストの形式が正しくない\n- 401 Unauthorized：認証情報がない、または期限切れ\n- 403 Forbidden：権限がない操作を行った\n- 404 Not Found：対象のリソースが存在しない\n- 409 Conflict：同じリソースを同時に更新しようとした\n- 422 Unprocessable Entity：入力値の検証に失敗した\n- 429 Too Many Requests：レート制限を超えた",
+     "relevance": 0.63,
+     "accepted": false
+    },
+    {
+     "id": "faq/contract.md#4",
+     "title": "SampleCloud FAQ：契約・解約",
+     "heading": "プランを下位プランに変更するとどうなりますか？",
+     "text": "下位プランへの変更は、次回の契約更新日から適用されます。上位プランへの変更は即時に適用され、差額は日割りで請求します。",
+     "relevance": 0.05,
+     "accepted": false
+    }
+   ],
+   "sufficiency": 0.97,
+   "claims": [
+    {
+     "text": "Freeプランの1分あたりのリクエスト数の上限は60回です。",
+     "support": 0.98,
+     "supported": true
+    },
+    {
+     "text": "また、1秒あたりの上限は5回です。",
+     "support": 0.69,
+     "supported": false
+    }
+   ],
+   "citations": [
+    "api/rate_limit.md#1",
+    "api/rate_limit.md#2"
+   ],
+   "timingsMs": {
+    "triage": 238.7,
+    "retrieval": 242.3,
+    "assess": 193.7,
+    "generate": 1690.1,
+    "verify": 201.7
+   },
+   "totalMs": 2566.5,
+   "jevCalls": 3,
+   "jevTokens": 3298,
+   "llmTokens": 282,
+   "baseline": {
+    "answer": "Freeプランの1分あたりのリクエスト数の上限は60回です [1]。また、1秒あたりの上限は5回です [2]。",
+    "totalMs": 2081.2,
+    "llmTokens": 521
+   }
+  },
+  {
+   "id": "t35",
+   "split": "test",
+   "type": "unanswerable",
+   "query": "海外出張の宿泊費の上限は？",
+   "answerable": false,
+   "status": "no_answer",
+   "answer": "社内の資料を確認しましたが、このご質問に答えられる記載は見つかりませんでした。担当部署へお問い合わせください。",
+   "triage": {
+    "intent": "knowledge_search",
+    "intent_confidence": 0.99,
+    "route": "expense",
+    "route_confidence": 1.0,
+    "decompose": 0.06
+   },
+   "subQueries": [],
+   "retrieved": [
+    {
+     "id": "expense/domestic_travel.md#3",
+     "title": "国内出張旅費規程",
+     "heading": "第3条 宿泊費",
+     "text": "宿泊費は実費を支給する。1泊あたりの上限は、東京23区・大阪市・名古屋市が12,000円、その他の地域が10,000円とする。",
+     "relevance": 0.65,
+     "accepted": false
+    },
+    {
+     "id": "expense/domestic_travel.md#2",
+     "title": "国内出張旅費規程",
+     "heading": "第2条 日当",
+     "text": "出張中の食事代などの補助として、日帰り出張は1日2,000円、宿泊を伴う出張は1日3,000円の日当を支給する。",
+     "relevance": 0.22,
+     "accepted": false
+    },
+    {
+     "id": "expense/domestic_travel.md#1",
+     "title": "国内出張旅費規程",
+     "heading": "第1条 適用範囲",
+     "text": "この規程は国内出張に適用する。出張とは、勤務地から片道100km以上の移動、または宿泊を伴う業務上の移動をいう。",
+     "relevance": 0.46,
+     "accepted": false
+    },
+    {
+     "id": "expense/domestic_travel.md#4",
+     "title": "国内出張旅費規程",
+     "heading": "第4条 交通機関",
+     "text": "新幹線は普通車指定席を利用する。グリーン車は部長以上に限り利用できる。航空機は片道500km以上の移動に限り利用できる。",
+     "relevance": 0.08,
+     "accepted": false
+    },
+    {
+     "id": "hr/allowances.md#2",
+     "title": "給与・諸手当規程",
+     "heading": "第2条 通勤手当",
+     "text": "公共交通機関を利用して通勤する社員には、最も経済的かつ合理的な経路の定期券代を通勤手当として支給する。支給額は月50,000円を上限とする。",
+     "relevance": 0.02,
+     "accepted": false
+    }
+   ],
+   "sufficiency": 0.04,
+   "claims": [],
+   "citations": [],
+   "timingsMs": {
+    "triage": 248.1,
+    "retrieval": 241.6,
+    "assess": 558.0
+   },
+   "totalMs": 1047.8,
+   "jevCalls": 2,
+   "jevTokens": 2533,
+   "llmTokens": 0,
+   "baseline": {
+    "answer": "海外出張の宿泊費の上限については、資料に記載がありません。資料に定められている宿泊費の上限は、国内出張に関するもののみです [1][3]。",
+    "totalMs": 1953.3,
+    "llmTokens": 487
+   }
+  },
+  {
+   "id": "t36",
+   "split": "test",
+   "type": "unanswerable",
+   "query": "病気で休むときの病気休暇は何日ありますか？",
+   "answerable": false,
+   "status": "no_answer",
+   "answer": "社内の資料を確認しましたが、このご質問に答えられる記載は見つかりませんでした。担当部署へお問い合わせください。",
+   "triage": {
+    "intent": "knowledge_search",
+    "intent_confidence": 0.97,
+    "route": "hr",
+    "route_confidence": 1.0,
+    "decompose": 0.09
+   },
+   "subQueries": [],
+   "retrieved": [
+    {
+     "id": "hr/leave.md#5",
+     "title": "休暇規程",
+     "heading": "第5条 特別休暇",
+     "text": "会社は、年次有給休暇とは別に、次の特別休暇を有給で付与する。\n- 夏季休暇：毎年7月から9月の間に3日\n- 結婚休暇：本人が結婚したとき5日（入籍日から6か月以内に取得）\n- 配偶者出産休暇：配偶者が出産したとき3日\n- 忌引休暇：配偶者・父母・子が亡くなったとき5日、祖父母・兄弟姉妹が亡くなったとき2日\n\n特別休暇は翌年度に繰り越すことはできない。",
+     "relevance": 0.29,
+     "accepted": false
+    },
+    {
+     "id": "hr/leave.md#1",
+     "title": "休暇規程",
+     "heading": "第1条 年次有給休暇の付与",
+     "text": "入社日から6か月間継続勤務し、所定労働日の8割以上出勤した社員には、10日の年次有給休暇を付与する。その後は1年ごとに勤続年数に応じて付与日数を増やし、勤続6年6か月以上で年20日を上限とする。",
+     "relevance": 0.4,
+     "accepted": false
+    },
+    {
+     "id": "hr/leave.md#3",
+     "title": "休暇規程",
+     "heading": "第3条 取得の申請",
+     "text": "年次有給休暇を取得するときは、原則として取得日の3営業日前までに勤怠システムで申請し、所属長の承認を得る。急病などやむを得ない場合は、事後の申請を認める。",
+     "relevance": 0.8,
+     "accepted": false
+    },
+    {
+     "id": "hr/childcare.md#4",
+     "title": "育児・介護休業規程",
+     "heading": "第4条 子の看護休暇",
+     "text": "小学校入学前の子を養育する社員は、子の看護のため、子が1人の場合は年5日、2人以上の場合は年10日の看護休暇を取得できる。",
+     "relevance": 0.16,
+     "accepted": false
+    },
+    {
+     "id": "hr/leave.md#4",
+     "title": "休暇規程",
+     "heading": "第4条 年次有給休暇の繰り越し",
+     "text": "当年度に使い切れなかった年次有給休暇は、翌年度に限り繰り越すことができる。繰り越せる日数の上限は20日とし、繰り越し分と当年度付与分を合わせて保有できる日数は最大40日とする。上限を超えた日数は消滅する。",
+     "relevance": 0.21,
+     "accepted": false
+    }
+   ],
+   "sufficiency": 0.07,
+   "claims": [],
+   "citations": [],
+   "timingsMs": {
+    "triage": 297.7,
+    "retrieval": 119.2,
+    "assess": 211.2
+   },
+   "totalMs": 628.1,
+   "jevCalls": 2,
+   "jevTokens": 2771,
+   "llmTokens": 0,
+   "baseline": {
+    "answer": "年次有給休暇の申請において急病などやむを得ない場合の事後申請は認められていますが、病気休暇の日数については資料に記載がありません [3]。",
+    "totalMs": 2406.2,
+    "llmTokens": 853
+   }
+  },
+  {
+   "id": "t37",
+   "split": "test",
+   "type": "unanswerable",
+   "query": "有給休暇の取得を拒否されたらどこに相談すればいい？",
+   "answerable": false,
+   "status": "no_answer",
+   "answer": "社内の資料を確認しましたが、このご質問に答えられる記載は見つかりませんでした。担当部署へお問い合わせください。",
+   "triage": {
+    "intent": "knowledge_search",
+    "intent_confidence": 0.5,
+    "route": "hr",
+    "route_confidence": 1.0,
+    "decompose": 0.07
+   },
+   "subQueries": [],
+   "retrieved": [
+    {
+     "id": "hr/leave.md#3",
+     "title": "休暇規程",
+     "heading": "第3条 取得の申請",
+     "text": "年次有給休暇を取得するときは、原則として取得日の3営業日前までに勤怠システムで申請し、所属長の承認を得る。急病などやむを得ない場合は、事後の申請を認める。",
+     "relevance": 0.87,
+     "accepted": false
+    },
+    {
+     "id": "hr/leave.md#2",
+     "title": "休暇規程",
+     "heading": "第2条 取得単位",
+     "text": "年次有給休暇は1日単位のほか、半日単位（年10回まで）および時間単位（年5日分まで）で取得できる。",
+     "relevance": 0.42,
+     "accepted": false
+    },
+    {
+     "id": "hr/leave.md#1",
+     "title": "休暇規程",
+     "heading": "第1条 年次有給休暇の付与",
+     "text": "入社日から6か月間継続勤務し、所定労働日の8割以上出勤した社員には、10日の年次有給休暇を付与する。その後は1年ごとに勤続年数に応じて付与日数を増やし、勤続6年6か月以上で年20日を上限とする。",
+     "relevance": 0.53,
+     "accepted": false
+    },
+    {
+     "id": "hr/leave.md#4",
+     "title": "休暇規程",
+     "heading": "第4条 年次有給休暇の繰り越し",
+     "text": "当年度に使い切れなかった年次有給休暇は、翌年度に限り繰り越すことができる。繰り越せる日数の上限は20日とし、繰り越し分と当年度付与分を合わせて保有できる日数は最大40日とする。上限を超えた日数は消滅する。",
+     "relevance": 0.28,
+     "accepted": false
+    },
+    {
+     "id": "hr/leave.md#5",
+     "title": "休暇規程",
+     "heading": "第5条 特別休暇",
+     "text": "会社は、年次有給休暇とは別に、次の特別休暇を有給で付与する。\n- 夏季休暇：毎年7月から9月の間に3日\n- 結婚休暇：本人が結婚したとき5日（入籍日から6か月以内に取得）\n- 配偶者出産休暇：配偶者が出産したとき3日\n- 忌引休暇：配偶者・父母・子が亡くなったとき5日、祖父母・兄弟姉妹が亡くなったとき2日\n\n特別休暇は翌年度に繰り越すことはできない。",
+     "relevance": 0.17,
+     "accepted": false
+    }
+   ],
+   "sufficiency": 0.05,
+   "claims": [],
+   "citations": [],
+   "timingsMs": {
+    "triage": 244.1,
+    "retrieval": 289.2,
+    "assess": 234.9
+   },
+   "totalMs": 768.1,
+   "jevCalls": 2,
+   "jevTokens": 2760,
+   "llmTokens": 0,
+   "baseline": {
+    "answer": "有給休暇の取得を拒否された場合の相談先については、資料に記載がありません。",
+    "totalMs": 3074.6,
+    "llmTokens": 792
+   }
+  },
+  {
+   "id": "t38",
+   "split": "test",
+   "type": "unanswerable",
+   "query": "副業は認められていますか？",
+   "answerable": false,
+   "status": "no_answer",
+   "answer": "社内の資料を確認しましたが、このご質問に答えられる記載は見つかりませんでした。担当部署へお問い合わせください。",
+   "triage": {
+    "intent": "knowledge_search",
+    "intent_confidence": 0.98,
+    "route": "hr",
+    "route_confidence": 1.0,
+    "decompose": 0.06
+   },
+   "subQueries": [],
+   "retrieved": [
+    {
+     "id": "hr/working_hours.md#3",
+     "title": "勤務時間・フレックスタイム規程",
+     "heading": "第3条 時間外労働",
+     "text": "時間外労働を行う場合は、事前に勤怠システムで申請し、所属長の承認を得なければならない。22時から翌5時までの深夜労働は原則として禁止する。",
+     "relevance": 0.1,
+     "accepted": false
+    },
+    {
+     "id": "hr/remote_work.md#3",
+     "title": "在宅勤務規程",
+     "heading": "第3条 勤務場所",
+     "text": "在宅勤務は、会社に届け出た自宅で行う。カフェなど不特定多数が出入りする場所での業務は禁止する。ただし、会社が契約したサテライトオフィスは利用できる。",
+     "relevance": 0.09,
+     "accepted": false
+    },
+    {
+     "id": "hr/remote_work.md#1",
+     "title": "在宅勤務規程",
+     "heading": "第1条 対象者",
+     "text": "在宅勤務の対象者は、試用期間を終えた正社員および契約社員とする。",
+     "relevance": 0.06,
+     "accepted": false
+    },
+    {
+     "id": "security/ai_guideline.md#1",
+     "title": "生成AI利用ガイドライン",
+     "heading": "1. 利用できるツール",
+     "text": "業務で利用できる生成AIは、会社が法人契約したツールに限る。個人で契約したアカウントを業務に使ってはならない。",
+     "relevance": 0.08,
+     "accepted": false
+    },
+    {
+     "id": "hr/remote_work.md#2",
+     "title": "在宅勤務規程",
+     "heading": "第2条 実施日数と申請",
+     "text": "在宅勤務は週3日までとする。在宅勤務を行う週の前週金曜日までに勤怠システムで申請し、所属長の承認を得る。",
+     "relevance": 0.08,
+     "accepted": false
+    }
+   ],
+   "sufficiency": 0.04,
+   "claims": [],
+   "citations": [],
+   "timingsMs": {
+    "triage": 193.8,
+    "retrieval": 195.6,
+    "assess": 328.3
+   },
+   "totalMs": 717.7,
+   "jevCalls": 2,
+   "jevTokens": 2528,
+   "llmTokens": 0,
+   "baseline": {
+    "answer": "副業が認められているかについては、資料に記載がありません。",
+    "totalMs": 3912.6,
+    "llmTokens": 587
+   }
+  },
+  {
+   "id": "t39",
+   "split": "test",
+   "type": "unanswerable",
+   "query": "育児休業中の給付金はいくらもらえますか？",
+   "answerable": false,
+   "status": "no_answer",
+   "answer": "社内の資料を確認しましたが、このご質問に答えられる記載は見つかりませんでした。担当部署へお問い合わせください。",
+   "triage": {
+    "intent": "knowledge_search",
+    "intent_confidence": 0.69,
+    "route": "hr",
+    "route_confidence": 1.0,
+    "decompose": 0.09
+   },
+   "subQueries": [],
+   "retrieved": [
+    {
+     "id": "hr/childcare.md#1",
+     "title": "育児・介護休業規程",
+     "heading": "第1条 育児休業",
+     "text": "社員は、子が1歳になるまでの間、育児休業を取得できる。保育所に入れないなどの事情がある場合は、最長で子が2歳になるまで延長できる。",
+     "relevance": 0.79,
+     "accepted": false
+    },
+    {
+     "id": "hr/childcare.md#2",
+     "title": "育児・介護休業規程",
+     "heading": "第2条 出生時育児休業（産後パパ育休）",
+     "text": "子の出生後8週間以内に、最大28日の出生時育児休業を取得できる。2回まで分割して取得できる。",
+     "relevance": 0.56,
+     "accepted": false
+    },
+    {
+     "id": "hr/childcare.md#3",
+     "title": "育児・介護休業規程",
+     "heading": "第3条 介護休業",
+     "text": "要介護状態にある対象家族1人につき、通算93日まで介護休業を取得できる。3回まで分割して取得できる。",
+     "relevance": 0.16,
+     "accepted": false
+    },
+    {
+     "id": "hr/childcare.md#4",
+     "title": "育児・介護休業規程",
+     "heading": "第4条 子の看護休暇",
+     "text": "小学校入学前の子を養育する社員は、子の看護のため、子が1人の場合は年5日、2人以上の場合は年10日の看護休暇を取得できる。",
+     "relevance": 0.2,
+     "accepted": false
+    },
+    {
+     "id": "hr/leave.md#5",
+     "title": "休暇規程",
+     "heading": "第5条 特別休暇",
+     "text": "会社は、年次有給休暇とは別に、次の特別休暇を有給で付与する。\n- 夏季休暇：毎年7月から9月の間に3日\n- 結婚休暇：本人が結婚したとき5日（入籍日から6か月以内に取得）\n- 配偶者出産休暇：配偶者が出産したとき3日\n- 忌引休暇：配偶者・父母・子が亡くなったとき5日、祖父母・兄弟姉妹が亡くなったとき2日\n\n特別休暇は翌年度に繰り越すことはできない。",
+     "relevance": 0.08,
+     "accepted": false
+    }
+   ],
+   "sufficiency": 0.04,
+   "claims": [],
+   "citations": [],
+   "timingsMs": {
+    "triage": 466.1,
+    "retrieval": 15.5,
+    "assess": 315.8
+   },
+   "totalMs": 797.4,
+   "jevCalls": 2,
+   "jevTokens": 2659,
+   "llmTokens": 0,
+   "baseline": {
+    "answer": "育児休業中の給付金に関する金額については、資料に記載がありません。",
+    "totalMs": 6067.7,
+    "llmTokens": 683
+   }
+  },
+  {
+   "id": "t40",
+   "split": "test",
+   "type": "unanswerable",
+   "query": "結婚祝い金はいくら支給されますか？",
+   "answerable": false,
+   "status": "no_answer",
+   "answer": "社内の資料を確認しましたが、このご質問に答えられる記載は見つかりませんでした。担当部署へお問い合わせください。",
+   "triage": {
+    "intent": "knowledge_search",
+    "intent_confidence": 0.96,
+    "route": "hr",
+    "route_confidence": 0.97,
+    "decompose": 0.06
+   },
+   "subQueries": [],
+   "retrieved": [
+    {
+     "id": "hr/leave.md#5",
+     "title": "休暇規程",
+     "heading": "第5条 特別休暇",
+     "text": "会社は、年次有給休暇とは別に、次の特別休暇を有給で付与する。\n- 夏季休暇：毎年7月から9月の間に3日\n- 結婚休暇：本人が結婚したとき5日（入籍日から6か月以内に取得）\n- 配偶者出産休暇：配偶者が出産したとき3日\n- 忌引休暇：配偶者・父母・子が亡くなったとき5日、祖父母・兄弟姉妹が亡くなったとき2日\n\n特別休暇は翌年度に繰り越すことはできない。",
+     "relevance": 0.69,
+     "accepted": false
+    },
+    {
+     "id": "hr/allowances.md#3",
+     "title": "給与・諸手当規程",
+     "heading": "第3条 住宅手当",
+     "text": "世帯主である社員に、住宅手当として月20,000円を支給する。",
+     "relevance": 0.07,
+     "accepted": false
+    },
+    {
+     "id": "hr/allowances.md#4",
+     "title": "給与・諸手当規程",
+     "heading": "第4条 家族手当",
+     "text": "扶養する配偶者がいる社員には月10,000円、扶養する子1人につき月5,000円を家族手当として支給する。",
+     "relevance": 0.25,
+     "accepted": false
+    },
+    {
+     "id": "hr/allowances.md#2",
+     "title": "給与・諸手当規程",
+     "heading": "第2条 通勤手当",
+     "text": "公共交通機関を利用して通勤する社員には、最も経済的かつ合理的な経路の定期券代を通勤手当として支給する。支給額は月50,000円を上限とする。",
+     "relevance": 0.03,
+     "accepted": false
+    },
+    {
+     "id": "hr/allowances.md#1",
+     "title": "給与・諸手当規程",
+     "heading": "第1条 給与の支給日",
+     "text": "給与は毎月25日に支給する。支給日が休日にあたる場合は、その直前の営業日に支給する。",
+     "relevance": 0.04,
+     "accepted": false
+    }
+   ],
+   "sufficiency": 0.05,
+   "claims": [],
+   "citations": [],
+   "timingsMs": {
+    "triage": 275.4,
+    "retrieval": 110.9,
+    "assess": 300.9
+   },
+   "totalMs": 687.2,
+   "jevCalls": 2,
+   "jevTokens": 2616,
+   "llmTokens": 0,
+   "baseline": {
+    "answer": "結婚祝い金の支給額については、資料に記載がありません。",
+    "totalMs": 3238.4,
+    "llmTokens": 714
+   }
+  },
+  {
+   "id": "t41",
+   "split": "test",
+   "type": "unanswerable",
+   "query": "退職金の計算方法を教えてください",
+   "answerable": false,
+   "status": "no_answer",
+   "answer": "社内の資料を確認しましたが、このご質問に答えられる記載は見つかりませんでした。担当部署へお問い合わせください。",
+   "triage": {
+    "intent": "knowledge_search",
+    "intent_confidence": 0.94,
+    "route": "hr",
+    "route_confidence": 1.0,
+    "decompose": 0.09
+   },
+   "subQueries": [],
+   "retrieved": [
+    {
+     "id": "security/accounts.md#4",
+     "title": "アカウント・PC管理規程",
+     "heading": "第4条 PCの交換と返却",
+     "text": "会社貸与PCは4年ごとに交換する。退職する社員は、最終出社日までに貸与品をすべて返却する。",
+     "relevance": 0.03,
+     "accepted": false
+    },
+    {
+     "id": "hr/leave.md#5",
+     "title": "休暇規程",
+     "heading": "第5条 特別休暇",
+     "text": "会社は、年次有給休暇とは別に、次の特別休暇を有給で付与する。\n- 夏季休暇：毎年7月から9月の間に3日\n- 結婚休暇：本人が結婚したとき5日（入籍日から6か月以内に取得）\n- 配偶者出産休暇：配偶者が出産したとき3日\n- 忌引休暇：配偶者・父母・子が亡くなったとき5日、祖父母・兄弟姉妹が亡くなったとき2日\n\n特別休暇は翌年度に繰り越すことはできない。",
+     "relevance": 0.02,
+     "accepted": false
+    },
+    {
+     "id": "hr/leave.md#1",
+     "title": "休暇規程",
+     "heading": "第1条 年次有給休暇の付与",
+     "text": "入社日から6か月間継続勤務し、所定労働日の8割以上出勤した社員には、10日の年次有給休暇を付与する。その後は1年ごとに勤続年数に応じて付与日数を増やし、勤続6年6か月以上で年20日を上限とする。",
+     "relevance": 0.08,
+     "accepted": false
+    },
+    {
+     "id": "hr/allowances.md#1",
+     "title": "給与・諸手当規程",
+     "heading": "第1条 給与の支給日",
+     "text": "給与は毎月25日に支給する。支給日が休日にあたる場合は、その直前の営業日に支給する。",
+     "relevance": 0.12,
+     "accepted": false
+    },
+    {
+     "id": "expense/expense.md#5",
+     "title": "経費精算規程",
+     "heading": "第5条 精算額の支払い",
+     "text": "毎月末に締めて承認された精算額は、翌月25日の給与と合わせて支払う。",
+     "relevance": 0.09,
+     "accepted": false
+    }
+   ],
+   "sufficiency": 0.02,
+   "claims": [],
+   "citations": [],
+   "timingsMs": {
+    "triage": 283.5,
+    "retrieval": 83.1,
+    "assess": 330.4
+   },
+   "totalMs": 696.9,
+   "jevCalls": 2,
+   "jevTokens": 2642,
+   "llmTokens": 0,
+   "baseline": {
+    "answer": "退職金の計算方法については、資料に記載がありません。",
+    "totalMs": 2048.3,
+    "llmTokens": 656
+   }
+  },
+  {
+   "id": "t42",
+   "split": "test",
+   "type": "unanswerable",
+   "query": "深夜残業の割増賃金率は何％ですか？",
+   "answerable": false,
+   "status": "no_answer",
+   "answer": "社内の資料を確認しましたが、このご質問に答えられる記載は見つかりませんでした。担当部署へお問い合わせください。",
+   "triage": {
+    "intent": "knowledge_search",
+    "intent_confidence": 0.96,
+    "route": "hr",
+    "route_confidence": 1.0,
+    "decompose": 0.05
+   },
+   "subQueries": [],
+   "retrieved": [
+    {
+     "id": "hr/working_hours.md#3",
+     "title": "勤務時間・フレックスタイム規程",
+     "heading": "第3条 時間外労働",
+     "text": "時間外労働を行う場合は、事前に勤怠システムで申請し、所属長の承認を得なければならない。22時から翌5時までの深夜労働は原則として禁止する。",
+     "relevance": 0.88,
+     "accepted": false
+    },
+    {
+     "id": "hr/working_hours.md#2",
+     "title": "勤務時間・フレックスタイム規程",
+     "heading": "第2条 フレックスタイム制",
+     "text": "全社員にフレックスタイム制を適用する。必ず勤務しなければならないコアタイムは11時から15時まで、始業・終業時刻を選べるフレキシブルタイムは7時から22時までとする。清算期間は1か月とする。",
+     "relevance": 0.46,
+     "accepted": false
+    },
+    {
+     "id": "hr/remote_work.md#4",
+     "title": "在宅勤務規程",
+     "heading": "第4条 在宅勤務手当",
+     "text": "在宅勤務を月4日以上行った月は、通信費・光熱費の補助として在宅勤務手当5,000円を給与に加算して支給する。",
+     "relevance": 0.03,
+     "accepted": false
+    },
+    {
+     "id": "hr/working_hours.md#1",
+     "title": "勤務時間・フレックスタイム規程",
+     "heading": "第1条 標準勤務時間",
+     "text": "標準の勤務時間は9時から18時までとし、12時から13時までの60分を休憩時間とする。",
+     "relevance": 0.3,
+     "accepted": false
+    },
+    {
+     "id": "hr/leave.md#1",
+     "title": "休暇規程",
+     "heading": "第1条 年次有給休暇の付与",
+     "text": "入社日から6か月間継続勤務し、所定労働日の8割以上出勤した社員には、10日の年次有給休暇を付与する。その後は1年ごとに勤続年数に応じて付与日数を増やし、勤続6年6か月以上で年20日を上限とする。",
+     "relevance": 0.01,
+     "accepted": false
+    }
+   ],
+   "sufficiency": 0.04,
+   "claims": [],
+   "citations": [],
+   "timingsMs": {
+    "triage": 223.4,
+    "retrieval": 298.8,
+    "assess": 199.3
+   },
+   "totalMs": 721.5,
+   "jevCalls": 2,
+   "jevTokens": 2636,
+   "llmTokens": 0,
+   "baseline": {
+    "answer": "深夜残業の割増賃金率については、資料に記載がありません。",
+    "totalMs": 3106.6,
+    "llmTokens": 762
+   }
+  },
+  {
+   "id": "t43",
+   "split": "test",
+   "type": "unanswerable",
+   "query": "社員旅行はいつありますか？",
+   "answerable": false,
+   "status": "no_answer",
+   "answer": "社内の資料を確認しましたが、このご質問に答えられる記載は見つかりませんでした。担当部署へお問い合わせください。",
+   "triage": {
+    "intent": "knowledge_search",
+    "intent_confidence": 0.96,
+    "route": "hr",
+    "route_confidence": 0.95,
+    "decompose": 0.04
+   },
+   "subQueries": [],
+   "retrieved": [
+    {
+     "id": "general/office.md#1",
+     "title": "オフィス利用ルール",
+     "heading": "入退館",
+     "text": "入退館には社員証（ICカード）を使う。オフィスの最終退館時刻は22時とする。",
+     "relevance": 0.02,
+     "accepted": false
+    },
+    {
+     "id": "hr/leave.md#1",
+     "title": "休暇規程",
+     "heading": "第1条 年次有給休暇の付与",
+     "text": "入社日から6か月間継続勤務し、所定労働日の8割以上出勤した社員には、10日の年次有給休暇を付与する。その後は1年ごとに勤続年数に応じて付与日数を増やし、勤続6年6か月以上で年20日を上限とする。",
+     "relevance": 0.04,
+     "accepted": false
+    },
+    {
+     "id": "hr/remote_work.md#1",
+     "title": "在宅勤務規程",
+     "heading": "第1条 対象者",
+     "text": "在宅勤務の対象者は、試用期間を終えた正社員および契約社員とする。",
+     "relevance": 0.01,
+     "accepted": false
+    },
+    {
+     "id": "hr/working_hours.md#2",
+     "title": "勤務時間・フレックスタイム規程",
+     "heading": "第2条 フレックスタイム制",
+     "text": "全社員にフレックスタイム制を適用する。必ず勤務しなければならないコアタイムは11時から15時まで、始業・終業時刻を選べるフレキシブルタイムは7時から22時までとする。清算期間は1か月とする。",
+     "relevance": 0.04,
+     "accepted": false
+    },
+    {
+     "id": "security/accounts.md#4",
+     "title": "アカウント・PC管理規程",
+     "heading": "第4条 PCの交換と返却",
+     "text": "会社貸与PCは4年ごとに交換する。退職する社員は、最終出社日までに貸与品をすべて返却する。",
+     "relevance": 0.02,
+     "accepted": false
+    }
+   ],
+   "sufficiency": 0.02,
+   "claims": [],
+   "citations": [],
+   "timingsMs": {
+    "triage": 326.9,
+    "retrieval": 118.8,
+    "assess": 176.2
+   },
+   "totalMs": 621.9,
+   "jevCalls": 2,
+   "jevTokens": 2548,
+   "llmTokens": 0,
+   "baseline": {
+    "answer": "社員旅行に関する情報は資料に記載がありません。",
+    "totalMs": 2089.6,
+    "llmTokens": 604
+   }
+  },
+  {
+   "id": "t44",
+   "split": "test",
+   "type": "unanswerable",
+   "query": "SampleCloud の Proプランの料金はいくら？",
+   "answerable": false,
+   "status": "no_answer",
+   "answer": "社内の資料を確認しましたが、このご質問に答えられる記載は見つかりませんでした。担当部署へお問い合わせください。",
+   "triage": {
+    "intent": "knowledge_search",
+    "intent_confidence": 0.97,
+    "route": "faq",
+    "route_confidence": 1.0,
+    "decompose": 0.04
+   },
+   "subQueries": [],
+   "retrieved": [
+    {
+     "id": "faq/contract.md#4",
+     "title": "SampleCloud FAQ：契約・解約",
+     "heading": "プランを下位プランに変更するとどうなりますか？",
+     "text": "下位プランへの変更は、次回の契約更新日から適用されます。上位プランへの変更は即時に適用され、差額は日割りで請求します。",
+     "relevance": 0.48,
+     "accepted": false
+    },
+    {
+     "id": "api/rate_limit.md#1",
+     "title": "SampleCloud API レート制限",
+     "heading": "プラン別の上限",
+     "text": "1分あたりのリクエスト数の上限は、Freeプランが60回、Standardプランが600回、Enterpriseプランが6,000回である。",
+     "relevance": 0.39,
+     "accepted": false
+    },
+    {
+     "id": "faq/contract.md#1",
+     "title": "SampleCloud FAQ：契約・解約",
+     "heading": "解約はいつまでに申し込めばよいですか？",
+     "text": "契約更新日の7日前までに、管理画面の「プラン設定」から解約を申し込んでください。",
+     "relevance": 0.09,
+     "accepted": false
+    },
+    {
+     "id": "faq/contract.md#2",
+     "title": "SampleCloud FAQ：契約・解約",
+     "heading": "年払いプランを途中で解約したら返金されますか？",
+     "text": "年払いプランを途中で解約した場合でも、残りの期間分の返金は行っていません。契約期間の終了日まではすべての機能を利用できます。",
+     "relevance": 0.23,
+     "accepted": false
+    },
+    {
+     "id": "api/rate_limit.md#2",
+     "title": "SampleCloud API レート制限",
+     "heading": "瞬間的なリクエスト（バースト）",
+     "text": "1秒あたりの上限は、Freeプランが5回、Standardプランが20回、Enterpriseプランが100回である。",
+     "relevance": 0.2,
+     "accepted": false
+    }
+   ],
+   "sufficiency": 0.02,
+   "claims": [],
+   "citations": [],
+   "timingsMs": {
+    "triage": 216.4,
+    "retrieval": 332.2,
+    "assess": 264.1
+   },
+   "totalMs": 812.7,
+   "jevCalls": 2,
+   "jevTokens": 2558,
+   "llmTokens": 0,
+   "baseline": {
+    "answer": "Proプランの料金については、資料に記載がありません。",
+    "totalMs": 2702.2,
+    "llmTokens": 630
+   }
+  },
+  {
+   "id": "t45",
+   "split": "test",
+   "type": "unanswerable",
+   "query": "Webhook の送信元IPアドレスの一覧はありますか？",
+   "answerable": false,
+   "status": "no_answer",
+   "answer": "社内の資料を確認しましたが、このご質問に答えられる記載は見つかりませんでした。担当部署へお問い合わせください。",
+   "triage": {
+    "intent": "knowledge_search",
+    "intent_confidence": 0.91,
+    "route": "api",
+    "route_confidence": 0.99,
+    "decompose": 0.06
+   },
+   "subQueries": [],
+   "retrieved": [
+    {
+     "id": "api/webhooks.md#1",
+     "title": "SampleCloud Webhook 仕様",
+     "heading": "署名の検証",
+     "text": "Webhook のリクエストには X-Sample-Signature ヘッダーが付く。値は、リクエストボディを Webhook シークレットで HMAC-SHA256 署名したものである。受信側はこの署名を検証し、一致しないリクエストを破棄すること。",
+     "relevance": 0.51,
+     "accepted": false
+    },
+    {
+     "id": "api/webhooks.md#2",
+     "title": "SampleCloud Webhook 仕様",
+     "heading": "タイムアウトとリトライ",
+     "text": "受信側は10秒以内に 2xx のステータスコードを返す必要がある。それ以外の応答やタイムアウトは失敗とみなし、1分、2分、4分、8分、16分の間隔で最大5回まで再送する。",
+     "relevance": 0.18,
+     "accepted": false
+    },
+    {
+     "id": "api/rate_limit.md#3",
+     "title": "SampleCloud API レート制限",
+     "heading": "上限を超えたとき",
+     "text": "上限を超えると HTTP 429 が返る。レスポンスの Retry-After ヘッダーに、再試行できるまでの秒数が入る。",
+     "relevance": 0.03,
+     "accepted": false
+    },
+    {
+     "id": "faq/billing.md#3",
+     "title": "SampleCloud FAQ：請求・支払い",
+     "heading": "適格請求書（インボイス）に対応していますか？",
+     "text": "対応しています。当社の登録番号は T1234567890123 です。",
+     "relevance": 0.01,
+     "accepted": false
+    },
+    {
+     "id": "api/errors.md#1",
+     "title": "SampleCloud API エラーコード",
+     "heading": "クライアントエラー",
+     "text": "- 400 Bad Request：リクエストの形式が正しくない\n- 401 Unauthorized：認証情報がない、または期限切れ\n- 403 Forbidden：権限がない操作を行った\n- 404 Not Found：対象のリソースが存在しない\n- 409 Conflict：同じリソースを同時に更新しようとした\n- 422 Unprocessable Entity：入力値の検証に失敗した\n- 429 Too Many Requests：レート制限を超えた",
+     "relevance": 0.04,
+     "accepted": false
+    }
+   ],
+   "sufficiency": 0.06,
+   "claims": [],
+   "citations": [],
+   "timingsMs": {
+    "triage": 198.4,
+    "retrieval": 283.9,
+    "assess": 214.6
+   },
+   "totalMs": 696.8,
+   "jevCalls": 2,
+   "jevTokens": 2701,
+   "llmTokens": 0,
+   "baseline": {
+    "answer": "Webhookの送信元IPアドレスの一覧については、資料に記載がありません。",
+    "totalMs": 1699.5,
+    "llmTokens": 533
+   }
+  },
+  {
+   "id": "t46",
+   "split": "test",
+   "type": "unanswerable",
+   "query": "SampleCloud のSLA（稼働率保証）は何％ですか？",
+   "answerable": false,
+   "status": "no_answer",
+   "answer": "社内の資料を確認しましたが、このご質問に答えられる記載は見つかりませんでした。担当部署へお問い合わせください。",
+   "triage": {
+    "intent": "knowledge_search",
+    "intent_confidence": 0.99,
+    "route": "faq",
+    "route_confidence": 0.98,
+    "decompose": 0.05
+   },
+   "subQueries": [],
+   "retrieved": [
+    {
+     "id": "faq/data.md#2",
+     "title": "SampleCloud FAQ：データの管理",
+     "heading": "解約後のデータはどうなりますか？",
+     "text": "解約から30日後に、すべてのデータを完全に削除します。削除後の復元はできません。",
+     "relevance": 0.03,
+     "accepted": false
+    },
+    {
+     "id": "faq/data.md#3",
+     "title": "SampleCloud FAQ：データの管理",
+     "heading": "バックアップはありますか？",
+     "text": "データは毎日バックアップし、7日間保存しています。",
+     "relevance": 0.18,
+     "accepted": false
+    },
+    {
+     "id": "faq/billing.md#3",
+     "title": "SampleCloud FAQ：請求・支払い",
+     "heading": "適格請求書（インボイス）に対応していますか？",
+     "text": "対応しています。当社の登録番号は T1234567890123 です。",
+     "relevance": 0.01,
+     "accepted": false
+    },
+    {
+     "id": "faq/contract.md#1",
+     "title": "SampleCloud FAQ：契約・解約",
+     "heading": "解約はいつまでに申し込めばよいですか？",
+     "text": "契約更新日の7日前までに、管理画面の「プラン設定」から解約を申し込んでください。",
+     "relevance": 0.03,
+     "accepted": false
+    },
+    {
+     "id": "faq/data.md#4",
+     "title": "SampleCloud FAQ：データの管理",
+     "heading": "データはどこに保存されていますか？",
+     "text": "東京リージョンのデータセンターに保存しています。災害対策として、大阪リージョンにも複製しています。",
+     "relevance": 0.22,
+     "accepted": false
+    }
+   ],
+   "sufficiency": 0.02,
+   "claims": [],
+   "citations": [],
+   "timingsMs": {
+    "triage": 295.4,
+    "retrieval": 93.6,
+    "assess": 467.3
+   },
+   "totalMs": 856.3,
+   "jevCalls": 2,
+   "jevTokens": 2505,
+   "llmTokens": 0,
+   "baseline": {
+    "answer": "SampleCloudのSLA（稼働率保証）については、資料に記載がありません。",
+    "totalMs": 1747.2,
+    "llmTokens": 379
+   }
+  },
+  {
+   "id": "t47",
+   "split": "test",
+   "type": "unanswerable",
+   "query": "APIキーの有効期限は何日ですか？",
+   "answerable": false,
+   "status": "no_answer",
+   "answer": "社内の資料を確認しましたが、このご質問に答えられる記載は見つかりませんでした。担当部署へお問い合わせください。",
+   "triage": {
+    "intent": "knowledge_search",
+    "intent_confidence": 0.89,
+    "route": "api",
+    "route_confidence": 0.91,
+    "decompose": 0.05
+   },
+   "subQueries": [],
+   "retrieved": [
+    {
+     "id": "api/auth.md#4",
+     "title": "SampleCloud API 認証仕様",
+     "heading": "APIキーのローテーション",
+     "text": "APIキーは1つのプロジェクトにつき最大2本まで同時に有効にできる。新しいキーを発行してから古いキーを無効化することで、停止せずにキーを切り替えられる。",
+     "relevance": 0.91,
+     "accepted": false
+    },
+    {
+     "id": "api/auth.md#2",
+     "title": "SampleCloud API 認証仕様",
+     "heading": "アクセストークン",
+     "text": "OAuth 2.0 で発行されるアクセストークンの有効期限は1時間である。期限切れのトークンでリクエストすると HTTP 401 が返る。",
+     "relevance": 0.8,
+     "accepted": false
+    },
+    {
+     "id": "api/auth.md#3",
+     "title": "SampleCloud API 認証仕様",
+     "heading": "リフレッシュトークン",
+     "text": "リフレッシュトークンの有効期限は30日である。/v1/oauth/token にリフレッシュトークンを送ると、新しいアクセストークンを取得できる。",
+     "relevance": 0.83,
+     "accepted": false
+    },
+    {
+     "id": "api/auth.md#1",
+     "title": "SampleCloud API 認証仕様",
+     "heading": "認証方式",
+     "text": "SampleCloud API は、APIキーと OAuth 2.0（クライアントクレデンシャルズフロー）の2つの認証方式に対応する。",
+     "relevance": 0.75,
+     "accepted": false
+    },
+    {
+     "id": "api/errors.md#1",
+     "title": "SampleCloud API エラーコード",
+     "heading": "クライアントエラー",
+     "text": "- 400 Bad Request：リクエストの形式が正しくない\n- 401 Unauthorized：認証情報がない、または期限切れ\n- 403 Forbidden：権限がない操作を行った\n- 404 Not Found：対象のリソースが存在しない\n- 409 Conflict：同じリソースを同時に更新しようとした\n- 422 Unprocessable Entity：入力値の検証に失敗した\n- 429 Too Many Requests：レート制限を超えた",
+     "relevance": 0.67,
+     "accepted": false
+    }
+   ],
+   "sufficiency": 0.06,
+   "claims": [],
+   "citations": [],
+   "timingsMs": {
+    "triage": 196.2,
+    "retrieval": 213.5,
+    "assess": 206.6
+   },
+   "totalMs": 616.3,
+   "jevCalls": 2,
+   "jevTokens": 2652,
+   "llmTokens": 0,
+   "baseline": {
+    "answer": "APIキーの有効期限については、資料に記載がありません。",
+    "totalMs": 2857.1,
+    "llmTokens": 677
+   }
+  },
+  {
+   "id": "t48",
+   "split": "test",
+   "type": "unanswerable",
+   "query": "SampleCloud の無料トライアル期間は何日？",
+   "answerable": false,
+   "status": "no_answer",
+   "answer": "社内の資料を確認しましたが、このご質問に答えられる記載は見つかりませんでした。担当部署へお問い合わせください。",
+   "triage": {
+    "intent": "knowledge_search",
+    "intent_confidence": 0.96,
+    "route": "faq",
+    "route_confidence": 1.0,
+    "decompose": 0.04
+   },
+   "subQueries": [],
+   "retrieved": [
+    {
+     "id": "api/errors.md#1",
+     "title": "SampleCloud API エラーコード",
+     "heading": "クライアントエラー",
+     "text": "- 400 Bad Request：リクエストの形式が正しくない\n- 401 Unauthorized：認証情報がない、または期限切れ\n- 403 Forbidden：権限がない操作を行った\n- 404 Not Found：対象のリソースが存在しない\n- 409 Conflict：同じリソースを同時に更新しようとした\n- 422 Unprocessable Entity：入力値の検証に失敗した\n- 429 Too Many Requests：レート制限を超えた",
+     "relevance": 0.04,
+     "accepted": false
+    },
+    {
+     "id": "api/webhooks.md#2",
+     "title": "SampleCloud Webhook 仕様",
+     "heading": "タイムアウトとリトライ",
+     "text": "受信側は10秒以内に 2xx のステータスコードを返す必要がある。それ以外の応答やタイムアウトは失敗とみなし、1分、2分、4分、8分、16分の間隔で最大5回まで再送する。",
+     "relevance": 0.04,
+     "accepted": false
+    },
+    {
+     "id": "faq/contract.md#1",
+     "title": "SampleCloud FAQ：契約・解約",
+     "heading": "解約はいつまでに申し込めばよいですか？",
+     "text": "契約更新日の7日前までに、管理画面の「プラン設定」から解約を申し込んでください。",
+     "relevance": 0.2,
+     "accepted": false
+    },
+    {
+     "id": "faq/data.md#2",
+     "title": "SampleCloud FAQ：データの管理",
+     "heading": "解約後のデータはどうなりますか？",
+     "text": "解約から30日後に、すべてのデータを完全に削除します。削除後の復元はできません。",
+     "relevance": 0.21,
+     "accepted": false
+    },
+    {
+     "id": "api/auth.md#1",
+     "title": "SampleCloud API 認証仕様",
+     "heading": "認証方式",
+     "text": "SampleCloud API は、APIキーと OAuth 2.0（クライアントクレデンシャルズフロー）の2つの認証方式に対応する。",
+     "relevance": 0.04,
+     "accepted": false
+    }
+   ],
+   "sufficiency": 0.03,
+   "claims": [],
+   "citations": [],
+   "timingsMs": {
+    "triage": 208.4,
+    "retrieval": 207.1,
+    "assess": 247.9
+   },
+   "totalMs": 663.4,
+   "jevCalls": 2,
+   "jevTokens": 2644,
+   "llmTokens": 0,
+   "baseline": {
+    "answer": "無料トライアル期間については、資料に記載がありません。",
+    "totalMs": 3298.3,
+    "llmTokens": 676
+   }
+  },
+  {
+   "id": "t49",
+   "split": "test",
+   "type": "unanswerable",
+   "query": "請求書を郵送してもらうことはできますか？",
+   "answerable": false,
+   "status": "no_answer",
+   "answer": "社内の資料を確認しましたが、このご質問に答えられる記載は見つかりませんでした。担当部署へお問い合わせください。",
+   "triage": {
+    "intent": "knowledge_search",
+    "intent_confidence": 0.96,
+    "route": "faq",
+    "route_confidence": 0.95,
+    "decompose": 0.05
+   },
+   "subQueries": [],
+   "retrieved": [
+    {
+     "id": "faq/billing.md#2",
+     "title": "SampleCloud FAQ：請求・支払い",
+     "heading": "請求書はいつ発行されますか？",
+     "text": "毎月1日に、前月分の請求書を管理画面に発行します。支払期限は発行月の末日です。",
+     "relevance": 0.92,
+     "accepted": false
+    },
+    {
+     "id": "faq/billing.md#1",
+     "title": "SampleCloud FAQ：請求・支払い",
+     "heading": "支払い方法は何がありますか？",
+     "text": "クレジットカード払いに対応しています。請求書払いは、Enterpriseプランの年払い契約に限り利用できます。",
+     "relevance": 0.92,
+     "accepted": false
+    },
+    {
+     "id": "faq/billing.md#3",
+     "title": "SampleCloud FAQ：請求・支払い",
+     "heading": "適格請求書（インボイス）に対応していますか？",
+     "text": "対応しています。当社の登録番号は T1234567890123 です。",
+     "relevance": 0.54,
+     "accepted": false
+    },
+    {
+     "id": "faq/contract.md#4",
+     "title": "SampleCloud FAQ：契約・解約",
+     "heading": "プランを下位プランに変更するとどうなりますか？",
+     "text": "下位プランへの変更は、次回の契約更新日から適用されます。上位プランへの変更は即時に適用され、差額は日割りで請求します。",
+     "relevance": 0.02,
+     "accepted": false
+    },
+    {
+     "id": "expense/expense.md#2",
+     "title": "経費精算規程",
+     "heading": "第2条 領収書",
+     "text": "申請には領収書を添付する。紙の領収書はスマートフォンで撮影した画像を添付すれば、原本の提出は不要とする。",
+     "relevance": 0.58,
+     "accepted": false
+    }
+   ],
+   "sufficiency": 0.08,
+   "claims": [],
+   "citations": [],
+   "timingsMs": {
+    "triage": 231.3,
+    "retrieval": 293.9,
+    "assess": 210.7
+   },
+   "totalMs": 735.8,
+   "jevCalls": 2,
+   "jevTokens": 2530,
+   "llmTokens": 0,
+   "baseline": {
+    "answer": "請求書の郵送に関する可否については、資料に記載がありません。",
+    "totalMs": 2252.6,
+    "llmTokens": 545
+   }
+  },
+  {
+   "id": "t50",
+   "split": "test",
+   "type": "unanswerable",
+   "query": "オフィスに駐車場はありますか？",
+   "answerable": false,
+   "status": "no_answer",
+   "answer": "社内の資料を確認しましたが、このご質問に答えられる記載は見つかりませんでした。担当部署へお問い合わせください。",
+   "triage": {
+    "intent": "knowledge_search",
+    "intent_confidence": 0.79,
+    "route": "general",
+    "route_confidence": 0.99,
+    "decompose": 0.04
+   },
+   "subQueries": [],
+   "retrieved": [
+    {
+     "id": "general/office.md#3",
+     "title": "オフィス利用ルール",
+     "heading": "会議室の予約",
+     "text": "会議室は予約システムから2週間先まで予約できる。15分を過ぎても利用がない予約は自動で取り消される。",
+     "relevance": 0.03,
+     "accepted": false
+    },
+    {
+     "id": "general/office.md#4",
+     "title": "オフィス利用ルール",
+     "heading": "ゴミと喫煙",
+     "text": "ゴミは毎週金曜日の夕方に回収する。オフィス内は全面禁煙とする。",
+     "relevance": 0.02,
+     "accepted": false
+    },
+    {
+     "id": "general/office.md#1",
+     "title": "オフィス利用ルール",
+     "heading": "入退館",
+     "text": "入退館には社員証（ICカード）を使う。オフィスの最終退館時刻は22時とする。",
+     "relevance": 0.06,
+     "accepted": false
+    },
+    {
+     "id": "general/office.md#2",
+     "title": "オフィス利用ルール",
+     "heading": "来客",
+     "text": "来客がある場合は、前日までに受付システムで来訪者を登録する。当日は受付で入館証を渡す。",
+     "relevance": 0.12,
+     "accepted": false
+    },
+    {
+     "id": "hr/remote_work.md#3",
+     "title": "在宅勤務規程",
+     "heading": "第3条 勤務場所",
+     "text": "在宅勤務は、会社に届け出た自宅で行う。カフェなど不特定多数が出入りする場所での業務は禁止する。ただし、会社が契約したサテライトオフィスは利用できる。",
+     "relevance": 0.08,
+     "accepted": false
+    }
+   ],
+   "sufficiency": 0.04,
+   "claims": [],
+   "citations": [],
+   "timingsMs": {
+    "triage": 175.7,
+    "retrieval": 251.3,
+    "assess": 220.7
+   },
+   "totalMs": 647.7,
+   "jevCalls": 2,
+   "jevTokens": 2458,
+   "llmTokens": 0,
+   "baseline": {
+    "answer": "オフィスに駐車場があるかどうかについては、資料に記載がありません。",
+    "totalMs": 1994.6,
+    "llmTokens": 508
+   }
+  },
+  {
+   "id": "t51",
+   "split": "test",
+   "type": "unanswerable",
+   "query": "会議室でプロジェクターを借りる方法は？",
+   "answerable": false,
+   "status": "no_answer",
+   "answer": "社内の資料を確認しましたが、このご質問に答えられる記載は見つかりませんでした。担当部署へお問い合わせください。",
+   "triage": {
+    "intent": "knowledge_search",
+    "intent_confidence": 0.99,
+    "route": "general",
+    "route_confidence": 0.99,
+    "decompose": 0.06
+   },
+   "subQueries": [],
+   "retrieved": [
+    {
+     "id": "general/office.md#3",
+     "title": "オフィス利用ルール",
+     "heading": "会議室の予約",
+     "text": "会議室は予約システムから2週間先まで予約できる。15分を過ぎても利用がない予約は自動で取り消される。",
+     "relevance": 0.85,
+     "accepted": false
+    },
+    {
+     "id": "api/auth.md#4",
+     "title": "SampleCloud API 認証仕様",
+     "heading": "APIキーのローテーション",
+     "text": "APIキーは1つのプロジェクトにつき最大2本まで同時に有効にできる。新しいキーを発行してから古いキーを無効化することで、停止せずにキーを切り替えられる。",
+     "relevance": 0.01,
+     "accepted": false
+    },
+    {
+     "id": "faq/data.md#4",
+     "title": "SampleCloud FAQ：データの管理",
+     "heading": "データはどこに保存されていますか？",
+     "text": "東京リージョンのデータセンターに保存しています。災害対策として、大阪リージョンにも複製しています。",
+     "relevance": 0.01,
+     "accepted": false
+    },
+    {
+     "id": "hr/remote_work.md#5",
+     "title": "在宅勤務規程",
+     "heading": "第5条 貸与品",
+     "text": "業務に必要なノートPC1台と外付けディスプレイ1台を会社が貸与する。",
+     "relevance": 0.3,
+     "accepted": false
+    },
+    {
+     "id": "general/office.md#2",
+     "title": "オフィス利用ルール",
+     "heading": "来客",
+     "text": "来客がある場合は、前日までに受付システムで来訪者を登録する。当日は受付で入館証を渡す。",
+     "relevance": 0.07,
+     "accepted": false
+    }
+   ],
+   "sufficiency": 0.05,
+   "claims": [],
+   "citations": [],
+   "timingsMs": {
+    "triage": 295.0,
+    "retrieval": 227.0,
+    "assess": 228.1
+   },
+   "totalMs": 750.1,
+   "jevCalls": 2,
+   "jevTokens": 2502,
+   "llmTokens": 0,
+   "baseline": {
+    "answer": "会議室でプロジェクターを借りる方法については、資料に記載がありません。",
+    "totalMs": 2170.5,
+    "llmTokens": 587
+   }
+  },
+  {
+   "id": "t52",
+   "split": "test",
+   "type": "unanswerable",
+   "query": "社内の宇宙旅行手当の申請方法は？",
+   "answerable": false,
+   "status": "no_answer",
+   "answer": "社内の資料を確認しましたが、このご質問に答えられる記載は見つかりませんでした。担当部署へお問い合わせください。",
+   "triage": {
+    "intent": "knowledge_search",
+    "intent_confidence": 1.0,
+    "route": "hr",
+    "route_confidence": 0.79,
+    "decompose": 0.07
+   },
+   "subQueries": [],
+   "retrieved": [
+    {
+     "id": "expense/expense.md#1",
+     "title": "経費精算規程",
+     "heading": "第1条 申請期限",
+     "text": "経費は、支出が発生した月の翌月10日までに経費精算システムで申請する。期限を過ぎた申請は、所属長の理由書がある場合に限り受け付ける。",
+     "relevance": 0.68,
+     "accepted": false
+    },
+    {
+     "id": "hr/remote_work.md#4",
+     "title": "在宅勤務規程",
+     "heading": "第4条 在宅勤務手当",
+     "text": "在宅勤務を月4日以上行った月は、通信費・光熱費の補助として在宅勤務手当5,000円を給与に加算して支給する。",
+     "relevance": 0.08,
+     "accepted": false
+    },
+    {
+     "id": "hr/leave.md#3",
+     "title": "休暇規程",
+     "heading": "第3条 取得の申請",
+     "text": "年次有給休暇を取得するときは、原則として取得日の3営業日前までに勤怠システムで申請し、所属長の承認を得る。急病などやむを得ない場合は、事後の申請を認める。",
+     "relevance": 0.16,
+     "accepted": false
+    },
+    {
+     "id": "hr/remote_work.md#2",
+     "title": "在宅勤務規程",
+     "heading": "第2条 実施日数と申請",
+     "text": "在宅勤務は週3日までとする。在宅勤務を行う週の前週金曜日までに勤怠システムで申請し、所属長の承認を得る。",
+     "relevance": 0.1,
+     "accepted": false
+    },
+    {
+     "id": "hr/allowances.md#2",
+     "title": "給与・諸手当規程",
+     "heading": "第2条 通勤手当",
+     "text": "公共交通機関を利用して通勤する社員には、最も経済的かつ合理的な経路の定期券代を通勤手当として支給する。支給額は月50,000円を上限とする。",
+     "relevance": 0.11,
+     "accepted": false
+    }
+   ],
+   "sufficiency": 0.02,
+   "claims": [],
+   "citations": [],
+   "timingsMs": {
+    "triage": 207.7,
+    "retrieval": 386.0,
+    "assess": 318.5
+   },
+   "totalMs": 912.3,
+   "jevCalls": 2,
+   "jevTokens": 2556,
+   "llmTokens": 0,
+   "baseline": {
+    "answer": "宇宙旅行手当の申請方法については、資料に記載がありません。",
+    "totalMs": 2215.4,
+    "llmTokens": 581
+   }
+  },
+  {
+   "id": "t53",
+   "split": "test",
+   "type": "restricted",
+   "query": "賞与はいつ支給されますか？",
+   "answerable": false,
+   "status": "no_answer",
+   "answer": "社内の資料を確認しましたが、このご質問に答えられる記載は見つかりませんでした。担当部署へお問い合わせください。",
+   "triage": {
+    "intent": "knowledge_search",
+    "intent_confidence": 0.98,
+    "route": "hr",
+    "route_confidence": 1.0,
+    "decompose": 0.05
+   },
+   "subQueries": [],
+   "retrieved": [
+    {
+     "id": "hr/allowances.md#1",
+     "title": "給与・諸手当規程",
+     "heading": "第1条 給与の支給日",
+     "text": "給与は毎月25日に支給する。支給日が休日にあたる場合は、その直前の営業日に支給する。",
+     "relevance": 0.79,
+     "accepted": false
+    },
+    {
+     "id": "hr/allowances.md#3",
+     "title": "給与・諸手当規程",
+     "heading": "第3条 住宅手当",
+     "text": "世帯主である社員に、住宅手当として月20,000円を支給する。",
+     "relevance": 0.1,
+     "accepted": false
+    },
+    {
+     "id": "hr/remote_work.md#4",
+     "title": "在宅勤務規程",
+     "heading": "第4条 在宅勤務手当",
+     "text": "在宅勤務を月4日以上行った月は、通信費・光熱費の補助として在宅勤務手当5,000円を給与に加算して支給する。",
+     "relevance": 0.18,
+     "accepted": false
+    },
+    {
+     "id": "hr/allowances.md#2",
+     "title": "給与・諸手当規程",
+     "heading": "第2条 通勤手当",
+     "text": "公共交通機関を利用して通勤する社員には、最も経済的かつ合理的な経路の定期券代を通勤手当として支給する。支給額は月50,000円を上限とする。",
+     "relevance": 0.13,
+     "accepted": false
+    },
+    {
+     "id": "hr/allowances.md#4",
+     "title": "給与・諸手当規程",
+     "heading": "第4条 家族手当",
+     "text": "扶養する配偶者がいる社員には月10,000円、扶養する子1人につき月5,000円を家族手当として支給する。",
+     "relevance": 0.16,
+     "accepted": false
+    }
+   ],
+   "sufficiency": 0.05,
+   "claims": [],
+   "citations": [],
+   "timingsMs": {
+    "triage": 261.7,
+    "retrieval": 194.7,
+    "assess": 200.4
+   },
+   "totalMs": 656.8,
+   "jevCalls": 2,
+   "jevTokens": 2487,
+   "llmTokens": 0,
+   "baseline": {
+    "answer": "賞与の支給日については、資料に記載がありません。",
+    "totalMs": 2945.5,
+    "llmTokens": 561
+   }
+  },
+  {
+   "id": "t54",
+   "split": "test",
+   "type": "restricted",
+   "query": "A評価のときの賞与の係数は？",
+   "answerable": false,
+   "status": "no_answer",
+   "answer": "社内の資料を確認しましたが、このご質問に答えられる記載は見つかりませんでした。担当部署へお問い合わせください。",
+   "triage": {
+    "intent": "knowledge_search",
+    "intent_confidence": 0.99,
+    "route": "hr",
+    "route_confidence": 1.0,
+    "decompose": 0.06
+   },
+   "subQueries": [],
+   "retrieved": [
+    {
+     "id": "hr/allowances.md#3",
+     "title": "給与・諸手当規程",
+     "heading": "第3条 住宅手当",
+     "text": "世帯主である社員に、住宅手当として月20,000円を支給する。",
+     "relevance": 0.03,
+     "accepted": false
+    },
+    {
+     "id": "hr/training.md#1",
+     "title": "研修・資格取得支援規程",
+     "heading": "第1条 資格取得奨励金",
+     "text": "会社が指定する資格に合格した社員に、次の奨励金を支給する。\n- 応用情報技術者試験：30,000円\n- 情報処理安全確保支援士試験：50,000円\n- AWS認定ソリューションアーキテクト – アソシエイト：20,000円",
+     "relevance": 0.02,
+     "accepted": false
+    },
+    {
+     "id": "hr/allowances.md#4",
+     "title": "給与・諸手当規程",
+     "heading": "第4条 家族手当",
+     "text": "扶養する配偶者がいる社員には月10,000円、扶養する子1人につき月5,000円を家族手当として支給する。",
+     "relevance": 0.02,
+     "accepted": false
+    },
+    {
+     "id": "hr/leave.md#1",
+     "title": "休暇規程",
+     "heading": "第1条 年次有給休暇の付与",
+     "text": "入社日から6か月間継続勤務し、所定労働日の8割以上出勤した社員には、10日の年次有給休暇を付与する。その後は1年ごとに勤続年数に応じて付与日数を増やし、勤続6年6か月以上で年20日を上限とする。",
+     "relevance": 0.01,
+     "accepted": false
+    },
+    {
+     "id": "hr/remote_work.md#4",
+     "title": "在宅勤務規程",
+     "heading": "第4条 在宅勤務手当",
+     "text": "在宅勤務を月4日以上行った月は、通信費・光熱費の補助として在宅勤務手当5,000円を給与に加算して支給する。",
+     "relevance": 0.01,
+     "accepted": false
+    }
+   ],
+   "sufficiency": 0.02,
+   "claims": [],
+   "citations": [],
+   "timingsMs": {
+    "triage": 256.0,
+    "retrieval": 321.6,
+    "assess": 245.0
+   },
+   "totalMs": 822.6,
+   "jevCalls": 2,
+   "jevTokens": 2591,
+   "llmTokens": 0,
+   "baseline": {
+    "answer": "A評価のときの賞与の係数については、資料に記載がありません。",
+    "totalMs": 2296.8,
+    "llmTokens": 616
+   }
+  },
+  {
+   "id": "t55",
+   "split": "test",
+   "type": "chitchat",
+   "query": "こんにちは！",
+   "answerable": false,
+   "status": "direct",
+   "answer": "こんにちは！社内の規程や手続きについて、知りたいことを質問してください。",
+   "triage": {
+    "intent": "direct_answer",
+    "intent_confidence": 1.0,
+    "route": "general",
+    "route_confidence": 0.99,
+    "decompose": 0.02
+   },
+   "subQueries": [],
+   "retrieved": [],
+   "sufficiency": null,
+   "claims": [],
+   "citations": [],
+   "timingsMs": {
+    "triage": 294.5
+   },
+   "totalMs": 294.5,
+   "jevCalls": 1,
+   "jevTokens": 943,
+   "llmTokens": 0,
+   "baseline": {
+    "answer": "こんにちは、ご用件に関する質問をどうぞ。なお、ご質問に対する回答は資料に記載されている内容のみに基づいて行いますが、現時点でのご挨拶に関する情報は資料に記載がありません。",
+    "totalMs": 2613.6,
+    "llmTokens": 428
+   }
+  },
+  {
+   "id": "t56",
+   "split": "test",
+   "type": "chitchat",
+   "query": "ありがとう、よく分かりました",
+   "answerable": false,
+   "status": "direct",
+   "answer": "こんにちは！社内の規程や手続きについて、知りたいことを質問してください。",
+   "triage": {
+    "intent": "direct_answer",
+    "intent_confidence": 1.0,
+    "route": "general",
+    "route_confidence": 0.93,
+    "decompose": 0.04
+   },
+   "subQueries": [],
+   "retrieved": [],
+   "sufficiency": null,
+   "claims": [],
+   "citations": [],
+   "timingsMs": {
+    "triage": 283.4
+   },
+   "totalMs": 283.4,
+   "jevCalls": 1,
+   "jevTokens": 951,
+   "llmTokens": 0,
+   "baseline": {
+    "answer": "お役に立てて幸いです。なお、今回のご発言に関する事項は資料に記載がありません。その他にご不明な点がございましたらお問い合わせください。",
+    "totalMs": 4608.6,
+    "llmTokens": 1048
+   }
+  },
+  {
+   "id": "t57",
+   "split": "test",
+   "type": "chitchat",
+   "query": "おはようございます。今日もよろしくお願いします",
+   "answerable": false,
+   "status": "direct",
+   "answer": "こんにちは！社内の規程や手続きについて、知りたいことを質問してください。",
+   "triage": {
+    "intent": "direct_answer",
+    "intent_confidence": 1.0,
+    "route": "general",
+    "route_confidence": 0.99,
+    "decompose": 0.02
+   },
+   "subQueries": [],
+   "retrieved": [],
+   "sufficiency": null,
+   "claims": [],
+   "citations": [],
+   "timingsMs": {
+    "triage": 256.9
+   },
+   "totalMs": 256.9,
+   "jevCalls": 1,
+   "jevTokens": 964,
+   "llmTokens": 0,
+   "baseline": {
+    "answer": "おはようございます。お問い合わせいただいた内容に関する情報は、資料に記載がありません。",
+    "totalMs": 2704.4,
+    "llmTokens": 531
+   }
+  },
+  {
+   "id": "t58",
+   "split": "test",
+   "type": "vague",
+   "query": "それってどうなってますか？",
+   "answerable": false,
+   "status": "clarify",
+   "answer": "ご質問の対象が特定できませんでした。どの制度・手続き・仕様について知りたいか、もう少し具体的に教えてください。",
+   "triage": {
+    "intent": "clarification_needed",
+    "intent_confidence": 1.0,
+    "route": "general",
+    "route_confidence": 0.81,
+    "decompose": 0.14
+   },
+   "subQueries": [],
+   "retrieved": [],
+   "sufficiency": null,
+   "claims": [],
+   "citations": [],
+   "timingsMs": {
+    "triage": 317.9
+   },
+   "totalMs": 317.9,
+   "jevCalls": 1,
+   "jevTokens": 956,
+   "llmTokens": 0,
+   "baseline": {
+    "answer": "ご質問の内容について、具体的に何を指しているか資料に記載がありません。どのような件について確認されたいか、詳細をお知らせください。",
+    "totalMs": 2736.8,
+    "llmTokens": 482
+   }
+  },
+  {
+   "id": "t59",
+   "split": "test",
+   "type": "vague",
+   "query": "あれについて教えて",
+   "answerable": false,
+   "status": "clarify",
+   "answer": "ご質問の対象が特定できませんでした。どの制度・手続き・仕様について知りたいか、もう少し具体的に教えてください。",
+   "triage": {
+    "intent": "clarification_needed",
+    "intent_confidence": 1.0,
+    "route": "general",
+    "route_confidence": 0.92,
+    "decompose": 0.09
+   },
+   "subQueries": [],
+   "retrieved": [],
+   "sufficiency": null,
+   "claims": [],
+   "citations": [],
+   "timingsMs": {
+    "triage": 201.5
+   },
+   "totalMs": 201.5,
+   "jevCalls": 1,
+   "jevTokens": 952,
+   "llmTokens": 0,
+   "baseline": {
+    "answer": "ご質問の「あれ」が何を指しているかについて、資料に記載がありません。",
+    "totalMs": 2867.5,
+    "llmTokens": 513
+   }
+  },
+  {
+   "id": "t60",
+   "split": "test",
+   "type": "vague",
+   "query": "例の件、どうなった？",
+   "answerable": false,
+   "status": "clarify",
+   "answer": "ご質問の対象が特定できませんでした。どの制度・手続き・仕様について知りたいか、もう少し具体的に教えてください。",
+   "triage": {
+    "intent": "clarification_needed",
+    "intent_confidence": 0.99,
+    "route": "general",
+    "route_confidence": 0.97,
+    "decompose": 0.08
+   },
+   "subQueries": [],
+   "retrieved": [],
+   "sufficiency": null,
+   "claims": [],
+   "citations": [],
+   "timingsMs": {
+    "triage": 181.3
+   },
+   "totalMs": 181.3,
+   "jevCalls": 1,
+   "jevTokens": 953,
+   "llmTokens": 0,
+   "baseline": {
+    "answer": "お問い合わせの件については、資料に記載がありません。",
+    "totalMs": 2307.8,
+    "llmTokens": 539
+   }
+  },
+  {
+   "id": "d01",
+   "split": "dev",
+   "type": "answerable",
+   "query": "有休を半日単位で取れる回数に上限はある？",
+   "answerable": true,
+   "status": "answered",
+   "answer": "年次有給休暇を半日単位で取得できる回数には上限があり、年10回までと定められています [1]。",
+   "triage": {
+    "intent": "knowledge_search",
+    "intent_confidence": 0.99,
+    "route": "hr",
+    "route_confidence": 1.0,
+    "decompose": 0.1
+   },
+   "subQueries": [],
+   "retrieved": [
+    {
+     "id": "hr/leave.md#2",
+     "title": "休暇規程",
+     "heading": "第2条 取得単位",
+     "text": "年次有給休暇は1日単位のほか、半日単位（年10回まで）および時間単位（年5日分まで）で取得できる。",
+     "relevance": 1.82,
+     "accepted": true
+    },
+    {
+     "id": "hr/leave.md#4",
+     "title": "休暇規程",
+     "heading": "第4条 年次有給休暇の繰り越し",
+     "text": "当年度に使い切れなかった年次有給休暇は、翌年度に限り繰り越すことができる。繰り越せる日数の上限は20日とし、繰り越し分と当年度付与分を合わせて保有できる日数は最大40日とする。上限を超えた日数は消滅する。",
+     "relevance": 0.37,
+     "accepted": false
+    },
+    {
+     "id": "hr/leave.md#1",
+     "title": "休暇規程",
+     "heading": "第1条 年次有給休暇の付与",
+     "text": "入社日から6か月間継続勤務し、所定労働日の8割以上出勤した社員には、10日の年次有給休暇を付与する。その後は1年ごとに勤続年数に応じて付与日数を増やし、勤続6年6か月以上で年20日を上限とする。",
+     "relevance": 0.58,
+     "accepted": false
+    },
+    {
+     "id": "expense/domestic_travel.md#3",
+     "title": "国内出張旅費規程",
+     "heading": "第3条 宿泊費",
+     "text": "宿泊費は実費を支給する。1泊あたりの上限は、東京23区・大阪市・名古屋市が12,000円、その他の地域が10,000円とする。",
+     "relevance": 0.01,
+     "accepted": false
+    },
+    {
+     "id": "hr/allowances.md#2",
+     "title": "給与・諸手当規程",
+     "heading": "第2条 通勤手当",
+     "text": "公共交通機関を利用して通勤する社員には、最も経済的かつ合理的な経路の定期券代を通勤手当として支給する。支給額は月50,000円を上限とする。",
+     "relevance": 0.01,
+     "accepted": false
+    }
+   ],
+   "sufficiency": 0.96,
+   "claims": [
+    {
+     "text": "年次有給休暇を半日単位で取得できる回数には上限があり、年10回までと定められています。",
+     "support": 0.97,
+     "supported": true
+    }
+   ],
+   "citations": [
+    "hr/leave.md#2"
+   ],
+   "timingsMs": {},
+   "totalMs": null,
+   "jevCalls": 3,
+   "jevTokens": 3095,
+   "llmTokens": 351,
+   "baseline": {
+    "answer": "年次有給休暇を半日単位で取得する場合、年10回までという上限があります [1]。",
+    "totalMs": null,
+    "llmTokens": 533
+   }
+  },
+  {
+   "id": "d02",
+   "split": "dev",
+   "type": "answerable",
+   "query": "出張で大阪に泊まる場合、ホテル代はいくらまで出る？",
+   "answerable": true,
+   "status": "answered",
+   "answer": "宿泊費は実費が支給され、大阪市の場合は1泊あたり12,000円、大阪市以外の地域の場合は10,000円が上限となります [1]。",
+   "triage": {
+    "intent": "knowledge_search",
+    "intent_confidence": 1.0,
+    "route": "expense",
+    "route_confidence": 1.0,
+    "decompose": 0.08
+   },
+   "subQueries": [],
+   "retrieved": [
+    {
+     "id": "expense/domestic_travel.md#3",
+     "title": "国内出張旅費規程",
+     "heading": "第3条 宿泊費",
+     "text": "宿泊費は実費を支給する。1泊あたりの上限は、東京23区・大阪市・名古屋市が12,000円、その他の地域が10,000円とする。",
+     "relevance": 1.79,
+     "accepted": true
+    },
+    {
+     "id": "expense/domestic_travel.md#2",
+     "title": "国内出張旅費規程",
+     "heading": "第2条 日当",
+     "text": "出張中の食事代などの補助として、日帰り出張は1日2,000円、宿泊を伴う出張は1日3,000円の日当を支給する。",
+     "relevance": 0.54,
+     "accepted": false
+    },
+    {
+     "id": "expense/domestic_travel.md#1",
+     "title": "国内出張旅費規程",
+     "heading": "第1条 適用範囲",
+     "text": "この規程は国内出張に適用する。出張とは、勤務地から片道100km以上の移動、または宿泊を伴う業務上の移動をいう。",
+     "relevance": 0.52,
+     "accepted": false
+    },
+    {
+     "id": "expense/domestic_travel.md#4",
+     "title": "国内出張旅費規程",
+     "heading": "第4条 交通機関",
+     "text": "新幹線は普通車指定席を利用する。グリーン車は部長以上に限り利用できる。航空機は片道500km以上の移動に限り利用できる。",
+     "relevance": 0.09,
+     "accepted": false
+    },
+    {
+     "id": "expense/expense.md#4",
+     "title": "経費精算規程",
+     "heading": "第4条 接待交際費",
+     "text": "取引先との会食費は、参加者1人あたり5,000円までとする。これを超える場合は、事前に部長の承認を得る。",
+     "relevance": 0.04,
+     "accepted": false
+    }
+   ],
+   "sufficiency": 0.97,
+   "claims": [
+    {
+     "text": "宿泊費は実費が支給され、大阪市の場合は1泊あたり12,000円、大阪市以外の地域の場合は10,000円が上限となります。",
+     "support": 0.1,
+     "supported": false
+    }
+   ],
+   "citations": [
+    "expense/domestic_travel.md#3"
+   ],
+   "timingsMs": {},
+   "totalMs": null,
+   "jevCalls": 3,
+   "jevTokens": 3035,
+   "llmTokens": 506,
+   "baseline": {
+    "answer": "宿泊費は実費が支給され、1泊あたりの上限は大阪市が12,000円、その他の地域が10,000円となっています [1]。",
+    "totalMs": null,
+    "llmTokens": 629
+   }
+  },
+  {
+   "id": "d03",
+   "split": "dev",
+   "type": "unanswerable",
+   "query": "海外出張の日当はいくらですか？",
+   "answerable": false,
+   "status": "no_answer",
+   "answer": "社内の資料を確認しましたが、このご質問に答えられる記載は見つかりませんでした。担当部署へお問い合わせください。",
+   "triage": {
+    "intent": "knowledge_search",
+    "intent_confidence": 0.98,
+    "route": "expense",
+    "route_confidence": 0.83,
+    "decompose": 0.07
+   },
+   "subQueries": [],
+   "retrieved": [
+    {
+     "id": "expense/domestic_travel.md#2",
+     "title": "国内出張旅費規程",
+     "heading": "第2条 日当",
+     "text": "出張中の食事代などの補助として、日帰り出張は1日2,000円、宿泊を伴う出張は1日3,000円の日当を支給する。",
+     "relevance": 0.79,
+     "accepted": false
+    },
+    {
+     "id": "expense/domestic_travel.md#1",
+     "title": "国内出張旅費規程",
+     "heading": "第1条 適用範囲",
+     "text": "この規程は国内出張に適用する。出張とは、勤務地から片道100km以上の移動、または宿泊を伴う業務上の移動をいう。",
+     "relevance": 0.44,
+     "accepted": false
+    },
+    {
+     "id": "expense/domestic_travel.md#3",
+     "title": "国内出張旅費規程",
+     "heading": "第3条 宿泊費",
+     "text": "宿泊費は実費を支給する。1泊あたりの上限は、東京23区・大阪市・名古屋市が12,000円、その他の地域が10,000円とする。",
+     "relevance": 0.32,
+     "accepted": false
+    },
+    {
+     "id": "expense/domestic_travel.md#4",
+     "title": "国内出張旅費規程",
+     "heading": "第4条 交通機関",
+     "text": "新幹線は普通車指定席を利用する。グリーン車は部長以上に限り利用できる。航空機は片道500km以上の移動に限り利用できる。",
+     "relevance": 0.1,
+     "accepted": false
+    },
+    {
+     "id": "expense/expense.md#4",
+     "title": "経費精算規程",
+     "heading": "第4条 接待交際費",
+     "text": "取引先との会食費は、参加者1人あたり5,000円までとする。これを超える場合は、事前に部長の承認を得る。",
+     "relevance": 0.05,
+     "accepted": false
+    }
+   ],
+   "sufficiency": 0.04,
+   "claims": [],
+   "citations": [],
+   "timingsMs": {},
+   "totalMs": null,
+   "jevCalls": 2,
+   "jevTokens": 2518,
+   "llmTokens": 0,
+   "baseline": {
+    "answer": "海外出張の日当については、資料に記載がありません。",
+    "totalMs": null,
+    "llmTokens": 623
+   }
+  },
+  {
+   "id": "d04",
+   "split": "dev",
+   "type": "unanswerable",
+   "query": "有給休暇の買い取りはしてもらえますか？",
+   "answerable": false,
+   "status": "no_answer",
+   "answer": "社内の資料を確認しましたが、このご質問に答えられる記載は見つかりませんでした。担当部署へお問い合わせください。",
+   "triage": {
+    "intent": "knowledge_search",
+    "intent_confidence": 1.0,
+    "route": "hr",
+    "route_confidence": 1.0,
+    "decompose": 0.05
+   },
+   "subQueries": [],
+   "retrieved": [
+    {
+     "id": "hr/leave.md#4",
+     "title": "休暇規程",
+     "heading": "第4条 年次有給休暇の繰り越し",
+     "text": "当年度に使い切れなかった年次有給休暇は、翌年度に限り繰り越すことができる。繰り越せる日数の上限は20日とし、繰り越し分と当年度付与分を合わせて保有できる日数は最大40日とする。上限を超えた日数は消滅する。",
+     "relevance": 0.76,
+     "accepted": false
+    },
+    {
+     "id": "hr/leave.md#1",
+     "title": "休暇規程",
+     "heading": "第1条 年次有給休暇の付与",
+     "text": "入社日から6か月間継続勤務し、所定労働日の8割以上出勤した社員には、10日の年次有給休暇を付与する。その後は1年ごとに勤続年数に応じて付与日数を増やし、勤続6年6か月以上で年20日を上限とする。",
+     "relevance": 0.52,
+     "accepted": false
+    },
+    {
+     "id": "hr/leave.md#2",
+     "title": "休暇規程",
+     "heading": "第2条 取得単位",
+     "text": "年次有給休暇は1日単位のほか、半日単位（年10回まで）および時間単位（年5日分まで）で取得できる。",
+     "relevance": 0.36,
+     "accepted": false
+    },
+    {
+     "id": "hr/leave.md#3",
+     "title": "休暇規程",
+     "heading": "第3条 取得の申請",
+     "text": "年次有給休暇を取得するときは、原則として取得日の3営業日前までに勤怠システムで申請し、所属長の承認を得る。急病などやむを得ない場合は、事後の申請を認める。",
+     "relevance": 0.22,
+     "accepted": false
+    },
+    {
+     "id": "hr/leave.md#5",
+     "title": "休暇規程",
+     "heading": "第5条 特別休暇",
+     "text": "会社は、年次有給休暇とは別に、次の特別休暇を有給で付与する。\n- 夏季休暇：毎年7月から9月の間に3日\n- 結婚休暇：本人が結婚したとき5日（入籍日から6か月以内に取得）\n- 配偶者出産休暇：配偶者が出産したとき3日\n- 忌引休暇：配偶者・父母・子が亡くなったとき5日、祖父母・兄弟姉妹が亡くなったとき2日\n\n特別休暇は翌年度に繰り越すことはできない。",
+     "relevance": 0.25,
+     "accepted": false
+    }
+   ],
+   "sufficiency": 0.06,
+   "claims": [],
+   "citations": [],
+   "timingsMs": {},
+   "totalMs": null,
+   "jevCalls": 2,
+   "jevTokens": 2748,
+   "llmTokens": 0,
+   "baseline": {
+    "answer": "有給休暇の買い取りについては、資料に記載がありません。",
+    "totalMs": null,
+    "llmTokens": 793
+   }
+  },
+  {
+   "id": "d05",
+   "split": "dev",
+   "type": "unanswerable",
+   "query": "SampleCloud API の Proプランのレート制限は？",
+   "answerable": false,
+   "status": "no_answer",
+   "answer": "社内の資料を確認しましたが、このご質問に答えられる記載は見つかりませんでした。担当部署へお問い合わせください。",
+   "triage": {
+    "intent": "knowledge_search",
+    "intent_confidence": 0.99,
+    "route": "api",
+    "route_confidence": 1.0,
+    "decompose": 0.05
+   },
+   "subQueries": [],
+   "retrieved": [
+    {
+     "id": "api/rate_limit.md#1",
+     "title": "SampleCloud API レート制限",
+     "heading": "プラン別の上限",
+     "text": "1分あたりのリクエスト数の上限は、Freeプランが60回、Standardプランが600回、Enterpriseプランが6,000回である。",
+     "relevance": 0.95,
+     "accepted": false
+    },
+    {
+     "id": "api/rate_limit.md#2",
+     "title": "SampleCloud API レート制限",
+     "heading": "瞬間的なリクエスト（バースト）",
+     "text": "1秒あたりの上限は、Freeプランが5回、Standardプランが20回、Enterpriseプランが100回である。",
+     "relevance": 0.92,
+     "accepted": false
+    },
+    {
+     "id": "api/rate_limit.md#3",
+     "title": "SampleCloud API レート制限",
+     "heading": "上限を超えたとき",
+     "text": "上限を超えると HTTP 429 が返る。レスポンスの Retry-After ヘッダーに、再試行できるまでの秒数が入る。",
+     "relevance": 0.81,
+     "accepted": false
+    },
+    {
+     "id": "api/errors.md#1",
+     "title": "SampleCloud API エラーコード",
+     "heading": "クライアントエラー",
+     "text": "- 400 Bad Request：リクエストの形式が正しくない\n- 401 Unauthorized：認証情報がない、または期限切れ\n- 403 Forbidden：権限がない操作を行った\n- 404 Not Found：対象のリソースが存在しない\n- 409 Conflict：同じリソースを同時に更新しようとした\n- 422 Unprocessable Entity：入力値の検証に失敗した\n- 429 Too Many Requests：レート制限を超えた",
+     "relevance": 0.86,
+     "accepted": false
+    },
+    {
+     "id": "faq/contract.md#4",
+     "title": "SampleCloud FAQ：契約・解約",
+     "heading": "プランを下位プランに変更するとどうなりますか？",
+     "text": "下位プランへの変更は、次回の契約更新日から適用されます。上位プランへの変更は即時に適用され、差額は日割りで請求します。",
+     "relevance": 0.15,
+     "accepted": false
+    }
+   ],
+   "sufficiency": 0.05,
+   "claims": [],
+   "citations": [],
+   "timingsMs": {},
+   "totalMs": null,
+   "jevCalls": 2,
+   "jevTokens": 2636,
+   "llmTokens": 0,
+   "baseline": {
+    "answer": "SampleCloud API の Proプランのレート制限については、資料に記載がありません。",
+    "totalMs": null,
+    "llmTokens": 602
+   }
+  },
+  {
+   "id": "d06",
+   "split": "dev",
+   "type": "compound",
+   "query": "Webhookのタイムアウトは何秒で、最大何回リトライされますか？",
+   "answerable": true,
+   "status": "answered",
+   "answer": "Webhookのタイムアウトは10秒であり、リトライ（再送）は最大5回まで行われます [1]。",
+   "triage": {
+    "intent": "knowledge_search",
+    "intent_confidence": 0.93,
+    "route": "api",
+    "route_confidence": 1.0,
+    "decompose": 0.77
+   },
+   "subQueries": [
+    "Webhookのタイムアウトは何秒で",
+    "最大何回リトライされますか？"
+   ],
+   "retrieved": [
+    {
+     "id": "api/webhooks.md#2",
+     "title": "SampleCloud Webhook 仕様",
+     "heading": "タイムアウトとリトライ",
+     "text": "受信側は10秒以内に 2xx のステータスコードを返す必要がある。それ以外の応答やタイムアウトは失敗とみなし、1分、2分、4分、8分、16分の間隔で最大5回まで再送する。",
+     "relevance": 1.79,
+     "accepted": true
+    },
+    {
+     "id": "api/webhooks.md#1",
+     "title": "SampleCloud Webhook 仕様",
+     "heading": "署名の検証",
+     "text": "Webhook のリクエストには X-Sample-Signature ヘッダーが付く。値は、リクエストボディを Webhook シークレットで HMAC-SHA256 署名したものである。受信側はこの署名を検証し、一致しないリクエストを破棄すること。",
+     "relevance": 0.18,
+     "accepted": false
+    },
+    {
+     "id": "api/errors.md#1",
+     "title": "SampleCloud API エラーコード",
+     "heading": "クライアントエラー",
+     "text": "- 400 Bad Request：リクエストの形式が正しくない\n- 401 Unauthorized：認証情報がない、または期限切れ\n- 403 Forbidden：権限がない操作を行った\n- 404 Not Found：対象のリソースが存在しない\n- 409 Conflict：同じリソースを同時に更新しようとした\n- 422 Unprocessable Entity：入力値の検証に失敗した\n- 429 Too Many Requests：レート制限を超えた",
+     "relevance": 0.02,
+     "accepted": false
+    },
+    {
+     "id": "hr/leave.md#4",
+     "title": "休暇規程",
+     "heading": "第4条 年次有給休暇の繰り越し",
+     "text": "当年度に使い切れなかった年次有給休暇は、翌年度に限り繰り越すことができる。繰り越せる日数の上限は20日とし、繰り越し分と当年度付与分を合わせて保有できる日数は最大40日とする。上限を超えた日数は消滅する。",
+     "relevance": 0.01,
+     "accepted": false
+    },
+    {
+     "id": "api/auth.md#4",
+     "title": "SampleCloud API 認証仕様",
+     "heading": "APIキーのローテーション",
+     "text": "APIキーは1つのプロジェクトにつき最大2本まで同時に有効にできる。新しいキーを発行してから古いキーを無効化することで、停止せずにキーを切り替えられる。",
+     "relevance": 0.02,
+     "accepted": false
+    }
+   ],
+   "sufficiency": 0.96,
+   "claims": [
+    {
+     "text": "Webhookのタイムアウトは10秒であり、リトライ（再送）は最大5回まで行われます。",
+     "support": 0.91,
+     "supported": true
+    }
+   ],
+   "citations": [
+    "api/webhooks.md#2"
+   ],
+   "timingsMs": {},
+   "totalMs": null,
+   "jevCalls": 3,
+   "jevTokens": 3301,
+   "llmTokens": 415,
+   "baseline": {
+    "answer": "Webhookのタイムアウトは10秒以内であり、受信側がこの時間内に2xxのステータスコードを返さない場合は失敗とみなされます [1]。また、リトライは最大5回まで行われます [1]。",
+    "totalMs": null,
+    "llmTokens": 612
+   }
+  },
+  {
+   "id": "d07",
+   "split": "dev",
+   "type": "chitchat",
+   "query": "ありがとうございます、助かりました！",
+   "answerable": false,
+   "status": "direct",
+   "answer": "こんにちは！社内の規程や手続きについて、知りたいことを質問してください。",
+   "triage": {
+    "intent": "direct_answer",
+    "intent_confidence": 1.0,
+    "route": "general",
+    "route_confidence": 0.9,
+    "decompose": 0.02
+   },
+   "subQueries": [],
+   "retrieved": [],
+   "sufficiency": null,
+   "claims": [],
+   "citations": [],
+   "timingsMs": {},
+   "totalMs": null,
+   "jevCalls": 1,
+   "jevTokens": 950,
+   "llmTokens": 0,
+   "baseline": {
+    "answer": "お役に立てて幸いです。なお、今回のご連絡に関する具体的な案内は資料に記載がありません。",
+    "totalMs": null,
+    "llmTokens": 733
+   }
+  },
+  {
+   "id": "d08",
+   "split": "dev",
+   "type": "restricted",
+   "query": "賞与の算定係数を教えて",
+   "answerable": false,
+   "status": "no_answer",
+   "answer": "社内の資料を確認しましたが、このご質問に答えられる記載は見つかりませんでした。担当部署へお問い合わせください。",
+   "triage": {
+    "intent": "knowledge_search",
+    "intent_confidence": 0.92,
+    "route": "hr",
+    "route_confidence": 1.0,
+    "decompose": 0.08
+   },
+   "subQueries": [],
+   "retrieved": [
+    {
+     "id": "hr/allowances.md#4",
+     "title": "給与・諸手当規程",
+     "heading": "第4条 家族手当",
+     "text": "扶養する配偶者がいる社員には月10,000円、扶養する子1人につき月5,000円を家族手当として支給する。",
+     "relevance": 0.08,
+     "accepted": false
+    },
+    {
+     "id": "hr/leave.md#1",
+     "title": "休暇規程",
+     "heading": "第1条 年次有給休暇の付与",
+     "text": "入社日から6か月間継続勤務し、所定労働日の8割以上出勤した社員には、10日の年次有給休暇を付与する。その後は1年ごとに勤続年数に応じて付与日数を増やし、勤続6年6か月以上で年20日を上限とする。",
+     "relevance": 0.01,
+     "accepted": false
+    },
+    {
+     "id": "hr/allowances.md#3",
+     "title": "給与・諸手当規程",
+     "heading": "第3条 住宅手当",
+     "text": "世帯主である社員に、住宅手当として月20,000円を支給する。",
+     "relevance": 0.06,
+     "accepted": false
+    },
+    {
+     "id": "hr/remote_work.md#4",
+     "title": "在宅勤務規程",
+     "heading": "第4条 在宅勤務手当",
+     "text": "在宅勤務を月4日以上行った月は、通信費・光熱費の補助として在宅勤務手当5,000円を給与に加算して支給する。",
+     "relevance": 0.05,
+     "accepted": false
+    },
+    {
+     "id": "hr/allowances.md#1",
+     "title": "給与・諸手当規程",
+     "heading": "第1条 給与の支給日",
+     "text": "給与は毎月25日に支給する。支給日が休日にあたる場合は、その直前の営業日に支給する。",
+     "relevance": 0.04,
+     "accepted": false
+    }
+   ],
+   "sufficiency": 0.02,
+   "claims": [],
+   "citations": [],
+   "timingsMs": {},
+   "totalMs": null,
+   "jevCalls": 2,
+   "jevTokens": 2513,
+   "llmTokens": 0,
+   "baseline": {
+    "answer": "賞与の算定係数については、提示された資料に記載がありません。",
+    "totalMs": null,
+    "llmTokens": 465
+   }
+  }
+ ]
+}

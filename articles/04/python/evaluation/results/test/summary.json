@@ -1,0 +1,220 @@
+{
+  "split": "test",
+  "questions": 60,
+  "gate1_intent_accuracy": {
+    "k": 59,
+    "n": 60,
+    "rate": 0.983,
+    "ci95": [
+      0.911,
+      0.997
+    ]
+  },
+  "gate1_route_accuracy": {
+    "k": 52,
+    "n": 54,
+    "rate": 0.963,
+    "ci95": [
+      0.875,
+      0.99
+    ]
+  },
+  "gate2_decompose_accuracy": {
+    "k": 49,
+    "n": 54,
+    "rate": 0.907,
+    "ci95": [
+      0.801,
+      0.96
+    ]
+  },
+  "retrieval_recall_at_k": {
+    "k": 33,
+    "n": 34,
+    "rate": 0.971,
+    "ci95": [
+      0.851,
+      0.995
+    ]
+  },
+  "gate3_evidence_kept": {
+    "k": 39,
+    "n": 39,
+    "rate": 1.0,
+    "ci95": [
+      0.91,
+      1.0
+    ]
+  },
+  "gate3_other_dropped": {
+    "k": 117,
+    "n": 126,
+    "rate": 0.929,
+    "ci95": [
+      0.87,
+      0.962
+    ]
+  },
+  "gate3_context_reduction_mean": 0.695,
+  "answerable_answered": {
+    "k": 32,
+    "n": 34,
+    "rate": 0.941,
+    "ci95": [
+      0.809,
+      0.984
+    ]
+  },
+  "answerable_answered_when_retrieved": {
+    "k": 32,
+    "n": 33,
+    "rate": 0.97,
+    "ci95": [
+      0.847,
+      0.995
+    ]
+  },
+  "unanswerable_blocked_by_gate": {
+    "k": 20,
+    "n": 20,
+    "rate": 1.0,
+    "ci95": [
+      0.839,
+      1.0
+    ]
+  },
+  "answer_correct": {
+    "k": 32,
+    "n": 34,
+    "rate": 0.941,
+    "ci95": [
+      0.809,
+      0.984
+    ]
+  },
+  "gate5_real_answer_claims_supported": {
+    "k": 47,
+    "n": 51,
+    "rate": 0.922,
+    "ci95": [
+      0.815,
+      0.969
+    ]
+  },
+  "gate5_false_claims_detected": {
+    "k": 20,
+    "n": 20,
+    "rate": 1.0,
+    "ci95": [
+      0.839,
+      1.0
+    ]
+  },
+  "gate5_true_claims_flagged": {
+    "k": 0,
+    "n": 20,
+    "rate": 0.0,
+    "ci95": [
+      -0.0,
+      0.161
+    ]
+  },
+  "gate5_false_claims_detected_num": {
+    "k": 8,
+    "n": 8,
+    "rate": 1.0,
+    "ci95": [
+      0.676,
+      1.0
+    ]
+  },
+  "gate5_false_claims_detected_add": {
+    "k": 12,
+    "n": 12,
+    "rate": 1.0,
+    "ci95": [
+      0.757,
+      1.0
+    ]
+  },
+  "baseline_answer_correct": {
+    "k": 34,
+    "n": 34,
+    "rate": 1.0,
+    "ci95": [
+      0.898,
+      1.0
+    ]
+  },
+  "baseline_unanswerable_declined": {
+    "k": 20,
+    "n": 20,
+    "rate": 1.0,
+    "ci95": [
+      0.839,
+      1.0
+    ]
+  },
+  "latency_ms": {
+    "answered": {
+      "n": 32,
+      "p50": 2798,
+      "p95": 5476
+    },
+    "clarify": {
+      "n": 4,
+      "p50": 202,
+      "p95": 318
+    },
+    "direct": {
+      "n": 3,
+      "p50": 283,
+      "p95": 294
+    },
+    "no_answer": {
+      "n": 21,
+      "p50": 718,
+      "p95": 912
+    }
+  },
+  "stage_latency_ms": {
+    "triage": {
+      "p50": 228,
+      "p95": 332
+    },
+    "retrieval": {
+      "p50": 251,
+      "p95": 810
+    },
+    "assess": {
+      "p50": 240,
+      "p95": 467
+    },
+    "generate": {
+      "p50": 1749,
+      "p95": 4358
+    },
+    "verify": {
+      "p50": 227,
+      "p95": 292
+    }
+  },
+  "baseline_latency_ms": {
+    "p50": 2253,
+    "p95": 4137
+  },
+  "answered_latency_vs_baseline_ms": {
+    "jev_p50": 2798,
+    "baseline_p50": 2123
+  },
+  "jev_calls_per_question": 2.42,
+  "jev_tokens_per_question": 2718,
+  "llm_tokens_total": {
+    "jev_pipeline": 11729,
+    "baseline": 34112
+  },
+  "llm_calls": {
+    "jev_pipeline": 32,
+    "baseline": 60
+  }
+}

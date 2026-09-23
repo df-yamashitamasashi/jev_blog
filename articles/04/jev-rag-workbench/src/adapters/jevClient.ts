@@ -96,8 +96,8 @@ export class JevClient {
     }
 
     const simulatedAnswers = this.simulateDecision(request.state, request.questions);
-    // Simulated network + inference latency (70 - 110ms)
-    await new Promise((resolve) => setTimeout(resolve, Math.floor(Math.random() * 40) + 70));
+    // Simulated latency: 180 - 300ms (real jev-1.13.0 calls measured p50 ≈ 230ms)
+    await new Promise((resolve) => setTimeout(resolve, Math.floor(Math.random() * 120) + 180));
 
     return {
       answers: simulatedAnswers,
@@ -191,8 +191,11 @@ export class JevClient {
     return { type: 'choice', choice: selected, probabilities, confidence: best.n > 0 ? 0.9 : 0.6 };
   }
 
-  private simulateScore(state: Record<string, any>, _score: Score): ScoreAnswer {
-    const ratio = coverage(String(state.query || ''), String(state.passage || ''), { stripQuestion: true });
+  private simulateScore(state: Record<string, any>, score: Score): ScoreAnswer {
+    // Batched questions refer to `passage_N`; single-passage questions use `passage`
+    const ref = score.instructions.match(/passage_(\d+)/);
+    const passage = ref ? state[`passage_${ref[1]}`] : state.passage;
+    const ratio = coverage(String(state.query || ''), String(passage || ''), { stripQuestion: true });
 
     let finalScore: number;
     let confidence: number;
@@ -220,9 +223,10 @@ export class JevClient {
   private simulateNoul(state: Record<string, any>, noul: Noul): NoulAnswer {
     const instructions = noul.instructions;
 
-    // Gate 5: claim is supported by source?
-    if ('claim' in state) {
-      const claim = String(state.claim || '');
+    // Gate 5: claim is supported by source? (batched questions refer to `claim_N`)
+    const claimRef = instructions.match(/claim_(\d+)/);
+    if (claimRef || 'claim' in state) {
+      const claim = String((claimRef ? state[`claim_${claimRef[1]}`] : state.claim) || '');
       const source = String(state.source || '');
 
       // 主張に含まれる数値（20日、5,000円など）が根拠に存在しなければ裏付けなしとみなす
@@ -235,7 +239,7 @@ export class JevClient {
     }
 
     // Gate 2: needs decomposition?
-    if (instructions.includes('分解')) {
+    if (instructions.includes('分解') || instructions.includes('分けて調べる')) {
       const query = String(state.query || '');
       const topics = splitTopics(query);
       const hasComparison = ['違い', '比較', 'vs', '併用', 'それぞれ', '両方'].some((w) => query.toLowerCase().includes(w));
@@ -243,10 +247,11 @@ export class JevClient {
       return { type: 'noul', noul: prob, confidence: 0.89 };
     }
 
-    // Gate 4: is the context sufficient?
-    if ('context' in state) {
+    // Gate 4: is the context sufficient? (context = all `passage_N` in a batched call)
+    const passages = Object.keys(state).filter((k) => /^passage_\d+$/.test(k));
+    if ('context' in state || passages.length > 0) {
       const query = String(state.query || '');
-      const context = String(state.context || '');
+      const context = String(state.context ?? passages.map((k) => state[k]).join('\n\n'));
       if (context.trim().length === 0) return { type: 'noul', noul: 0.02, confidence: 0.98 };
 
       const ratio = coverage(query, context, { stripQuestion: true });

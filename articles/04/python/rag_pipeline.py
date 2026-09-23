@@ -1,5 +1,9 @@
 """
-Jev Adaptive RAG Pipeline (Reference Implementation)
+Jev Adaptive RAG Pipeline (minimal, single-file version for reading)
+
+For real use, see the `jev_rag` package in this folder (document loading,
+embeddings, hybrid search, Gemini generation, access control, CLI, HTTP API).
+
 5-Stage System One Gated Architecture:
   Gate 1: Intent & Route Guard (Choice)
   Gate 2: Query Decomposition (Noul)       ... Gate 1 と同じ1回の呼び出しで判定
@@ -15,8 +19,9 @@ TYPESAFE_API_KEY が設定されていれば typesafe-sdk で本物の Jev を�
 import os
 import re
 import unicodedata
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Any, Callable
+from typing import Any
 
 try:
     from typesafe_sdk import (
@@ -154,7 +159,7 @@ class StandaloneSimulatorClient:
         answers = {}
         for k, q in questions.items():
             if isinstance(q, Score):
-                answers[k] = self._score(state)
+                answers[k] = self._score(state, q)
             elif isinstance(q, Choice):
                 answers[k] = self._choice(state, q)
             elif isinstance(q, Noul):
@@ -206,12 +211,10 @@ class StandaloneSimulatorClient:
             confidence=0.9 if hits[best] > 0 else 0.6,
         )
 
-    def _score(self, state: dict[str, Any]) -> ScoreAnswer:
-        ratio = coverage(
-            str(state.get("query", "")),
-            str(state.get("passage", "")),
-            strip_question=True,
-        )
+    def _score(self, state: dict[str, Any], q: Score) -> ScoreAnswer:
+        ref = re.search(r"passage_(\d+)", q.instructions)
+        passage = state.get(f"passage_{ref.group(1)}" if ref else "passage", "")
+        ratio = coverage(str(state.get("query", "")), str(passage), strip_question=True)
         if ratio >= 0.5:
             score = 1.7 + min(0.3, (ratio - 0.5) * 0.6)
         elif ratio >= 0.25:
@@ -227,8 +230,12 @@ class StandaloneSimulatorClient:
         )
 
     def _noul(self, state: dict[str, Any], q: Noul) -> NoulAnswer:
-        if "claim" in state:  # Gate 5
-            claim = str(state.get("claim", ""))
+        claim_ref = re.search(r"claim_(\d+)", q.instructions)
+        passages = [v for k, v in state.items() if re.fullmatch(r"passage_\d+", k)]
+        if claim_ref or "claim" in state:  # Gate 5
+            claim = str(
+                state.get(f"claim_{claim_ref.group(1)}" if claim_ref else "claim", "")
+            )
             source = str(state.get("source", ""))
             source_facts = set(numeric_facts(source))
             missing_fact = any(f not in source_facts for f in numeric_facts(claim))
@@ -244,11 +251,9 @@ class StandaloneSimulatorClient:
             )
         elif "分解" in q.instructions:  # Gate 2
             noul = 0.85 if len(split_topics(str(state.get("query", "")))) >= 2 else 0.12
-        elif "context" in state:  # Gate 4
+        elif passages:  # Gate 4
             ratio = coverage(
-                str(state.get("query", "")),
-                str(state.get("context", "")),
-                strip_question=True,
+                str(state.get("query", "")), "\n".join(passages), strip_question=True
             )
             noul = 0.92 if ratio >= 0.5 else 0.6 if ratio >= 0.35 else 0.12
         else:
@@ -484,33 +489,38 @@ class JevAdaptiveRagPipeline:
         candidates = self.retrieve(sub_queries, category)
 
         # ----------------------------------------------------
-        # GATE 3: Semantic Reranking & Noise Filter
+        # GATE 3 & 4: relevance of every passage + sufficiency (one Jev call)
         # ----------------------------------------------------
-        reranked: list[RerankedPassage] = []
-        for chunk in candidates:
-            score_resp = self.client.system_one(
-                state={"query": query, "passage": chunk.text},
-                questions={
-                    "relevance": Score(
-                        instructions="`passage` の内容は `query` に対する直接的根拠を含んでいますか？",
-                        criteria=[
-                            "0: 無関係、トピックが異なる",
-                            "1: 部分的に関連するが直接の回答には不足",
-                            "2: 非常に有用、直接的な回答または根拠を含む",
-                        ],
-                    )
-                },
+        state = {"query": query}
+        questions: dict[str, Any] = {}
+        for i, chunk in enumerate(candidates, 1):
+            state[f"passage_{i}"] = f"【{chunk.doc_title}】\n{chunk.text}"
+            questions[f"relevance_{i}"] = Score(
+                instructions=f"`passage_{i}` は `query` の答えを含んでいますか？",
+                criteria=[
+                    "0: 無関係、または質問の答えに役立つ情報を含まない",
+                    "1: 関連はするが、質問への直接の答えは含まない",
+                    "2: 質問への直接の答え（数値・条件・手順など）を含む",
+                ],
             )
-            ans = score_resp.answers["relevance"]
-            reranked.append(
-                RerankedPassage(
-                    chunk=chunk,
-                    relevance_score=ans.score,
-                    confidence=ans.confidence,
-                    is_accepted=ans.score >= RELEVANCE_THRESHOLD,
-                )
+        questions["sufficient"] = Noul(
+            instructions=(
+                f"passage_1〜passage_{len(candidates)} に書かれている内容だけで、"
+                "`query` に正確に答えられますか？"
+                "推測や一般常識で補わないと答えられない場合は No としてください。"
             )
+        )
+        assess = self.client.system_one(state=state, questions=questions).answers
 
+        reranked = [
+            RerankedPassage(
+                chunk=chunk,
+                relevance_score=assess[f"relevance_{i}"].score,
+                confidence=assess[f"relevance_{i}"].confidence,
+                is_accepted=assess[f"relevance_{i}"].score >= RELEVANCE_THRESHOLD,
+            )
+            for i, chunk in enumerate(candidates, 1)
+        ]
         reranked.sort(key=lambda p: p.relevance_score, reverse=True)
         accepted = [p for p in reranked if p.is_accepted]
         initial_chars = sum(len(c.text) for c in candidates)
@@ -520,26 +530,9 @@ class JevAdaptiveRagPipeline:
             if initial_chars
             else 0
         )
-
-        # ----------------------------------------------------
-        # GATE 4: Context Sufficiency Check
-        # ----------------------------------------------------
-        context_text = "\n\n".join(
-            f"[{p.chunk.doc_title}]\n{p.chunk.text}" for p in accepted
+        is_sufficient = bool(accepted) and (
+            assess["sufficient"].noul >= SUFFICIENCY_THRESHOLD
         )
-        is_sufficient = False
-        if accepted:
-            suff_resp = self.client.system_one(
-                state={"query": query, "context": context_text},
-                questions={
-                    "is_sufficient": Noul(
-                        instructions="提供された context のみを参照して、query に客観的に回答可能ですか？"
-                    )
-                },
-            )
-            is_sufficient = (
-                suff_resp.answers["is_sufficient"].noul >= SUFFICIENCY_THRESHOLD
-            )
 
         if not is_sufficient:
             return RagPipelineResult(
@@ -562,30 +555,37 @@ class JevAdaptiveRagPipeline:
         # ----------------------------------------------------
         # SYSTEM TWO: Grounded Generation (LLM, called once)
         # ----------------------------------------------------
+        context_text = "\n\n".join(
+            f"【{p.chunk.doc_title}】\n{p.chunk.text}" for p in accepted
+        )
         answer = self.generator(query, context_text)
         claims = split_sentences(answer)
 
         # ----------------------------------------------------
-        # GATE 5: Faithfulness & Citation Verification
+        # GATE 5: Faithfulness & Citation Verification (one Jev call)
         # ----------------------------------------------------
         verified_claims: list[VerifiedClaim] = []
-        for claim in claims:
-            v_resp = self.client.system_one(
-                state={"claim": claim, "source": context_text},
-                questions={
-                    "is_supported": Noul(
-                        instructions="`claim` の内容は `source` によって客観的事実として完全に裏付けられていますか？"
+        if claims:
+            state = {"source": context_text}
+            questions = {}
+            for i, claim in enumerate(claims, 1):
+                state[f"claim_{i}"] = claim
+                questions[f"supported_{i}"] = Noul(
+                    instructions=(
+                        f"`claim_{i}` の内容（数値・条件・対象を含む）は、"
+                        "`source` に書かれていることだけで裏付けられますか？"
                     )
-                },
-            )
-            noul_val = v_resp.answers["is_supported"].noul
-            verified_claims.append(
-                VerifiedClaim(
-                    claim=claim,
-                    is_supported=noul_val >= SUPPORT_THRESHOLD,
-                    support_score=noul_val,
                 )
-            )
+            verify = self.client.system_one(state=state, questions=questions).answers
+            for i, claim in enumerate(claims, 1):
+                noul_val = verify[f"supported_{i}"].noul
+                verified_claims.append(
+                    VerifiedClaim(
+                        claim=claim,
+                        is_supported=noul_val >= SUPPORT_THRESHOLD,
+                        support_score=noul_val,
+                    )
+                )
 
         passed = sum(1 for c in verified_claims if c.is_supported)
         attribution = (

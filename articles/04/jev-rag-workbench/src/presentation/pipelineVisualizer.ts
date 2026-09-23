@@ -24,6 +24,16 @@ export class PipelineVisualizer {
     `;
   }
 
+  showReplayNote(): void {
+    this.container.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-icon">🎬</div>
+        <h3>実測リプレイを再生中</h3>
+        <p>上の「動作フロー」に、記録された判定の内容を表示しています。この欄には、ブラウザでライブ実行したときの各ゲートの詳細ログが表示されます。</p>
+      </div>
+    `;
+  }
+
   showRunning(query: string): void {
     this.container.innerHTML = `
       <div class="pipeline-header">

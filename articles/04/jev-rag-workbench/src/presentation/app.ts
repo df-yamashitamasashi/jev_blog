@@ -3,12 +3,24 @@
  */
 
 import { InMemoryRetriever } from '../adapters/inMemoryRetriever';
+import { loadReplays, ReplayData, ReplayRecord, runFromReplay } from '../adapters/replayRepository';
+import { runFromRagResult } from '../domain/trace';
+import { RELEVANCE_THRESHOLD, SUFFICIENCY_THRESHOLD } from '../usecases/assessUseCase';
+import { SUPPORT_THRESHOLD } from '../usecases/verificationUseCase';
 import { JevClient } from '../adapters/jevClient';
 import { LLMClient } from '../adapters/llmClient';
 import { RagOrchestrator } from '../usecases/ragOrchestrator';
 import { BenchmarkComparator } from './benchmarkComparator';
 import { DocumentManager } from './documentManager';
+import { FlowVisualizer } from './flowVisualizer';
 import { PipelineVisualizer } from './pipelineVisualizer';
+import { ReplayPanel } from './replayPanel';
+
+const LIVE_THRESHOLDS = {
+  relevance: RELEVANCE_THRESHOLD,
+  sufficiency: SUFFICIENCY_THRESHOLD,
+  support: SUPPORT_THRESHOLD,
+};
 
 export class App {
   private jevClient: JevClient;
@@ -18,6 +30,8 @@ export class App {
   public visualizer!: PipelineVisualizer;
   public docManager!: DocumentManager;
   public comparator!: BenchmarkComparator;
+  public flow!: FlowVisualizer;
+  private replays: ReplayData | null = null;
 
   constructor() {
     const savedJevKey = localStorage.getItem('TYPESAFE_API_KEY') || '';
@@ -34,12 +48,48 @@ export class App {
   }
 
   init(): void {
+    // ?capture shows only the flow diagram, without animation (for screenshots)
+    const params = new URLSearchParams(location.search);
+    if (params.has('capture')) document.body.classList.add('capture');
+    // ?still disables animation and auto-scroll (for full-page screenshots)
+    if (params.has('still')) document.body.classList.add('still');
+
     this.visualizer = new PipelineVisualizer('pipeline-container');
     this.docManager = new DocumentManager('docs-container', this.retriever);
     this.comparator = new BenchmarkComparator('benchmark-container');
+    this.flow = new FlowVisualizer('flow-container');
+    const replayPanel = new ReplayPanel('replay-container', (r) => this.playReplay(r));
 
     this.bindEvents();
     this.updateKeyStatusBadges();
+
+    loadReplays()
+      .then((data) => {
+        this.replays = data;
+        replayPanel.render(data);
+        // ?replay=t02 plays a recorded run on load (used for links and screenshots)
+        const id = new URLSearchParams(location.search).get('replay');
+        const record = id ? data.records.find((r) => r.id === id) : undefined;
+        if (record) this.playReplay(record);
+      })
+      .catch((err) => replayPanel.showError(`記録を読み込めませんでした: ${err.message}`));
+  }
+
+  private playReplay(record: ReplayRecord): void {
+    if (!this.replays) return;
+    const { meta } = this.replays;
+    this.flow.render(runFromReplay(record, meta), {
+      kind: 'replay',
+      label: `実測リプレイ：${meta.jevModel} + ${meta.generationModel}`,
+    });
+    this.visualizer.showReplayNote();
+    const input = document.getElementById('query-input') as HTMLTextAreaElement | null;
+    if (input) input.value = record.query;
+    if (document.body.classList.contains('capture') || document.body.classList.contains('still')) {
+      document.title = `capture-height:${document.body.scrollHeight}`;
+    } else {
+      document.getElementById('flow-container')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
   }
 
   private bindEvents(): void {
@@ -61,6 +111,12 @@ export class App {
           }
         });
         this.visualizer.renderFinalResult(result);
+        this.flow.render(runFromRagResult(result, LIVE_THRESHOLDS), {
+          kind: this.jevClient.hasApiKey() ? 'api' : 'simulator',
+          label: this.jevClient.hasApiKey()
+            ? 'ライブ実行：TypeSafe API'
+            : 'ライブ実行：シミュレータ（簡易判定・精度の評価には使えません）',
+        });
       } catch (err: any) {
         alert(`実行エラー: ${err.message}`);
       } finally {

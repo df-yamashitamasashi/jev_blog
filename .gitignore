@@ -16,3 +16,9 @@ dist/
 *.vsix
 .vscode-test/
 .claude/
+
+# articles/04: sample corpus is Markdown; generated index / logs / embedding cache are not tracked
+!articles/04/python/sample_docs/**/*.md
+articles/04/python/index.json
+articles/04/python/audit*.jsonl
+articles/04/python/evaluation/results/cache/embeddings.jsonl

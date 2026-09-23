@@ -64,7 +64,7 @@ export class TriageUseCase {
     // 「分解すべきか」は Jev が判定し、「どう分解するか」はルールで行う。
     const subQueries: string[] = [query];
     if (needsDecomposition) {
-      subQueries.push(...splitTopics(query).slice(0, 3));
+      subQueries.push(...splitTopics(query).filter((t) => t !== query).slice(0, 3));
     }
 
     return {

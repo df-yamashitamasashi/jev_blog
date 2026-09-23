@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { JevClient } from '../src/adapters/jevClient';
 import { RerankedPassage } from '../src/domain/models';
 import { VerificationUseCase } from '../src/usecases/verificationUseCase';
@@ -30,6 +30,17 @@ describe('VerificationUseCase (Gate 5)', () => {
     expect(result.allPassed).toBe(true);
     expect(result.attributionScore).toBe(100);
     expect(result.claims[0].isSupported).toBe(true);
+  });
+
+  it('verifies all claims in one Jev call and skips "not in the documents" sentences', async () => {
+    const client = new JevClient();
+    const spy = vi.spyOn(client, 'systemOne');
+    const result = await new VerificationUseCase(client).execute(
+      ['有給休暇の繰り越し上限は最大20日です。', '買い取りについては資料に記載がありません。'],
+      passages
+    );
+    expect(spy).toHaveBeenCalledTimes(1);
+    expect(result.claims.map((c) => c.claim)).toEqual(['有給休暇の繰り越し上限は最大20日です。']);
   });
 
   it('should flag unsupported or fabricated claims as hallucination', async () => {

@@ -8,8 +8,7 @@ import { LLMClient } from '../adapters/llmClient';
 import { BenchmarkComparison, PipelineStageRecord, RagResult } from '../domain/models';
 import { PipelineEventCallback } from '../domain/pipelineEvents';
 import { GeneratorUseCase } from './generatorUseCase';
-import { RerankUseCase } from './rerankUseCase';
-import { SUFFICIENCY_THRESHOLD, SufficiencyUseCase } from './sufficiencyUseCase';
+import { AssessUseCase, SUFFICIENCY_THRESHOLD } from './assessUseCase';
 import { TriageUseCase } from './triageUseCase';
 import { VerificationUseCase } from './verificationUseCase';
 
@@ -17,8 +16,7 @@ const TOP_K = 5;
 
 export class RagOrchestrator {
   private triageUseCase: TriageUseCase;
-  private rerankUseCase: RerankUseCase;
-  private sufficiencyUseCase: SufficiencyUseCase;
+  private assessUseCase: AssessUseCase;
   private generatorUseCase: GeneratorUseCase;
   private verificationUseCase: VerificationUseCase;
 
@@ -28,8 +26,7 @@ export class RagOrchestrator {
     private retriever: InMemoryRetriever
   ) {
     this.triageUseCase = new TriageUseCase(jevClient);
-    this.rerankUseCase = new RerankUseCase(jevClient);
-    this.sufficiencyUseCase = new SufficiencyUseCase(jevClient);
+    this.assessUseCase = new AssessUseCase(jevClient);
     this.generatorUseCase = new GeneratorUseCase(llmClient);
     this.verificationUseCase = new VerificationUseCase(jevClient);
   }
@@ -117,31 +114,27 @@ export class RagOrchestrator {
     });
 
     // ==========================================
-    // Gate 3: Semantic Reranker & Noise Filter
+    // Gate 3 & 4: Relevance of every passage + sufficiency (one Jev call)
     // ==========================================
     onEvent?.({ type: 'stage_start', stageId: 'rerank' });
-    const rerank = await this.rerankUseCase.execute(query, searchResults);
+    const rerank = await this.assessUseCase.execute(query, searchResults);
+    const sufficiency = rerank.sufficiency;
 
     record({
       stageId: 'rerank',
       stageName: 'Gate 3: Fast Reranking & Noise Filter',
       status: 'passed',
-      latencyMs: rerank.totalLatencyMs,
+      latencyMs: rerank.latencyMs,
       summary: `精選: ${rerank.acceptedPassages.length}件採択 / ${rerank.rejectedCount}件除外 (コンテキスト${rerank.tokensSavedPercent}%削減)`,
       details: { rerank },
     });
 
-    // ==========================================
-    // Gate 4: Context Sufficiency Gate
-    // ==========================================
     onEvent?.({ type: 'stage_start', stageId: 'sufficiency' });
-    const sufficiency = await this.sufficiencyUseCase.execute(query, rerank.acceptedPassages);
-
     record({
       stageId: 'sufficiency',
-      stageName: 'Gate 4: Context Sufficiency Gate',
+      stageName: 'Gate 4: Context Sufficiency Gate（Gate 3 と同じ呼び出し）',
       status: sufficiency.isSufficient ? 'passed' : 'fallback',
-      latencyMs: sufficiency.latencyMs,
+      latencyMs: 0,
       summary: sufficiency.isSufficient
         ? `十分性スコア: ${Math.round(sufficiency.sufficiencyScore * 100)}% (合格)`
         : `十分性不足: ${Math.round(sufficiency.sufficiencyScore * 100)}% (早期終了)`,

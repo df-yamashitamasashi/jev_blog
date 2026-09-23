@@ -1,6 +1,6 @@
-# Jev Adaptive RAG Workbench (Vol. 4)
+# Jev Adaptive RAG (Vol. 4)
 
-[English](#english) | [日本語](#japanese)
+[日本語](#japanese) | [English](#english)
 
 ---
 
@@ -8,40 +8,39 @@
 ## 日本語
 
 ### 概要
-**Jev Adaptive RAG Workbench** は、TypeSafe AI の型安全な意思決定モデル **Jev (System One)** を検索拡張生成 (RAG) の「関所（ゲート）」として組み込んだ、対話型ワークベンチと Python リファレンス実装です。
+「判断は Jev、文章は LLM」という設計を確かめるための **検証用 RAG** です。社内文書に答える RAG で、「答えるべきか」「どの文書が使えるか」「根拠は足りるか」「回答は文書どおりか」を **Jev（TypeSafe AI の意思決定モデル）** が判断し、LLM（Gemini）は回答文を書くだけにしています。
 
-「検索が必要か」「この文書は使えるか」「根拠は足りているか」といった判断を Jev に任せ、LLM は根拠がそろったときに1回だけ回答を生成します。**5つの System One ゲート**で、ムダな LLM 呼び出しと根拠のない回答を減らします。
+| フォルダ | 内容 |
+| :--- | :--- |
+| [`python/jev_rag/`](python/README.md) | RAG 本体（文書の取り込み、ハイブリッド検索、5つの Jev ゲート、Gemini による回答生成、閲覧権限、監査ログ、CLI、HTTP API） |
+| [`python/evaluation/`](python/evaluation/README.md) | 本物の Jev / Gemini で行った評価（質問68問）の手順・データ・結果 |
+| `jev-rag-workbench/` | 動作の可視化。利用者・Jev・検索・LLM の誰が何をしたかを、フロー図で表示する。評価の記録を API キーなしで再生できる |
+| `images/` | 記事で使っているスクリーンショット |
 
-### 主な特徴
-1. **Gate 1: Intent & Route Guard (Choice)**: 挨拶や曖昧な入力は検索・LLM を使わずに返答。検索先カテゴリも判定。
-2. **Gate 2: Query Decomposition (Noul)**: 複合質問をサブクエリに分解して検索（Gate 1 と同じ1回の呼び出しで判定）。
-3. **Gate 3: Fast Semantic Reranking (Score)**: 候補パッセージを0〜2点で採点し、1.0未満を除外して LLM に渡すコンテキストを削減。
-4. **Gate 4: Context Sufficiency Gate (Noul)**: 根拠が足りないときは LLM を呼ばずに「見つかりませんでした」と返す。
-5. **Gate 5: Faithfulness & Citation Guard (Noul)**: 回答を1文ずつ根拠と照合し、引用元と引用忠実性スコアを表示。
-6. **APIキー不要で試せる**: キー未設定時は内蔵シミュレータ（文字一致率ベースの簡易判定）で動作。キーを設定すると本物の Jev / OpenAI API を使用。
-7. **Clean Architecture**: Domain, UseCases, Adapters, Presentation を分離。
+### 評価結果（jev-1.13.0 + gemini-3.8-flash、本番評価60問）
+- 答えのない質問 20/20 を、LLM に渡さずに止めた
+- 答えのある質問 34問中32問に正しく回答（2問を取りこぼし）
+- 文書にない内容を含む文 20/20 を検出、正しい文を誤って疑ったのは 0/20
+- LLM の呼び出し 60回→32回、LLM のトークン −66%
+- 答えを返す場合は、ゲートなしより約0.7秒遅い
 
 ### クイックスタート
 
-#### 1. インタラクティブ・スタジオの起動 (TypeScript + Vite)
 ```bash
+# 動作の可視化（API キー不要）
 cd articles/04/jev-rag-workbench
-npm install
-npm run dev
-# ブラウザで http://localhost:3000/ にアクセス
-```
+npm install && npm run dev
+# http://localhost:3000/?replay=t02 を開く
 
-#### 2. 単体テストの実行 (Vitest)
-```bash
-npm test
-```
-
-#### 3. Python 本番パイプラインの実行
-```bash
+# RAG 本体（TYPESAFE_API_KEY と GEMINI_API_KEY が必要）
 cd articles/04/python
 pip install -r requirements.txt
-python rag_pipeline.py
-pytest test_rag_pipeline.py -v
+python -m jev_rag ingest ./sample_docs --index index.json
+python -m jev_rag ask "使い切れなかった有休は来年に持ち越せる？" --index index.json
+
+# テスト（API キー不要）
+pytest -q                          # articles/04/python
+npm test                           # articles/04/jev-rag-workbench
 ```
 
 ---
@@ -50,40 +49,32 @@ pytest test_rag_pipeline.py -v
 ## English
 
 ### Overview
-**Jev Adaptive RAG Workbench** is an interactive studio and Python reference implementation that places TypeSafe AI's type-safe decision model **Jev (System One)** as gates inside a Retrieval-Augmented Generation (RAG) pipeline.
+A **RAG for verifying one design idea**: *Jev decides, the LLM writes.* Jev (TypeSafe AI's decision model) decides whether to answer, which passages are usable, whether the evidence is sufficient, and whether each generated sentence is supported. The LLM (Gemini) only writes the answer.
 
-Jev makes the decisions ("does this need retrieval?", "is this passage relevant?", "is the context sufficient?"), and the LLM writes an answer only once the evidence is in place. **5 System One gates** cut unnecessary LLM calls and ungrounded answers.
+| Folder | Contents |
+| :--- | :--- |
+| [`python/jev_rag/`](python/README.md) | The RAG package: ingestion, hybrid search, five Jev gates, Gemini generation, access control, audit log, CLI, HTTP API |
+| [`python/evaluation/`](python/evaluation/README.md) | Evaluation protocol, data (68 questions) and results with the real Jev / Gemini APIs |
+| `jev-rag-workbench/` | Visualizer showing who (user / Jev / search / LLM) did what, as a swimlane flow diagram. Replays the recorded runs without API keys |
+| `images/` | Screenshots used in the article |
 
-### Key Features
-1. **Gate 1: Intent & Route Guard (Choice)**: Answers greetings / asks for clarification without retrieval or LLM calls, and routes to a document category.
-2. **Gate 2: Query Decomposition (Noul)**: Splits compound queries into sub-queries for retrieval (decided in the same Jev call as Gate 1).
-3. **Gate 3: Fast Semantic Reranking (Score)**: Scores each candidate 0-2 and drops passages below 1.0, shrinking the LLM context.
-4. **Gate 4: Context Sufficiency Gate (Noul)**: Returns "not found" instead of calling the LLM when the evidence is insufficient.
-5. **Gate 5: Faithfulness & Citation Guard (Noul)**: Checks each generated sentence against the sources and shows citations and an Attribution Score.
-6. **Runs without API keys**: Falls back to a built-in heuristic simulator (character-overlap based). Set keys to use the real Jev / OpenAI APIs.
-7. **Clean Architecture**: Domain, UseCases, Adapters, and Presentation are separated.
+### Results (jev-1.13.0 + gemini-3.8-flash, 60 test questions)
+- Stopped 20/20 unanswerable questions before calling the LLM
+- Answered 32 of 34 answerable questions correctly (2 were wrongly stopped)
+- Flagged 20/20 unsupported sentences, with 0/20 false alarms on supported ones
+- LLM calls 60 → 32, LLM tokens −66%
+- About 0.7 s slower than an ungated RAG when an answer is returned
 
 ### Quickstart
 
-#### 1. Launch Interactive Studio (TypeScript + Vite)
 ```bash
-cd articles/04/jev-rag-workbench
-npm install
-npm run dev
-# Open http://localhost:3000/ in browser
-```
+# Visualizer (no API keys)
+cd articles/04/jev-rag-workbench && npm install && npm run dev   # open /?replay=t02
 
-#### 2. Run Test Suite (Vitest)
-```bash
-npm test
-```
-
-#### 3. Run Python Reference Pipeline
-```bash
-cd articles/04/python
-pip install -r requirements.txt
-python rag_pipeline.py
-pytest test_rag_pipeline.py -v
+# RAG package (needs TYPESAFE_API_KEY and GEMINI_API_KEY)
+cd articles/04/python && pip install -r requirements.txt
+python -m jev_rag ingest ./sample_docs --index index.json
+python -m jev_rag ask "有休の繰り越し上限は？" --index index.json
 ```
 
 ### License
